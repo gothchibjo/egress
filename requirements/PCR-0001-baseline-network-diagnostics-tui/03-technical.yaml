@@ -1,7 +1,7 @@
 pcr: PCR-0001
 title: Baseline network diagnostics and TUI shell
 status: draft
-revised: 2026-11-10
+revised: 2026-11-11
 frozen_by: null
 frozen_at: null
 pipeline_gates:
@@ -9,4 +9,637 @@ pipeline_gates:
   plan_approval: { required: true, passed: false }
   verification_evidence: { required: true, passed: false }
   guard_conditions: { required: true, passed: false }
-requirements: []
+requirements:
+  - id: REQ-001
+    traces_to: [BR-03]
+    type: functional
+    title: Check result and evidence model
+    description: >-
+      WHEN a baseline check completes, fails or is skipped, THE SYSTEM SHALL
+      emit a result containing the check id, status, target, method, measured
+      values, timestamp and an error or diagnostic message when applicable.
+    priority: must
+    acceptance_criteria:
+      - Every completed check has one of the statuses pass, warn, fail or skipped.
+      - Every fail or warn result contains at least one measured value or error message.
+      - Every skipped result states the missing capability or condition.
+      - The TUI and JSON output expose the same evidence fields.
+    dependencies: []
+    verification:
+      method: test
+      evidence:
+        - unit test report
+        - JSON schema validation report
+    guard_conditions:
+      - BR-03 remains approved; evidence fields cannot be dropped without a new PCR.
+      - No result may present a status without evidence.
+    size_hint: s
+
+  - id: REQ-002
+    traces_to: [BR-01]
+    type: functional
+    title: Baseline orchestration and progress
+    description: >-
+      WHEN the utility starts in an interactive terminal, THE SYSTEM SHALL run
+      the baseline automatically, report progress for checks longer than one
+      second and transition to the dashboard without user input.
+    priority: must
+    acceptance_criteria:
+      - The baseline starts without a keypress.
+      - Checks longer than one second show progress.
+      - The dashboard is reachable within the 30-second budget.
+      - No sudo or privilege prompt appears.
+      - Starting without internet still reaches a dashboard with a degraded result.
+      - Only one baseline run executes at a time.
+    dependencies: [REQ-001]
+    verification:
+      method: test
+      evidence:
+        - unit test report
+        - TUI walkthrough notes
+    guard_conditions:
+      - The utility never prompts for or requests elevated privileges on startup.
+      - A previous run is replaced, not merged, when the baseline is re-run.
+    size_hint: m
+
+  - id: REQ-003
+    traces_to: [BR-10]
+    type: business-rule
+    title: Curated multi-vendor anchor set
+    description: >-
+      THE SYSTEM SHALL use Cloudflare 1.1.1.1, Google 8.8.8.8, the Apple
+      captive-portal canary and example.com as the baseline anchors and SHALL
+      report each anchor independently.
+    priority: must
+    acceptance_criteria:
+      - All four anchors are present in every baseline run.
+      - Each anchor result is visible separately in the TUI and JSON.
+      - One failing anchor while others pass yields a warning rather than a global network blocked verdict.
+      - The anchor list is documented and used consistently across TUI and JSON.
+    dependencies: []
+    verification:
+      method: inspection
+      evidence:
+        - anchor list review sign-off
+        - traceability matrix
+    guard_conditions:
+      - The anchor set remains multi-vendor.
+      - No single vendor determines the overall verdict alone.
+    size_hint: xs
+
+  - id: REQ-004
+    traces_to: [BR-02]
+    type: functional
+    title: Local link and default route inspection
+    description: >-
+      WHEN the baseline starts, THE SYSTEM SHALL inspect local interfaces, link
+      state, IP addresses and the default route and SHALL report each
+      observation and failure reason.
+    priority: must
+    acceptance_criteria:
+      - The result lists interfaces with link state and addresses.
+      - The default route is reported when present.
+      - A missing default route is reported as a distinct local failure.
+      - Every observation includes enough evidence to explain the status.
+    dependencies: [REQ-001, REQ-002]
+    verification:
+      method: test
+      evidence:
+        - platform test report
+        - traceability matrix
+    guard_conditions:
+      - Inspection is read-only and never changes interface or route configuration.
+      - macOS and Linux are the only v1 platforms.
+    size_hint: s
+
+  - id: REQ-005
+    traces_to: [BR-02]
+    type: functional
+    title: Gateway reachability
+    description: >-
+      WHEN a default gateway is present, THE SYSTEM SHALL probe its reachability
+      with the platform-appropriate method and SHALL report latency or the
+      failure reason.
+    priority: must
+    acceptance_criteria:
+      - The detected gateway address is reported.
+      - Reachable and unreachable outcomes are distinguishable.
+      - Round-trip latency is reported for successful probes.
+      - No default gateway produces a skipped result with a reason.
+    dependencies: [REQ-004]
+    verification:
+      method: test
+      evidence:
+        - unit test report
+        - platform test report
+    guard_conditions:
+      - No network configuration is changed.
+    size_hint: s
+
+  - id: REQ-006
+    traces_to: [BR-02]
+    type: functional
+    title: DNS configuration and canary resolution
+    description: >-
+      WHEN the baseline runs, THE SYSTEM SHALL read the configured resolver set
+      and resolve a canary hostname, reporting resolver addresses, answers,
+      response code and latency.
+    priority: must
+    acceptance_criteria:
+      - The configured resolver addresses are reported.
+      - The canary answers are reported with response code and latency.
+      - NXDOMAIN, SERVFAIL and timeout outcomes are distinguishable.
+      - Missing resolver configuration produces a fail result with a reason.
+    dependencies: [REQ-002]
+    verification:
+      method: test
+      evidence:
+        - unit test report
+        - integration test report
+    guard_conditions:
+      - No DNS configuration is changed.
+    size_hint: s
+
+  - id: REQ-007
+    traces_to: [BR-02]
+    type: functional
+    title: System resolver versus DoH comparison
+    description: >-
+      WHEN the canary is resolved, THE SYSTEM SHALL compare the system-resolver
+      answer with a DoH answer and SHALL report both answer sets and the
+      comparison outcome.
+    priority: must
+    acceptance_criteria:
+      - Both the system-resolver and DoH answers are reported.
+      - Differing answer sets are flagged with the CDN and geo-DNS caveat.
+      - A DoH failure is reported separately and does not erase the system answer.
+      - The comparison result is present in the JSON output.
+    dependencies: [REQ-006]
+    verification:
+      method: test
+      evidence:
+        - unit test report
+        - integration test report
+    guard_conditions:
+      - Public DoH resolvers are allowed only as diagnostic probes.
+      - No enrichment API is called.
+    size_hint: m
+
+  - id: REQ-008
+    traces_to: [BR-02, BR-15]
+    type: functional
+    title: Proxy environment detection
+    description: >-
+      WHEN the baseline runs, THE SYSTEM SHALL read proxy environment variables
+      and SHALL report each detected setting with its source, or state that none
+      is set.
+    priority: must
+    acceptance_criteria:
+      - Detected proxy settings are listed with their source.
+      - The absence of proxy settings is shown explicitly.
+      - The utility does not bypass the detected proxy for baseline probes.
+      - Detection is present in the TUI and JSON output.
+    dependencies: [REQ-001]
+    verification:
+      method: test
+      evidence:
+        - unit test report
+        - traceability matrix
+    guard_conditions:
+      - No proxy bypass or direct-versus-proxied comparison occurs in v1.
+    size_hint: xs
+
+  - id: REQ-009
+    traces_to: [BR-02]
+    type: functional
+    title: ICMP reachability to gateway and anchors
+    description: >-
+      WHEN anchors are configured, THE SYSTEM SHALL send ICMP echo probes to the
+      gateway and each anchor, reporting reachability, round-trip time and loss.
+    priority: must
+    acceptance_criteria:
+      - Each gateway and anchor has an individual ICMP result.
+      - Successful probes report round-trip time.
+      - Loss is reported for the bounded sample.
+      - ICMP rate limiting is named as a caveat when responses are absent.
+      - The check works in unprivileged mode or reports a limited result with an elevation hint.
+    dependencies: [REQ-003, REQ-005]
+    verification:
+      method: test
+      evidence:
+        - integration test report
+        - platform test report
+    guard_conditions:
+      - Unprivileged mode works without raw sockets.
+      - Raw sockets are used only in explicitly elevated mode.
+    size_hint: m
+
+  - id: REQ-010
+    traces_to: [BR-02]
+    type: functional
+    title: TCP reachability to anchors
+    description: >-
+      WHEN anchors are configured, THE SYSTEM SHALL attempt TCP connections to
+      port 443 and port 53 on each anchor and SHALL report connect latency,
+      refusal, timeout or reset.
+    priority: must
+    acceptance_criteria:
+      - Each anchor and port has an individual result.
+      - Connection outcomes distinguish refusal, timeout and reset.
+      - Successful connections report connect latency.
+      - Active rejection and passive timeout are labelled distinctly.
+    dependencies: [REQ-003]
+    verification:
+      method: test
+      evidence:
+        - integration test report
+        - traceability matrix
+    guard_conditions:
+      - Probes go only to configured anchors and documented destinations.
+      - Per-probe timeouts are bounded.
+    size_hint: s
+
+  - id: REQ-011
+    traces_to: [BR-02, BR-12]
+    type: functional
+    title: Captive portal HTTP canary
+    description: >-
+      WHEN the baseline reaches the HTTP layer, THE SYSTEM SHALL request the
+      captive-portal canary and SHALL compare status, headers and body against
+      the expected response, reporting a portal when they differ.
+    priority: must
+    acceptance_criteria:
+      - The expected status and body fingerprint are documented.
+      - A captive portal produces a distinct warning with the observed redirect or body.
+      - The utility never authenticates to the portal or changes settings.
+      - The check result is visible in the TUI and JSON output.
+    dependencies: [REQ-010]
+    verification:
+      method: simulation
+      evidence:
+        - simulated portal test report
+        - TUI walkthrough notes
+    guard_conditions:
+      - No authentication or configuration change is performed.
+      - The canary request is the only HTTP request made by this check.
+    size_hint: m
+
+  - id: REQ-012
+    traces_to: [BR-02, BR-12]
+    type: functional
+    title: MTU and PMTU probe
+    description: >-
+      WHEN the network path is reachable, THE SYSTEM SHALL probe path MTU with
+      the don't-fragment flag and SHALL report suspected blackholes with the
+      packet sizes tested.
+    priority: must
+    acceptance_criteria:
+      - The probe reports the packet sizes tested.
+      - A suspected PMTU blackhole is reported with the failing size.
+      - The check does not change interface MTU or any host setting.
+      - An unreachable path produces a skipped result with a reason.
+    dependencies: [REQ-009]
+    verification:
+      method: simulation
+      evidence:
+        - simulated PMTU test report
+        - traceability matrix
+    guard_conditions:
+      - The probe is read-only.
+      - Packet sizes stay within the documented test range.
+    size_hint: m
+
+  - id: REQ-013
+    traces_to: [BR-02]
+    type: functional
+    title: Latency, jitter and loss sample
+    description: >-
+      WHEN an anchor is reachable, THE SYSTEM SHALL collect a bounded sample of
+      round-trip times and SHALL report minimum, median, maximum, jitter and
+      loss.
+    priority: must
+    acceptance_criteria:
+      - The sample size is reported.
+      - Minimum, median and maximum round-trip times are reported.
+      - Jitter and loss are derived from the same sample.
+      - The sample stays within the baseline time budget.
+    dependencies: [REQ-009]
+    verification:
+      method: test
+      evidence:
+        - unit test report
+        - integration test report
+    guard_conditions:
+      - The sample is bounded and cannot extend the baseline beyond its budget.
+    size_hint: s
+
+  - id: REQ-014
+    traces_to: [BR-07]
+    type: non-functional
+    title: Baseline time budget, timeouts and cancellation
+    description: >-
+      WHILE the baseline runs, THE SYSTEM SHALL enforce per-probe timeouts and
+      bounded retries, SHALL report timed-out checks and SHALL allow cancellation
+      with x, X or Ctrl-C while retaining completed results.
+    priority: must
+    acceptance_criteria:
+      - A typical baseline completes within 30 seconds.
+      - The dashboard remains reachable after per-probe budgets expire.
+      - Timed-out checks have a status and evidence.
+      - Cancellation takes effect promptly and labels the run cancelled.
+      - Completed checks remain visible and exportable after cancellation.
+      - Ctrl-C asks for confirmation before quitting.
+    dependencies: [REQ-002]
+    verification:
+      method: test
+      evidence:
+        - timing test report
+        - cancellation test report
+    guard_conditions:
+      - The user can quit immediately at any point.
+      - No probe can hang the session beyond its timeout.
+    size_hint: m
+
+  - id: REQ-015
+    traces_to: [BR-08]
+    type: constraint
+    title: Platform capability abstraction
+    description: >-
+      WHERE the utility runs on macOS or Linux, THE SYSTEM SHALL select
+      OS-appropriate mechanisms for interfaces, routes, DNS configuration, ICMP
+      and tracing and SHALL report unsupported mechanisms explicitly.
+    priority: must
+    acceptance_criteria:
+      - The utility starts and completes a baseline on both macOS and Linux.
+      - Platform-specific differences appear in the evidence.
+      - An unsupported mechanism produces a skipped or limited result instead of a crash.
+      - Windows is not presented as a supported platform.
+    dependencies: [REQ-001]
+    verification:
+      method: inspection
+      evidence:
+        - platform test matrix
+        - code review sign-off
+    guard_conditions:
+      - macOS and Linux are the only v1 platforms.
+      - Platform-specific behavior never changes the meaning of a check silently.
+    size_hint: m
+
+  - id: REQ-016
+    traces_to: [BR-06]
+    type: business-rule
+    title: Unprivileged execution and capability detection
+    description: >-
+      WHEN the utility starts without elevated privileges, THE SYSTEM SHALL run
+      all core checks that do not require raw sockets and SHALL mark raw-socket
+      checks as limited or skipped with an elevation hint.
+    priority: must
+    acceptance_criteria:
+      - No privilege prompt appears on startup.
+      - One unprivileged check cannot fail the whole baseline.
+      - Each limited check names the missing capability and how to enable it.
+      - The utility never re-execs itself with sudo.
+    dependencies: [REQ-015]
+    verification:
+      method: test
+      evidence:
+        - unprivileged test report
+        - TUI walkthrough notes
+    guard_conditions:
+      - Unprivileged execution is the default.
+      - Elevated access is explicit and user-initiated.
+    size_hint: m
+
+  - id: REQ-017
+    traces_to: [BR-13]
+    type: functional
+    title: Optional elevated mode
+    description: >-
+      WHEN the utility starts with sufficient privileges, THE SYSTEM SHALL enable
+      raw-socket checks and SHALL label the session as elevated without changing
+      the meaning of other results.
+    priority: should
+    acceptance_criteria:
+      - An elevated session exposes additional raw-socket checks.
+      - The UI and JSON label the session mode.
+      - Results remain comparable with an unprivileged run.
+      - The utility does not escalate privileges on its own.
+    dependencies: [REQ-016]
+    verification:
+      method: test
+      evidence:
+        - elevated mode test report
+        - traceability matrix
+    guard_conditions:
+      - Elevation is explicit.
+      - No check silently changes meaning between modes.
+    size_hint: s
+
+  - id: REQ-018
+    traces_to: [BR-04]
+    type: business-rule
+    title: Aggregate verdict logic
+    description: >-
+      WHEN all baseline checks finish or time out, THE SYSTEM SHALL compute an
+      overall verdict from check statuses using a documented deterministic rule
+      and SHALL identify the most actionable finding.
+    priority: must
+    acceptance_criteria:
+      - The aggregation rule is documented.
+      - Status counts and severity are derived from the same rule.
+      - The most severe finding is identifiable without opening every check.
+      - No overall verdict is produced when no check has run.
+      - One failing anchor does not by itself produce a global network blocked verdict.
+    dependencies: [REQ-001, REQ-004, REQ-005, REQ-006, REQ-007, REQ-008, REQ-009, REQ-010, REQ-011, REQ-012, REQ-013]
+    verification:
+      method: test
+      evidence:
+        - unit test report
+        - verdict rule review sign-off
+    guard_conditions:
+      - A verdict is never produced without evidence.
+      - The rule is deterministic for identical check results.
+    size_hint: m
+
+  - id: REQ-019
+    traces_to: [BR-11]
+    type: business-rule
+    title: Offline and degraded classification
+    description: >-
+      WHEN connectivity is absent or degraded, THE SYSTEM SHALL distinguish
+      local link, gateway, DNS-only and upstream failures, report what could be
+      tested locally and SHALL NOT label missing connectivity as censorship.
+    priority: must
+    acceptance_criteria:
+      - A no-route or unplugged run produces a local diagnosis.
+      - The baseline still completes.
+      - DNS-only failure is distinguishable from gateway and upstream failure.
+      - Wording avoids blockage claims without evidence.
+      - Re-running after recovery produces a fresh result.
+    dependencies: [REQ-002, REQ-018]
+    verification:
+      method: simulation
+      evidence:
+        - simulated offline test report
+        - TUI walkthrough notes
+    guard_conditions:
+      - Missing connectivity is never presented as censorship.
+    size_hint: m
+
+  - id: REQ-020
+    traces_to: [BR-09]
+    type: constraint
+    title: Local-only egress policy
+    description: >-
+      THE SYSTEM SHALL send no telemetry, analytics, crash reports or result
+      uploads and SHALL perform no enrichment calls; only documented diagnostic
+      probes to configured anchors and public DoH resolvers are permitted.
+    priority: must
+    acceptance_criteria:
+      - No network traffic exists beyond documented probes.
+      - Private or identifying data is not stored or transmitted.
+      - Probe destinations are documented.
+      - The utility remains useful without internet and reports local diagnostics.
+      - No hidden background calls occur.
+    dependencies: [REQ-002]
+    verification:
+      method: inspection
+      evidence:
+        - network capture review
+        - code review sign-off
+    guard_conditions:
+      - Diagnostic probes are the only outbound traffic.
+      - No telemetry or enrichment API is added.
+    size_hint: s
+
+  - id: REQ-021
+    traces_to: [BR-05, BR-16]
+    type: non-functional
+    title: Keyboard navigation and help overlay
+    description: >-
+      WHEN the dashboard is active, THE SYSTEM SHALL provide keyboard navigation
+      with arrows and j/k, Enter to drill in, Esc to go back, single-letter
+      actions and ? to open a help overlay with the key map and verdict
+      semantics.
+    priority: must
+    acceptance_criteria:
+      - A user can review the whole baseline without a mouse.
+      - The footer shows contextual key hints.
+      - Every key is documented in the help overlay.
+      - Esc only navigates back.
+      - Help is reachable from the dashboard.
+    dependencies: [REQ-018]
+    verification:
+      method: manual-review
+      evidence:
+        - TUI walkthrough notes
+        - key map review sign-off
+    guard_conditions:
+      - Keyboard control is complete; mouse support remains optional.
+    size_hint: m
+
+  - id: REQ-022
+    traces_to: [BR-14]
+    type: functional
+    title: JSON and non-interactive output
+    description: >-
+      WHEN JSON or non-interactive mode is requested, THE SYSTEM SHALL emit the
+      complete baseline result on stdout as schema-valid JSON without ANSI
+      escapes and SHALL return documented exit codes; in the TUI, e writes an
+      `egress-<timestamp>.json` file and E opens a path prompt.
+    priority: should
+    acceptance_criteria:
+      - The output validates against a documented schema.
+      - No ANSI or TUI escapes appear when stdout is not a TTY.
+      - Exit codes distinguish healthy, degraded and failed outcomes.
+      - JSON contains the same evidence as the TUI.
+      - The default filename is `egress-<timestamp>.json` and the path is shown after writing.
+      - Existing files are not overwritten without confirmation.
+      - Export works for completed and cancelled runs.
+    dependencies: [REQ-018]
+    verification:
+      method: test
+      evidence:
+        - JSON schema validation report
+        - CLI test report
+    guard_conditions:
+      - No secrets or unrelated host data are exported.
+      - Non-interactive output contains no terminal control sequences.
+    size_hint: m
+
+  - id: REQ-023
+    traces_to: [BR-15]
+    type: functional
+    title: Proxy and VPN context display
+    description: >-
+      WHEN the dashboard renders, THE SYSTEM SHALL display detected proxy
+      settings and VPN-like interfaces or routes as context and SHALL state when
+      none are detected.
+    priority: should
+    acceptance_criteria:
+      - Detected settings are shown with their source.
+      - The absence of proxy or VPN context is shown explicitly.
+      - No proxy bypass or A/B run occurs.
+      - The context appears in the TUI and JSON output.
+    dependencies: [REQ-008]
+    verification:
+      method: test
+      evidence:
+        - unit test report
+        - TUI walkthrough notes
+    guard_conditions:
+      - Context is informational only.
+    size_hint: s
+
+  - id: REQ-024
+    traces_to: [BR-16]
+    type: functional
+    title: README and operational documentation
+    description: >-
+      THE SYSTEM SHALL be documented in the repository README with installation,
+      unprivileged and elevated modes, privacy behavior, JSON usage and exit
+      codes.
+    priority: could
+    acceptance_criteria:
+      - The README covers installation and both privilege modes.
+      - The README documents the local-only privacy rule.
+      - The README documents JSON output and exit codes.
+      - Keys are discoverable without reading the README.
+    dependencies: [REQ-022]
+    verification:
+      method: inspection
+      evidence:
+        - documentation review sign-off
+    guard_conditions:
+      - Documentation is written in English.
+    size_hint: xs
+
+  - id: REQ-025
+    traces_to: [BR-04]
+    type: non-functional
+    title: Dashboard rendering and adaptive layout
+    description: >-
+      WHEN baseline results are available, THE SYSTEM SHALL render a
+      master-detail dashboard with the path list on the left and selected
+      evidence on the right, collapse to a stacked view on narrow terminals and
+      use color plus symbols or text so status is readable in monochrome.
+    priority: must
+    acceptance_criteria:
+      - At 80x24 or wider the path list and evidence pane are both visible.
+      - Below 80x24 the layout collapses without losing the selected check.
+      - Status uses color plus a symbol or text and remains readable in monochrome.
+      - NO_COLOR is honored and 256-color and 16-color terminals both render.
+      - An ASCII fallback is available for non-Unicode terminals.
+      - Normal layout works from 80x24 and compact from 60x20.
+      - A resize message appears below 60x20 and rendering stops below 40x10.
+      - Resizing reflows without losing state.
+    dependencies: [REQ-018]
+    verification:
+      method: manual-review
+      evidence:
+        - TUI walkthrough notes
+        - terminal matrix
+    guard_conditions:
+      - Status never depends on color alone.
+      - Minimum terminal sizes are enforced by the UI.
+    size_hint: l

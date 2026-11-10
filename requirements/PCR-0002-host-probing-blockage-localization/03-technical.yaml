@@ -1,7 +1,7 @@
 pcr: PCR-0002
 title: Interactive host probing and blockage localization
 status: draft
-revised: 2026-11-10
+revised: 2026-11-11
 frozen_by: null
 frozen_at: null
 pipeline_gates:
@@ -9,4 +9,442 @@ pipeline_gates:
   plan_approval: { required: true, passed: false }
   verification_evidence: { required: true, passed: false }
   guard_conditions: { required: true, passed: false }
-requirements: []
+requirements:
+  - id: REQ-001
+    traces_to: [BR-07]
+    type: functional
+    title: Static preset target catalog
+    description: >-
+      THE SYSTEM SHALL ship a built-in target catalog containing YouTube,
+      Telegram, Discord, GitHub, Google, Cloudflare, Wikipedia, X, Tor, 1.1.1.1
+      and 8.8.8.8, each with a display name, host, category and default
+      ports/protocols, and SHALL report the catalog version in every session.
+    priority: must
+    acceptance_criteria:
+      - All eleven catalog entries are present and selectable by display name.
+      - Each entry exposes the address that will be probed.
+      - The catalog loads with no configuration file and no network access.
+      - JSON export identifies the catalog version.
+      - No remote catalog update is attempted in v1.
+    dependencies: []
+    verification:
+      method: inspection
+      evidence:
+        - catalog review sign-off
+        - traceability matrix
+    guard_conditions:
+      - The catalog stays static and built into the binary in v1.
+      - Catalog entries require no remote update mechanism.
+    size_hint: s
+
+  - id: REQ-002
+    traces_to: [BR-01]
+    type: functional
+    title: Target picker with multi-select and filter
+    description: >-
+      WHEN the user opens the picker from the dashboard, THE SYSTEM SHALL list
+      presets by category with visible checkboxes, filter the list on `/`, toggle
+      a target on `Space`, show the selected count, accept a custom target
+      inline and start the run on `Enter` only when at least one target is
+      selected.
+    priority: must
+    acceptance_criteria:
+      - Presets show a display label and the address that will be probed.
+      - Checkbox state is visible for every row.
+      - "`/` filters the catalog without clearing the current selection."
+      - The selected count is visible at all times.
+      - A custom target can be added without leaving the picker.
+      - Enter with an empty selection starts nothing and explains why.
+      - Esc returns to the dashboard without running anything.
+    dependencies: [REQ-001]
+    verification:
+      method: test
+      evidence:
+        - TUI walkthrough notes
+        - traceability matrix
+    guard_conditions:
+      - An empty selection cannot start a run.
+      - Filtering never changes the selection silently.
+    size_hint: m
+
+  - id: REQ-003
+    traces_to: [BR-02]
+    type: functional
+    title: Custom target validation and resolution
+    description: >-
+      WHEN the user submits a custom target, THE SYSTEM SHALL accept a hostname
+      or IPv4/IPv6 literal with an optional port and protocol override, validate
+      it inline, resolve hostnames before probing and SHALL show the resolved
+      addresses.
+    priority: must
+    acceptance_criteria:
+      - A valid target starts a run.
+      - Invalid input shows a concrete error, does not crash and does not start a run.
+      - IPv6 literals are accepted.
+      - Ports outside 1-65535 are rejected.
+      - Resolved addresses are visible before or during the run.
+      - Duplicate selections are de-duplicated.
+    dependencies: [REQ-002]
+    verification:
+      method: test
+      evidence:
+        - unit test report
+        - TUI walkthrough notes
+    guard_conditions:
+      - Full URLs with scheme and path remain out of v1.
+      - An unresolvable hostname produces a diagnostic result, not a crash.
+    size_hint: s
+
+  - id: REQ-004
+    traces_to: [BR-03]
+    type: functional
+    title: Layered probe ladder per target
+    description: >-
+      WHEN a run starts for a target, THE SYSTEM SHALL execute DNS resolution
+      with system-resolver and DoH comparison, TCP connect on the target's
+      ports, a TLS ClientHello with real, decoy and absent SNI, an HTTP GET and
+      ICMP echo, and SHALL run traceroute alongside the ladder with each step
+      independent.
+    priority: must
+    acceptance_criteria:
+      - Every ladder step produces a result or a skipped reason.
+      - A DNS failure does not prevent TCP probes when an IP address is known.
+      - A failed step does not cancel later steps.
+      - Each step records order, timestamp, duration, target and raw evidence.
+      - Real, decoy and absent SNI results are distinguishable.
+      - All step results are retained for the verdict and the export.
+    dependencies: [REQ-002, REQ-003]
+    verification:
+      method: test
+      evidence:
+        - integration test report
+        - traceability matrix
+    guard_conditions:
+      - Probes go only to selected targets and declared resolvers.
+      - Every probe step has a bounded timeout.
+    size_hint: l
+
+  - id: REQ-005
+    traces_to: [BR-11]
+    type: business-rule
+    title: Privilege mode and tracing method
+    description: >-
+      WHEN a run starts, THE SYSTEM SHALL use UDP tracepath-style tracing in
+      unprivileged mode, SHALL add ICMP traceroute only in elevated mode, and
+      SHALL label the session as limited or elevated in the UI and the export.
+    priority: must
+    acceptance_criteria:
+      - An unprivileged run completes the ladder with UDP tracing.
+      - An elevated run adds ICMP tracing without changing the meaning of other results.
+      - The session mode is visible in the UI and JSON.
+      - Missing raw-socket capability is explained with an elevation hint.
+      - The tool never prompts for or attempts privilege escalation.
+    dependencies: [REQ-004]
+    verification:
+      method: test
+      evidence:
+        - unprivileged test report
+        - elevated mode test report
+    guard_conditions:
+      - Unprivileged execution is the default.
+      - Elevation is explicit and user-initiated.
+    size_hint: m
+
+  - id: REQ-006
+    traces_to: [BR-04]
+    type: functional
+    title: Path discovery and drop-hop localization
+    description: >-
+      WHEN traceroute data is available, THE SYSTEM SHALL build a hop table with
+      per-hop loss and latency, and SHALL report either the first
+      non-responding hop after the last responding hop or an inconclusive range
+      with alternative hypotheses, cross-checked against ladder outcomes.
+    priority: must
+    acceptance_criteria:
+      - A hop table shows per-hop statistics for every target.
+      - The result states "drop after hop N" or "inconclusive between hops N and M".
+      - A non-responding hop is never presented as proof of blocking on its own.
+      - Localization is cross-checked against TCP and DNS probe outcomes.
+      - Ambiguous stars produce an inconclusive segment with alternatives.
+    dependencies: [REQ-004, REQ-005]
+    verification:
+      method: simulation
+      evidence:
+        - simulated trace test report
+        - traceability matrix
+    guard_conditions:
+      - Localization relies on a single vantage point.
+      - No packet capture is used in v1.
+    size_hint: l
+
+  - id: REQ-007
+    traces_to: [BR-05]
+    type: business-rule
+    title: Blockage taxonomy and ranked hypothesis
+    description: >-
+      WHEN ladder and hop evidence is complete, THE SYSTEM SHALL produce one
+      ranked hypothesis from the taxonomy - DNS tampering, TCP RST injection, IP
+      drop/blackhole, port block, SNI/TLS filtering, HTTP block/captive portal,
+      throttling or unknown - with a confidence level, supporting evidence and
+      rejected alternatives.
+    priority: must
+    acceptance_criteria:
+      - Every target ends with a type or unknown, a confidence level and at least one evidence line.
+      - A type is never shown without evidence.
+      - Rejected alternatives are available on demand.
+      - The single-vantage-point caveat accompanies every verdict.
+      - Unknown is a valid terminal outcome.
+    dependencies: [REQ-004, REQ-006]
+    verification:
+      method: test
+      evidence:
+        - classification test report
+        - verdict rule review sign-off
+    guard_conditions:
+      - A verdict is never produced without evidence.
+      - The taxonomy is not extended without a new PCR.
+    size_hint: l
+
+  - id: REQ-008
+    traces_to: [BR-06]
+    type: business-rule
+    title: Active-versus-passive evidence interpretation
+    description: >-
+      WHEN evidence is classified, THE SYSTEM SHALL label each observation as
+      active rejection or passive silence, SHALL NOT treat timeouts alone as
+      proof of blocking, and SHALL account for ICMP rate limiting and CDN/geo-DNS
+      answer variability.
+    priority: must
+    acceptance_criteria:
+      - Every evidence line is labelled active or passive.
+      - A timeout-only case cannot receive high confidence.
+      - DNS verdicts show both answer sets and the CDN/geo caveat.
+      - ICMP rate limiting is named when responses are absent.
+      - RST-based and drop-based verdicts are distinguishable.
+    dependencies: [REQ-004, REQ-007]
+    verification:
+      method: test
+      evidence:
+        - unit test report
+        - interpretation review sign-off
+    guard_conditions:
+      - Silence is never presented as proof of censorship.
+      - CDN and geo-DNS differences are not reported as tampering.
+    size_hint: m
+
+  - id: REQ-009
+    traces_to: [BR-08]
+    type: non-functional
+    title: Scheduling, concurrency and cancellation
+    description: >-
+      WHILE a run is active, THE SYSTEM SHALL run at most four targets
+      concurrently, keep per-target ladder steps sequential, bound per-probe
+      timeouts and retries, and SHALL handle `x`, `X`, `Ctrl-C` and `Esc` as
+      specified.
+    priority: must
+    acceptance_criteria:
+      - No more than four targets run at once.
+      - Per-target step order is preserved.
+      - x stops only the current target; X stops every target.
+      - Ctrl-C prompts before quitting; Esc never cancels a run.
+      - Cancellation takes effect promptly and keeps partial results exportable.
+      - A hung probe cannot stall the session beyond its timeout.
+      - The UI stays responsive during a run.
+    dependencies: [REQ-004]
+    verification:
+      method: test
+      evidence:
+        - concurrency test report
+        - cancellation test report
+    guard_conditions:
+      - Concurrency is capped at four targets.
+      - Every probe timeout is bounded.
+    size_hint: m
+
+  - id: REQ-010
+    traces_to: [BR-09]
+    type: non-functional
+    title: Adaptive run view with target tabs
+    description: >-
+      WHILE a run is active, THE SYSTEM SHALL render target tabs with Ladder,
+      Hops and Verdict views for the active target, show the ladder and hop
+      table side by side on wide terminals, switch between them on narrow
+      terminals, and keep status readable without color.
+    priority: must
+    acceptance_criteria:
+      - Progress is visible for the running target and step.
+      - Target tabs show running, done and cancelled states.
+      - Every target has a completed view at the end of the run.
+      - Wide terminals show ladder and hops together; narrow terminals switch between them.
+      - Status is readable in monochrome and in the ASCII fallback.
+      - NO_COLOR is honored and 256-color and 16-color terminals both render.
+      - Normal layout works from 80x24, compact from 60x20, a resize message appears below 60x20 and rendering stops below 40x10.
+      - Resizing reflows without losing state.
+      - Help is reachable from the results view.
+    dependencies: [REQ-007, REQ-009]
+    verification:
+      method: manual-review
+      evidence:
+        - TUI walkthrough notes
+        - terminal matrix
+    guard_conditions:
+      - Status never depends on color alone.
+      - Minimum terminal sizes are enforced by the UI.
+    size_hint: l
+
+  - id: REQ-011
+    traces_to: [BR-10]
+    type: functional
+    title: Session JSON export
+    description: >-
+      WHEN the user presses `e` or confirms a path with `E`, THE SYSTEM SHALL
+      write the full session - targets, ladder steps, raw evidence, hops,
+      verdict, confidence, timestamps, privilege mode and catalog version - as
+      schema-valid JSON and SHALL show the written path.
+    priority: must
+    acceptance_criteria:
+      - The export validates against the documented schema.
+      - The export contains the same evidence as the UI.
+      - The default filename is `egress-<timestamp>.json` in the current directory.
+      - The written path is shown after export.
+      - Existing files are not overwritten without confirmation.
+      - Export works after a completed run and for partial results after cancellation.
+      - No secrets or unrelated host data are included.
+    dependencies: [REQ-007, REQ-010]
+    verification:
+      method: test
+      evidence:
+        - JSON schema validation report
+        - TUI walkthrough notes
+    guard_conditions:
+      - No database or history is retained.
+      - Export contains only data from the current session.
+    size_hint: m
+
+  - id: REQ-012
+    traces_to: [BR-12]
+    type: constraint
+    title: Local-only operation and destination transparency
+    description: >-
+      THE SYSTEM SHALL send no telemetry, uploads, enrichment requests or
+      background calls; the only outbound traffic SHALL be probes to selected
+      targets and declared public resolvers, and the run's destination list
+      SHALL be visible in the UI and the export.
+    priority: must
+    acceptance_criteria:
+      - The destination list for a run is viewable.
+      - Network capture shows no traffic beyond declared probes.
+      - No persistent identifier is created or stored.
+      - Behavior without internet is explicit and diagnostic.
+      - The privacy rule is documented.
+    dependencies: [REQ-004]
+    verification:
+      method: inspection
+      evidence:
+        - network capture review
+        - code review sign-off
+    guard_conditions:
+      - Only declared destinations receive traffic.
+      - No telemetry or enrichment API is added.
+    size_hint: s
+
+  - id: REQ-013
+    traces_to: [BR-13]
+    type: functional
+    title: Proxy and VPN context display
+    description: >-
+      WHEN the run view or export renders, THE SYSTEM SHALL show detected proxy
+      environment settings and VPN-like interfaces or routes as context, and
+      SHALL state explicitly when none are detected.
+    priority: should
+    acceptance_criteria:
+      - Detected settings are shown with their source.
+      - The absence of proxy or VPN context is shown explicitly.
+      - No bypass or direct-versus-proxied run occurs.
+      - The context appears in the UI and the JSON export.
+    dependencies: [REQ-010]
+    verification:
+      method: test
+      evidence:
+        - unit test report
+        - TUI walkthrough notes
+    guard_conditions:
+      - Context is informational only.
+      - Proxy and VPN settings are never modified.
+    size_hint: s
+
+  - id: REQ-014
+    traces_to: [BR-14]
+    type: business-rule
+    title: Limitations and confidence disclosure
+    description: >-
+      THE SYSTEM SHALL state, in every verdict, results view and export, the
+      single-vantage-point limitation, the main false-positive risks of the
+      probes used and that absence of evidence is not proof of blocking, and
+      SHALL suggest re-running from another network.
+    priority: should
+    acceptance_criteria:
+      - The caveat appears in the UI and JSON for every target.
+      - Unknown is preferred when evidence is insufficient.
+      - The external-validation suggestion is visible without leaving the tool.
+      - False-positive risks name the probes that cause them.
+    dependencies: [REQ-007, REQ-008]
+    verification:
+      method: inspection
+      evidence:
+        - verdict review sign-off
+        - TUI walkthrough notes
+    guard_conditions:
+      - The caveat cannot be hidden or collapsed away.
+      - No verdict claims proof of blocking.
+    size_hint: s
+
+  - id: REQ-015
+    traces_to: [BR-15]
+    type: constraint
+    title: Tool survey and feature rationale document
+    description: >-
+      THE SYSTEM SHALL include a repository document that compares ping,
+      traceroute, mtr, tcptraceroute, nexttrace, trippy, dig/dog, curl, OONI
+      Probe and RIPE Atlas, and lists adopted, deferred and rejected features
+      with links to the corresponding BRs.
+    priority: should
+    acceptance_criteria:
+      - Each surveyed tool is named with its relevant capability and privilege model.
+      - Adopted and excluded features are listed with reasons.
+      - Every adopted feature maps to a BR.
+      - The document is updated when scope changes.
+    dependencies: []
+    verification:
+      method: inspection
+      evidence:
+        - documentation review sign-off
+    guard_conditions:
+      - The document is written in English.
+      - Only surveyed tools are named.
+    size_hint: s
+
+  - id: REQ-016
+    traces_to: [BR-16]
+    type: functional
+    title: In-app help for picker and results
+    description: >-
+      WHEN the user presses `?` in the picker or results view, THE SYSTEM SHALL
+      show an overlay that explains target selection, ladder steps, hop-table
+      reading, the blockage taxonomy, confidence levels and keyboard shortcuts,
+      and SHALL dismiss it without losing the run.
+    priority: could
+    acceptance_criteria:
+      - Help is reachable from the picker and the results view.
+      - Help covers all keys and taxonomy terms.
+      - Help can be dismissed without losing the run.
+    dependencies: [REQ-010]
+    verification:
+      method: manual-review
+      evidence:
+        - TUI walkthrough notes
+        - key map review sign-off
+    guard_conditions:
+      - Help content matches the implemented key map.
+      - Dismissing help never resets the run.
+    size_hint: s

@@ -2,7 +2,7 @@
 pcr: PCR-0002
 title: Interactive host probing and blockage localization
 slug: host-probing-blockage-localization
-status: br_approved
+status: technical
 requester: gothchibjo (repo owner)
 channel: chat paste
 received: 2026-11-10
