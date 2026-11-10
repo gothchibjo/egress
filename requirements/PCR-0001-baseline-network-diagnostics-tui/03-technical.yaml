@@ -1,11 +1,11 @@
 pcr: PCR-0001
 title: Baseline network diagnostics and TUI shell
-status: draft
+status: frozen
 revised: 2026-11-11
-frozen_by: null
-frozen_at: null
+frozen_by: gothchibjo
+frozen_at: 2026-11-11
 pipeline_gates:
-  requirement_freeze: { required: true, passed: false }
+  requirement_freeze: { required: true, passed: true }
   plan_approval: { required: true, passed: false }
   verification_evidence: { required: true, passed: false }
   guard_conditions: { required: true, passed: false }
