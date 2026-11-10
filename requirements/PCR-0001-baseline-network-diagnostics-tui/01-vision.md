@@ -2,7 +2,7 @@
 pcr: PCR-0001
 title: Baseline network diagnostics and TUI shell
 slug: baseline-network-diagnostics-tui
-status: br_review
+status: br_approved
 requester: gothchibjo (repo owner)
 channel: chat paste
 received: 2026-11-10

@@ -1,11 +1,11 @@
 ---
 pcr: PCR-0001
 title: Baseline network diagnostics and TUI shell
-status: proposed
+status: approved
 revised: 2026-11-10
 based_on: 01-vision.md
-approved_by: null
-approved_at: null
+approved_by: gothchibjo
+approved_at: 2026-11-10
 revisions: []
 ---
 
