@@ -42,3 +42,16 @@ Next, you can select one of the preset hosts or IPs, or enter your own host or I
 > Q2 — proxy/VPN control: Should v1 compare direct vs proxy/VPN paths as a control? ➡️ Detect and show proxy/VPN settings as context only; no automatic A/B comparison in v1.
 
 > CUSTOMER (relay): Keep v1 lean — no MTR, TCP SYN tracing, distributed measurement, ASN/BGP, throttling quantification or Windows; proxy/VPN detected and shown only.
+
+### CL-3 (answered) — 2026-11-10
+
+> Q1 — TUI layout: Which base layout should be used? ➡️ Master-detail plus tabs: dashboard with the path list on the left and evidence on the right; run view with target tabs and adaptive panes; narrow terminals collapse to stacked or tabbed views.
+> Q2 — target picker: How should targets be selected? ➡️ Multi-select checkboxes, `space` toggles, `/` filters the catalog, custom target entry on the same screen, `enter` runs the selected targets.
+> Q3 — run view: How should run results be shown? ➡️ Target tabs on top; Ladder, Hops and Verdict as inner views; wide terminals show ladder and hops side by side; narrow terminals switch between them.
+> Q4 — keys: Which control scheme should be fixed? ➡️ Arrows and `j`/`k` both navigate; `enter` drills in; `esc` goes back; single-letter shortcuts for actions; `?` opens help.
+> Q5 — color: Which visual policy should apply? ➡️ Semantic colors plus symbols and text; 256-color and 16-color fallbacks; `NO_COLOR` support; ASCII fallback for non-Unicode terminals; status never depends on color alone.
+> Q6 — minimum size: Which minimum terminal size should be supported? ➡️ Normal from 80x24; compact layout from 60x20; below that a clear resize message; below 40x10 refuse to render.
+> Q7 — export: How does result export work? ➡️ `e` writes `egress-<timestamp>.json` in the current directory and shows the path in a toast; `E` opens a path prompt if needed.
+> Q8 — cancel: How should runs be cancelled and the app exited? ➡️ `x` cancels the current target, `X` cancels all targets, `Ctrl-C` asks to quit and keeps partial results exportable; `esc` only navigates back.
+
+> CUSTOMER (relay): Master-detail + tabs; multi-select picker with search; target tabs and adaptive panes; arrows + vim + shortcuts; color with symbols and fallbacks; 80x24 normal, 60x20 compact, refuse below 40x10; timestamped JSON export with toast; `x` / `X` / `Ctrl-C` cancellation.

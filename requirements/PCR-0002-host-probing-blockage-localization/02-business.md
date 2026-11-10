@@ -75,6 +75,13 @@ capture and no automatic remediation.
 | Throttling is inferred only from coarse timing and loss observations in v1; no throughput test exists, so a throttling verdict is low confidence at best | [CL-1 Q4], [CL-2 Q1]        | yes      |
 | Session results live in memory and are exported on demand; nothing persists after exit unless exported                                                   | [CL-1 Q7]                   | yes      |
 | UI is in English; verdicts include the single-vantage-point caveat                                                                                       | registration batch, analyst | yes      |
+| Target picker is multi-select with checkboxes, `space` toggles, `/` filters, inline custom target entry and `Enter` to run                               | [CL-3 Q2]                   | yes      |
+| Run view uses target tabs with Ladder/Hops/Verdict inner views; wide terminals show ladder and hops side by side, narrow terminals switch between them   | [CL-3 Q3]                   | yes      |
+| Keyboard map: arrows and j/k navigate, Enter drills in, Esc goes back, single-letter actions, `?` opens help                                             | [CL-3 Q4]                   | yes      |
+| Visual policy: semantic colors plus symbols and text, 256/16-color fallbacks, `NO_COLOR`, ASCII fallback; status never relies on color alone             | [CL-3 Q5]                   | yes      |
+| Terminal sizes: normal from 80x24, compact from 60x20, resize message below that, refuse below 40x10                                                     | [CL-3 Q6]                   | yes      |
+| Export: `e` writes a timestamped JSON file and shows a toast; `E` opens a path prompt                                                                    | [CL-3 Q7]                   | yes      |
+| Cancellation: `x` cancels current, `X` cancels all, `Ctrl-C` confirms quit and keeps partial results; `Esc` only navigates back                          | [CL-3 Q8]                   | yes      |
 
 # Non-Goals
 
@@ -97,17 +104,20 @@ capture and no automatic remediation.
 ### BR-01 — Target picker and selection
 
 - description: From the dashboard the user opens a target picker that lists
-  presets grouped by category and offers a custom-target entry; the user can
-  select one or more targets with the keyboard and sees exactly what will be
-  probed before starting.
+  presets grouped by category with checkboxes, offers inline custom-target entry
+  and filters with `/`. `Space` toggles a target, `Enter` runs the selected set,
+  and the picker shows exactly what will be probed before starting.
 - priority: must
 - rationale: The vision starts with choosing a preset host/IP or entering a
-  custom one.
+  custom one; multi-select and search keep the 11-entry catalog usable without
+  leaving the keyboard.
 - acceptance criteria (business): Presets show a human label and the address
-  that will be probed; multiple targets can be selected; a custom target can be
-  added from the same screen; the selected set is listed before the run starts;
-  the user can return to the dashboard without running anything.
-- traces to: [V §1], [CL-1 Q1], [CL-1 Q5], [CL-1 Q6]
+  that will be probed; checkbox state is visible; `/` filters the catalog
+  without losing the current selection; the selected count is visible; a custom
+  target can be added from the same screen; an empty selection cannot start a
+  run; `Enter` starts the run; the user can return to the dashboard without
+  running anything.
+- traces to: [V §1], [CL-1 Q1], [CL-1 Q5], [CL-1 Q6], [CL-3 Q2]
 - depends on: none
 
 ### BR-02 — Custom target validation
@@ -215,47 +225,63 @@ capture and no automatic remediation.
 
 - description: Selected targets run in parallel with a maximum of four
   concurrent targets; probes within a target run sequentially in ladder order;
-  per-probe timeouts and retries are bounded; the user can cancel a run, which
-  stops new probes and reports partial results.
+  per-probe timeouts and retries are bounded. `x` cancels the current target,
+  `X` cancels all targets, and `Ctrl-C` asks to quit while keeping partial
+  results; `Esc` only navigates back.
 - priority: must
 - rationale: The customer chose sequential-per-target with four parallel targets
   to keep evidence readable and load bounded.
 - acceptance criteria (business): No more than four targets run at once;
-  per-target step order is preserved; cancellation takes effect promptly and
-  keeps partial results exportable; the UI stays responsive during a run; a hung
-  probe cannot stall the whole session beyond its timeout.
-- traces to: [V §1], [CL-1 Q6]
+  per-target step order is preserved; `x` stops only the current target; `X`
+  stops every target; cancellation takes effect promptly and keeps partial
+  results exportable; `Ctrl-C` prompts before quitting; `Esc` never cancels a
+  run; the UI stays responsive during a run; a hung probe cannot stall the whole
+  session beyond its timeout.
+- traces to: [V §1], [CL-1 Q6], [CL-3 Q8]
 - depends on: BR-03
 
 ### BR-09 — Live results UI
 
-- description: Per-target cards show the current step, ladder results, the hop
-  table, the verdict and its confidence; the user can navigate between targets,
-  steps and hops, re-run, cancel, export and open help using the keyboard, and
-  the layout adapts to terminal resizing.
+- description: The run view shows target tabs on top and Ladder, Hops and
+  Verdict as inner views for the active target. Wide terminals show the ladder
+  and hop table side by side; narrow terminals switch between them. The view
+  shows the current step, evidence, verdict and confidence, and uses color plus
+  a symbol or text so status remains readable without color. The user can
+  navigate targets, steps and hops, re-run, cancel, export and open help using
+  the keyboard.
 - priority: must
-- rationale: The vision requires terminal display and keyboard control; live
-  progress is what makes a long ladder understandable.
+- rationale: The vision requires terminal display and keyboard control; tabs and
+  adaptive panes keep the active target readable while the ladder runs.
 - acceptance criteria (business): Progress is visible for the running target and
-  step; every target has a completed card at the end; all actions are reachable
-  by keyboard; help is reachable from the results view; resizing keeps the
-  content usable; quitting mid-run is possible.
-- traces to: [V §1], [V §3], [CL-1 Q6], [CL-1 Q7]
+  step; target tabs show running, done and cancelled states; every target has a
+  completed view at the end; wide terminals show ladder and hops together while
+  narrow terminals switch between them; status is readable in monochrome and
+  ASCII fallback; `NO_COLOR` is honored; normal layout works from 80x24, compact
+  from 60x20, a resize message appears below 60x20 and rendering stops below
+  40x10; all actions are reachable by keyboard; help is reachable from the
+  results view; resizing reflows without losing state; quitting mid-run is
+  possible.
+- traces to: [V §1], [V §3], [CL-1 Q6], [CL-1 Q7], [CL-3 Q1], [CL-3 Q3], [CL-3
+  Q4], [CL-3 Q5], [CL-3 Q6]
 - depends on: BR-05, BR-08
 
 ### BR-10 — JSON session export
 
 - description: The user can export the full session — targets, ladder steps, raw
   evidence, hops, verdict, confidence, timestamps, privilege mode and catalog
-  version — as JSON on demand, with no database or history retained.
+  version — as JSON on demand, with no database or history retained. `e` writes
+  a timestamped `egress-<timestamp>.json` to the current directory and shows the
+  path in a toast; `E` opens a path prompt.
 - priority: must
 - rationale: The customer chose JSON export so findings can be attached to
   reports and compared between networks.
 - acceptance criteria (business): The export validates against a documented
-  schema; it contains the same evidence as the UI; the file path is shown after
-  export; export works after a completed run and for partial results after
-  cancellation; no secrets or unrelated host data are included.
-- traces to: [V §1], [CL-1 Q7]
+  schema; it contains the same evidence as the UI; the default filename is
+  timestamped; the path is shown after export; existing files are not
+  overwritten without confirmation; export works after a completed run and for
+  partial results after cancellation; no secrets or unrelated host data are
+  included.
+- traces to: [V §1], [CL-1 Q7], [CL-3 Q7]
 - depends on: BR-05, BR-09
 
 ### BR-11 — Privilege handling

@@ -55,24 +55,30 @@ host.
 
 # Assumptions Ledger
 
-| Assumption / decision                                                                                                        | Source               | Resolved |
-| :--------------------------------------------------------------------------------------------------------------------------- | :------------------- | :------- |
-| Artifacts and UI are in English (repo language is English)                                                                   | registration batch   | yes      |
-| v1 targets macOS and Linux                                                                                                   | [CL-1 Q5]            | yes      |
-| Baseline completes within 30 seconds on a typical network                                                                    | [CL-1 Q3]            | yes      |
-| Baseline covers the full recommended check set                                                                               | [CL-1 Q1]            | yes      |
-| Baseline auto-runs at launch and lands on a dashboard                                                                        | [CL-1 Q2]            | yes      |
-| Unprivileged by default; elevation is optional and explicit                                                                  | [CL-1 Q4]            | yes      |
-| TUI is primary; `--json` and non-interactive modes exist                                                                     | [CL-1 Q6]            | yes      |
-| No telemetry, uploads or enrichment APIs; diagnostic probes to public resolvers/anchors are allowed                          | [CL-1 Q7], [CL-2 Q1] | yes      |
-| Curated multi-vendor anchor set is used                                                                                      | [CL-1 Q8]            | yes      |
-| Status model is pass / warn / fail / skipped, always backed by evidence                                                      | analyst decision     | yes      |
-| No automatic remediation or host reconfiguration                                                                             | [V §1], analyst      | yes      |
-| Per-probe timeouts, retries and thresholds are technical defaults set in the technical spec                                  | analyst              | yes      |
-| Only one baseline run executes at a time; re-run replaces the displayed result                                               | analyst              | yes      |
-| Non-TTY execution falls back to non-interactive output                                                                       | [CL-1 Q6]            | yes      |
-| A single vantage point cannot prove nationwide or ISP-wide blocking; the tool reports evidence and confidence, not certainty | research, analyst    | yes      |
-| Baseline history is not persisted; JSON export is the only artifact                                                          | [CL-1 Q6]            | yes      |
+| Assumption / decision                                                                                                                        | Source               | Resolved |
+| :------------------------------------------------------------------------------------------------------------------------------------------- | :------------------- | :------- |
+| Artifacts and UI are in English (repo language is English)                                                                                   | registration batch   | yes      |
+| v1 targets macOS and Linux                                                                                                                   | [CL-1 Q5]            | yes      |
+| Baseline completes within 30 seconds on a typical network                                                                                    | [CL-1 Q3]            | yes      |
+| Baseline covers the full recommended check set                                                                                               | [CL-1 Q1]            | yes      |
+| Baseline auto-runs at launch and lands on a dashboard                                                                                        | [CL-1 Q2]            | yes      |
+| Unprivileged by default; elevation is optional and explicit                                                                                  | [CL-1 Q4]            | yes      |
+| TUI is primary; `--json` and non-interactive modes exist                                                                                     | [CL-1 Q6]            | yes      |
+| No telemetry, uploads or enrichment APIs; diagnostic probes to public resolvers/anchors are allowed                                          | [CL-1 Q7], [CL-2 Q1] | yes      |
+| Curated multi-vendor anchor set is used                                                                                                      | [CL-1 Q8]            | yes      |
+| Status model is pass / warn / fail / skipped, always backed by evidence                                                                      | analyst decision     | yes      |
+| No automatic remediation or host reconfiguration                                                                                             | [V §1], analyst      | yes      |
+| Per-probe timeouts, retries and thresholds are technical defaults set in the technical spec                                                  | analyst              | yes      |
+| Only one baseline run executes at a time; re-run replaces the displayed result                                                               | analyst              | yes      |
+| Non-TTY execution falls back to non-interactive output                                                                                       | [CL-1 Q6]            | yes      |
+| A single vantage point cannot prove nationwide or ISP-wide blocking; the tool reports evidence and confidence, not certainty                 | research, analyst    | yes      |
+| Baseline history is not persisted; JSON export is the only artifact                                                                          | [CL-1 Q6]            | yes      |
+| TUI uses master-detail: path list on the left, selected check evidence on the right; narrow terminals collapse to a stacked view             | [CL-3 Q1]            | yes      |
+| Keyboard map: arrows and j/k navigate, Enter drills in, Esc goes back, single-letter actions, `?` opens help                                 | [CL-3 Q4]            | yes      |
+| Visual policy: semantic colors plus symbols and text, 256/16-color fallbacks, `NO_COLOR`, ASCII fallback; status never relies on color alone | [CL-3 Q5]            | yes      |
+| Terminal sizes: normal from 80x24, compact from 60x20, resize message below that, refuse below 40x10                                         | [CL-3 Q6]            | yes      |
+| Export: `e` writes a timestamped JSON file and shows a toast; `E` opens a path prompt                                                        | [CL-3 Q7]            | yes      |
+| Cancellation: `x` cancels current, `X` cancels all, `Ctrl-C` confirms quit and keeps partial results; `Esc` only navigates back              | [CL-3 Q8]            | yes      |
 
 # Non-Goals
 
@@ -139,32 +145,40 @@ host.
 
 ### BR-04 — Dashboard and overall verdict
 
-- description: The dashboard groups checks by path layer (local link → gateway →
-  DNS → transport → HTTP), shows an overall verdict, status counts, elapsed time
-  and the most actionable finding, and derives the verdict deterministically
-  from check statuses.
+- description: The dashboard uses a master-detail layout: checks are grouped by
+  path layer (local link → gateway → DNS → transport → HTTP) in a list on the
+  left, and the selected check's evidence appears on the right; narrow terminals
+  collapse to a stacked view. It shows an overall verdict, status counts,
+  elapsed time and the most actionable finding, and derives the verdict
+  deterministically from check statuses.
 - priority: must
-- rationale: The vision asks for displayed results; grouping by layer is what
-  makes a blockage understandable at a glance.
+- rationale: The vision asks for displayed results; grouping by layer and
+  showing evidence next to the list makes a blockage understandable at a glance.
 - acceptance criteria (business): The overall verdict follows a documented
   aggregation rule; re-running updates the dashboard in place; the most severe
   finding is identifiable without opening every check; no overall verdict is
-  produced when no check has run.
-- traces to: [V §2], [V §3], [CL-1 Q2]
+  produced when no check has run; at 80x24 or wider the list and evidence pane
+  are both visible; below 80x24 the layout collapses without losing the selected
+  check; status uses color plus a symbol or text and stays readable in
+  monochrome; resizing reflows without losing state.
+- traces to: [V §2], [V §3], [CL-1 Q2], [CL-3 Q1], [CL-3 Q5], [CL-3 Q6]
 - depends on: BR-03
 
 ### BR-05 — Keyboard-only operation
 
 - description: Every function — navigating checks, opening details, re-running,
-  entering target mode, opening help and quitting — is reachable by keyboard,
-  with a visible key-hint bar and an in-app help overlay; the mouse is optional.
+  entering target mode, opening help and quitting — is reachable by keyboard
+  using arrows and `j`/`k` to move, `Enter` to drill in, `Esc` to go back,
+  single-letter shortcuts for actions and `?` for help. A visible key-hint bar
+  and an in-app help overlay expose the map; the mouse is optional.
 - priority: must
 - rationale: The vision explicitly requires keyboard control and terminal-only
   display.
 - acceptance criteria (business): A user can review the whole baseline without a
-  mouse; every key is documented in the help overlay; resizing the terminal
-  keeps content usable; Ctrl-C exits cleanly at any time.
-- traces to: [V §3]
+  mouse; the footer shows contextual key hints; every key is documented in the
+  help overlay; `Esc` only navigates back; `Ctrl-C` asks for confirmation and
+  exits cleanly; resizing the terminal keeps content usable.
+- traces to: [V §3], [CL-3 Q4], [CL-3 Q8]
 - depends on: BR-04
 
 ### BR-06 — Unprivileged by default
@@ -186,14 +200,18 @@ host.
 - description: The baseline targets completion within 30 seconds on a typical
   network using per-probe timeouts, bounded retries and parallel independent
   probes; a probe that exceeds its budget is reported as timed out instead of
-  hanging the run.
+  hanging the run. The user can cancel the baseline with `x`, `X` or `Ctrl-C`;
+  cancellation stops new probes, retains completed checks and reports a
+  cancelled result.
 - priority: must
 - rationale: The customer accepted a 30-second budget; an unbounded diagnostic
   tool is worse than no tool on a broken network.
 - acceptance criteria (business): A typical run completes within 30 seconds; the
   dashboard remains reachable after per-probe budgets expire; timed-out checks
-  have a status and evidence; the user can quit immediately at any point.
-- traces to: [V §2], [CL-1 Q3]
+  have a status and evidence; cancellation takes effect promptly; completed
+  checks remain visible; a cancelled run is labelled and exportable; the user
+  can quit immediately at any point.
+- traces to: [V §2], [CL-1 Q3], [CL-3 Q8]
 - depends on: BR-01, BR-02
 
 ### BR-08 — macOS and Linux support
@@ -289,15 +307,19 @@ host.
 - description: The utility offers `--json` and a non-interactive mode that emit
   the complete baseline result — checks, evidence, verdict, timestamps, mode and
   platform — as stable machine-readable JSON on stdout, with documented exit
-  codes reflecting the verdict.
+  codes reflecting the verdict. In the interactive TUI, `e` writes a timestamped
+  JSON file to the current directory and shows the path in a toast; `E` opens a
+  path prompt.
 - priority: should
 - rationale: The customer chose scriptable output so results can be attached to
   bug reports and compared later.
 - acceptance criteria (business): Output validates against a documented schema;
   no ANSI or TUI escapes appear when stdout is not a TTY; exit codes distinguish
   healthy, degraded and failed outcomes; JSON contains the same evidence as the
-  TUI.
-- traces to: [CL-1 Q6], [V §3]
+  TUI; the default filename is timestamped; the path is shown after writing;
+  existing files are not overwritten without confirmation; export works for
+  completed and cancelled runs.
+- traces to: [CL-1 Q6], [CL-3 Q7], [V §3]
 - depends on: BR-03, BR-04
 
 ### BR-15 — Proxy and VPN context
