@@ -1,7 +1,7 @@
 ---
 pcr: PCR-0001
 title: Baseline network diagnostics and TUI shell
-status: plan_approved
+status: implementing
 basis: 03-technical.yaml (frozen)
 revised: 2026-11-11
 approved_by: gothchibjo
@@ -364,6 +364,13 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
   for every REQ.
 - Guard violations set `blocked`; only `resume` leaves that state.
 - History in this file is append-only.
+
+# Guard Log
+
+| Date       | REQ     | Guard                                                                        | Check                                                                                                                                                  | Result |
+| :--------- | :------ | :--------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- | :----- |
+| 2026-11-11 | REQ-001 | BR-03 remains approved; evidence fields cannot be dropped without a new PCR. | `02-business.md` is `approved`; frozen REQ-001 still requires check id, status, target, method, measured values, timestamp and diagnostic/error.       | pass   |
+| 2026-11-11 | REQ-001 | No result may present a status without evidence.                             | No implementation exists yet; the frozen model requires evidence for warn/fail and a stated reason for skipped, and the constructor will enforce both. | pass   |
 
 # Revisions
 

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gothchibjo/egress/schema/result-v1.json",
+  "title": "Egress baseline result envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "results"],
+  "properties": {
+    "schema_version": { "const": "v1" },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "check_id",
+          "status",
+          "target",
+          "method",
+          "measurements",
+          "timestamp"
+        ],
+        "properties": {
+          "check_id": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["pass", "warn", "fail", "skipped"] },
+          "target": { "type": "string", "minLength": 1 },
+          "method": { "type": "string", "minLength": 1 },
+          "measurements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "value"],
+              "properties": {
+                "name": { "type": "string", "minLength": 1 },
+                "value": { "type": "string", "minLength": 1 },
+                "unit": { "type": "string" }
+              }
+            }
+          },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "diagnostic": { "type": "string" },
+          "error": { "type": "string" }
+        }
+      }
+    }
+  }
+}
