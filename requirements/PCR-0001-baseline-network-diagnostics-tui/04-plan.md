@@ -384,6 +384,55 @@ REQ-001 stays open: the result model, validation and JSON envelope are proven,
 but the acceptance criterion "The TUI and JSON output expose the same evidence
 fields" needs the TUI adapter from REQ-021 and REQ-025.
 
+# Plan Revision 2 — TUI-First Execution Order
+
+Supersedes the order in "Execution Order" for the remainder of the work. The
+frozen REQ texts, acceptance criteria and guard conditions are unchanged.
+
+## Rationale
+
+REQ-001 and REQ-002 are open only on their TUI-facing criteria. Building the
+dashboard shell and keyboard layer before the probe set closes both REQs, gives
+the probe adapters a real integration target and makes progress observable
+instead of landing invisible modules.
+
+## Revised order
+
+1. **REQ-003** — anchor set (must, xs). Independent domain data.
+2. **REQ-008** — proxy environment detection (must, xs). Independent.
+3. **REQ-018** — aggregate verdict (must, m), built against frozen result
+   fixtures. The live-check integration of REQ-004…REQ-013 follows later; the
+   REQ stays open until that integration evidence exists.
+4. **REQ-025** — dashboard rendering and adaptive layout (must, l), driven by a
+   run provider that accepts fixture and live results.
+5. **REQ-021** — keyboard navigation and help overlay (must, m).
+6. **REQ-002 wiring** — `cmd/egress/main.go`, TTY detection, session start,
+   dashboard hand-off and clean exit. Then re-verify REQ-002 and REQ-001.
+7. **REQ-004…REQ-013** — probe set in frozen REQ order.
+8. **REQ-014** — time budget, timeouts and cancellation.
+9. **REQ-015…REQ-017** — platform abstraction, unprivileged execution, elevated
+   mode.
+10. **REQ-019** — offline and degraded classification.
+11. **REQ-020** — local-only egress policy.
+12. **REQ-022** — JSON and non-interactive output.
+13. **REQ-023** — proxy and VPN context display.
+14. **REQ-024** — README and operational documentation.
+15. **Complete** — re-run verification for every REQ, including the TUI parity
+    of REQ-001 and the dashboard hand-off of REQ-002.
+
+## TUI dependency decision
+
+REQ-025 and REQ-021 may add `github.com/charmbracelet/bubbletea`,
+`github.com/charmbracelet/lipgloss` and `github.com/charmbracelet/bubbles` for
+terminal rendering, keyboard input and resize handling. No domain package
+imports them.
+
+## Entry-point task (REQ-002)
+
+`cmd/egress/main.go` is created after REQ-025 and REQ-021: detect a TTY, build
+the check list, start one session, render the dashboard and exit cleanly. It is
+recorded as part of REQ-002, not as a new requirement.
+
 # Revisions
 
 - 2026-11-11 — draft v1 authored from frozen `03-technical.yaml` (analyst).
@@ -392,3 +441,8 @@ fields" needs the TUI adapter from REQ-021 and REQ-025.
   produce the schema report; it is not a runtime dependency.
 - 2026-11-11 — REQ-002 implements the orchestration runner; the `cmd/egress`
   entry point stays pending until a dashboard adapter exists.
+- 2026-11-11 — execution order revised to bring REQ-018, REQ-025, REQ-021 and
+  the entry point before the probe set; approved by gothchibjo in chat. Revision
+  1 order remains above.
+- 2026-11-11 — Plan Revision 2 approved explicitly by gothchibjo;
+  `plan_approval` remains passed.
