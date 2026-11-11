@@ -1,0 +1,14 @@
+=== RUN   TestDetectProxyEnvEmpty
+--- PASS: TestDetectProxyEnvEmpty (0.00s)
+=== RUN   TestDetectProxyEnvUppercase
+--- PASS: TestDetectProxyEnvUppercase (0.00s)
+=== RUN   TestDetectProxyEnvLowercaseSources
+--- PASS: TestDetectProxyEnvLowercaseSources (0.00s)
+=== RUN   TestDetectProxyEnvReportsBothCaseVariants
+--- PASS: TestDetectProxyEnvReportsBothCaseVariants (0.00s)
+=== RUN   TestDetectProxyEnvRedactsCredentials
+--- PASS: TestDetectProxyEnvRedactsCredentials (0.00s)
+=== RUN   TestDetectProxyEnvReadsProcessEnvironment
+--- PASS: TestDetectProxyEnvReadsProcessEnvironment (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/platform	0.442s

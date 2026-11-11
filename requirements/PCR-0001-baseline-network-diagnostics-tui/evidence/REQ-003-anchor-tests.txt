@@ -1,0 +1,6 @@
+=== RUN   TestBaselineAnchors
+--- PASS: TestBaselineAnchors (0.00s)
+=== RUN   TestBaselineAnchorsReturnsCopy
+--- PASS: TestBaselineAnchorsReturnsCopy (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/domain	0.321s

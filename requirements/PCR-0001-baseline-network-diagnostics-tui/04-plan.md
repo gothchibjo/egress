@@ -382,10 +382,21 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | REQ     | verification.method | evidence artifact                                                           | status (open/done/waived) |
 | :------ | :------------------ | :-------------------------------------------------------------------------- | :------------------------ |
 | REQ-001 | test                | `evidence/REQ-001-unit-tests.txt`; `evidence/REQ-001-schema-validation.txt` | open                      |
+| REQ-003 | inspection          | `evidence/REQ-003-anchor-review.md`; `evidence/REQ-003-traceability.md`     | open                      |
+| REQ-008 | test                | `evidence/REQ-008-unit-tests.txt`; `evidence/REQ-008-traceability.md`       | open                      |
 
 REQ-001 stays open: the result model, validation and JSON envelope are proven,
 but the acceptance criterion "The TUI and JSON output expose the same evidence
 fields" needs the TUI adapter from REQ-021 and REQ-025.
+
+REQ-003 stays open: the catalog, its documentation and the traceability matrix
+exist, but anchor visibility needs the TUI and JSON adapters (REQ-025, REQ-022),
+the single-failing-anchor warning needs REQ-018, and the reviewer sign-off in
+`evidence/REQ-003-anchor-review.md` is still pending.
+
+REQ-008 stays open: detection, source reporting, explicit absence and credential
+redaction are covered by unit tests, but acceptance criterion "Detection is
+present in the TUI and JSON output" needs REQ-023 and REQ-022.
 
 # Plan Revision 2 — TUI-First Execution Order
 
@@ -449,3 +460,5 @@ recorded as part of REQ-002, not as a new requirement.
   1 order remains above.
 - 2026-11-11 — Plan Revision 2 approved explicitly by gothchibjo;
   `plan_approval` remains passed.
+- 2026-11-12 — REQ-003 and REQ-008 evidence recorded; both stay open on their
+  TUI and JSON acceptance criteria.
