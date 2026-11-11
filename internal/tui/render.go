@@ -1,0 +1,438 @@
+package tui
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/charmbracelet/lipgloss"
+
+	"github.com/gothchibjo/egress/internal/domain"
+)
+
+const detailLabelWidth = 10
+
+type theme struct {
+	pass    lipgloss.Style
+	warn    lipgloss.Style
+	fail    lipgloss.Style
+	skip    lipgloss.Style
+	muted   lipgloss.Style
+	heading lipgloss.Style
+}
+
+func (m Model) theme() theme {
+	if !m.opts.color {
+		return theme{}
+	}
+	return theme{
+		pass:    lipgloss.NewStyle().Foreground(lipgloss.Color("2")),
+		warn:    lipgloss.NewStyle().Foreground(lipgloss.Color("3")),
+		fail:    lipgloss.NewStyle().Foreground(lipgloss.Color("1")),
+		skip:    lipgloss.NewStyle().Foreground(lipgloss.Color("8")),
+		muted:   lipgloss.NewStyle().Foreground(lipgloss.Color("8")),
+		heading: lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6")),
+	}
+}
+
+func (t theme) status(status domain.Status) lipgloss.Style {
+	switch status {
+	case domain.StatusPass:
+		return t.pass
+	case domain.StatusWarn:
+		return t.warn
+	case domain.StatusFail:
+		return t.fail
+	default:
+		return t.skip
+	}
+}
+
+func (m Model) verdictStyle() lipgloss.Style {
+	if !m.opts.color {
+		return lipgloss.Style{}
+	}
+	style := lipgloss.NewStyle().Bold(true)
+	switch m.verdict.Level {
+	case domain.VerdictHealthy:
+		return style.Foreground(lipgloss.Color("2"))
+	case domain.VerdictDegraded:
+		return style.Foreground(lipgloss.Color("3"))
+	case domain.VerdictBlocked:
+		return style.Foreground(lipgloss.Color("1"))
+	default:
+		return style
+	}
+}
+
+func (m Model) verdictLabel() string {
+	if !m.hasVerdict {
+		return "NO VERDICT"
+	}
+	return strings.ToUpper(string(m.verdict.Level))
+}
+
+func (m Model) renderNormal() string {
+	header := m.renderHeader()
+	footer := m.renderFooter(true)
+	bodyHeight := m.height - len(header) - len(footer)
+	if bodyHeight < 1 {
+		bodyHeight = 1
+	}
+
+	listWidth := m.width / 3
+	if listWidth < 24 {
+		listWidth = 24
+	}
+	if listWidth > 38 {
+		listWidth = 38
+	}
+	const separatorWidth = 3
+	detailWidth := m.width - listWidth - separatorWidth
+	if detailWidth < 20 {
+		detailWidth = 20
+		listWidth = m.width - detailWidth - separatorWidth
+	}
+
+	list := block(m.listLines(listWidth, bodyHeight), listWidth, bodyHeight)
+	separator := block(m.separatorLines(bodyHeight), separatorWidth, bodyHeight)
+	detail := block(m.detailLines(detailWidth, bodyHeight), detailWidth, bodyHeight)
+	body := lipgloss.JoinHorizontal(lipgloss.Top, list, separator, detail)
+
+	lines := append(header, strings.Split(body, "\n")...)
+	lines = append(lines, footer...)
+	return strings.Join(lines, "\n")
+}
+
+func (m Model) renderCompact() string {
+	header := m.renderHeader()
+	footer := m.renderFooter(false)
+	bodyHeight := m.height - len(header) - len(footer)
+	if bodyHeight < 5 {
+		bodyHeight = 5
+	}
+
+	listHeight := bodyHeight * 2 / 5
+	if listHeight < 4 {
+		listHeight = 4
+	}
+	detailHeight := bodyHeight - listHeight - 1
+	if detailHeight < 3 {
+		detailHeight = 3
+		listHeight = bodyHeight - detailHeight - 1
+		if listHeight < 1 {
+			listHeight = 1
+		}
+	}
+
+	list := block(m.listLines(m.width, listHeight), m.width, listHeight)
+	detail := block(m.detailLines(m.width, detailHeight), m.width, detailHeight)
+
+	lines := append([]string{}, header...)
+	lines = append(lines, strings.Split(list, "\n")...)
+	lines = append(lines, m.rule(m.width))
+	lines = append(lines, strings.Split(detail, "\n")...)
+	lines = append(lines, footer...)
+	return strings.Join(fitBlock(lines, m.width, m.height), "\n")
+}
+
+func (m Model) renderTooSmall() string {
+	lines := []string{
+		fmt.Sprintf(" Terminal too small: %dx%d", m.width, m.height),
+		"",
+		fmt.Sprintf(" Need at least %dx%d.", CompactMinWidth, CompactMinHeight),
+		" Resize the terminal to continue.",
+	}
+	return strings.Join(fitBlock(lines, m.width, m.height), "\n")
+}
+
+func (m Model) renderHeader() []string {
+	left := " egress " + m.dash() + " " + m.verdictLabel()
+	if m.opts.color {
+		left = m.verdictStyle().Render(left)
+	}
+	right := ""
+	if m.hasVerdict {
+		counts := m.verdict.Counts
+		right = fmt.Sprintf("pass %d  warn %d  fail %d  skip %d ", counts.Pass, counts.Warn, counts.Fail, counts.Skipped)
+	}
+	if m.opts.hasElapsed {
+		right += fmt.Sprintf(" %s", m.opts.elapsed.Round(10*time.Millisecond))
+	}
+	return []string{padLine(left, right, m.width), m.rule(m.width)}
+}
+
+func (m Model) renderFooter(legend bool) []string {
+	position := " no results"
+	if len(m.results) > 0 {
+		position = fmt.Sprintf(" %d/%d selected", m.selected+1, len(m.results))
+	}
+	right := ""
+	if legend {
+		right = fmt.Sprintf(
+			"%s pass  %s warn  %s fail  %s skip ",
+			m.marker(domain.StatusPass),
+			m.marker(domain.StatusWarn),
+			m.marker(domain.StatusFail),
+			m.marker(domain.StatusSkipped),
+		)
+	}
+	return []string{m.rule(m.width), padLine(position, right, m.width)}
+}
+
+func (m Model) listLines(width, height int) []string {
+	grouped := rows(m.results)
+	if len(grouped) == 0 {
+		return []string{"", " No baseline results yet."}
+	}
+
+	lines := make([]string, 0, len(grouped)+len(layerOrder))
+	rowLine := make([]int, len(grouped))
+	current := Layer("")
+	for i, entry := range grouped {
+		if entry.layer != current {
+			current = entry.layer
+			lines = append(lines, m.theme().heading.Render(" "+strings.ToUpper(string(entry.layer))))
+		}
+		prefix := "  "
+		if i == m.selected {
+			prefix = "> "
+		}
+		id := string(entry.result.CheckID)
+		if i == m.selected && m.opts.color {
+			id = lipgloss.NewStyle().Bold(true).Render(id)
+		}
+		rowLine[i] = len(lines)
+		lines = append(lines, prefix+m.marker(entry.result.Status)+" "+id)
+	}
+
+	if height > 0 && len(lines) > height {
+		offset := 0
+		if selected := rowLine[m.selected]; selected >= height {
+			offset = selected - height + 1
+		}
+		if maxOffset := len(lines) - height; offset > maxOffset {
+			offset = maxOffset
+		}
+		lines = lines[offset : offset+height]
+	}
+	return lines
+}
+
+func (m Model) detailLines(width, height int) []string {
+	grouped := rows(m.results)
+	if len(grouped) == 0 {
+		return []string{
+			" " + m.theme().heading.Render("EVIDENCE"),
+			"",
+			" No baseline results yet.",
+			"",
+			" The dashboard appears when the baseline reports results.",
+		}
+	}
+
+	entry := grouped[m.selected]
+	result := entry.result
+	lines := []string{
+		" " + m.theme().heading.Render("EVIDENCE"),
+	}
+	if m.opts.color {
+		lines = append(lines, " "+lipgloss.NewStyle().Bold(true).Render(string(result.CheckID)))
+	} else {
+		lines = append(lines, " "+string(result.CheckID))
+	}
+	lines = append(lines, m.field("status", m.marker(result.Status)+" "+string(result.Status), width)...)
+	lines = append(lines, m.field("layer", string(entry.layer), width)...)
+	lines = append(lines, m.field("target", result.Target, width)...)
+	lines = append(lines, m.field("method", result.Method, width)...)
+
+	timestamp := m.none()
+	if !result.Timestamp.IsZero() {
+		timestamp = result.Timestamp.UTC().Format("2006-01-02 15:04:05 MST")
+	}
+	lines = append(lines, m.field("time", timestamp, width)...)
+
+	if len(result.Measurements) > 0 {
+		for i, measurement := range result.Measurements {
+			label := "measured"
+			if i > 0 {
+				label = ""
+			}
+			value := measurement.Name + " = " + measurement.Value
+			if measurement.Unit != "" {
+				value += " " + measurement.Unit
+			}
+			lines = append(lines, m.field(label, value, width)...)
+		}
+	}
+	if result.Diagnostic != "" {
+		lines = append(lines, m.field("diagnostic", result.Diagnostic, width)...)
+	}
+	if result.Error != "" {
+		lines = append(lines, m.field("error", result.Error, width)...)
+	}
+
+	if height > 0 && len(lines) > height {
+		lines = lines[:height]
+	}
+	return lines
+}
+
+func (m Model) field(label, value string, width int) []string {
+	if value == "" {
+		value = m.none()
+	}
+	wrapWidth := width - detailLabelWidth - 2
+	if wrapWidth < 8 {
+		wrapWidth = 8
+	}
+	parts := wrapText(value, wrapWidth)
+	lines := make([]string, 0, len(parts))
+	for i, part := range parts {
+		if i == 0 {
+			lines = append(lines, " "+padLabel(label)+" "+part)
+		} else {
+			lines = append(lines, " "+strings.Repeat(" ", detailLabelWidth)+" "+part)
+		}
+	}
+	return lines
+}
+
+func (m Model) separatorLines(height int) []string {
+	line := " " + m.vertical() + " "
+	if m.opts.color {
+		line = m.theme().muted.Render(line)
+	}
+	lines := make([]string, height)
+	for i := range lines {
+		lines[i] = line
+	}
+	return lines
+}
+
+func (m Model) marker(status domain.Status) string {
+	t := m.theme()
+	if m.opts.ascii {
+		switch status {
+		case domain.StatusPass:
+			return t.pass.Render("[ok]")
+		case domain.StatusWarn:
+			return t.warn.Render("[!!]")
+		case domain.StatusFail:
+			return t.fail.Render("[xx]")
+		default:
+			return t.skip.Render("[--]")
+		}
+	}
+	switch status {
+	case domain.StatusPass:
+		return t.pass.Render("✓")
+	case domain.StatusWarn:
+		return t.warn.Render("!")
+	case domain.StatusFail:
+		return t.fail.Render("✗")
+	default:
+		return t.skip.Render("·")
+	}
+}
+
+func (m Model) rule(width int) string {
+	return strings.Repeat(m.horizontal(), width)
+}
+
+func (m Model) horizontal() string {
+	if m.opts.ascii {
+		return "-"
+	}
+	return "─"
+}
+
+func (m Model) vertical() string {
+	if m.opts.ascii {
+		return "|"
+	}
+	return "│"
+}
+
+func (m Model) dash() string {
+	if m.opts.ascii {
+		return "-"
+	}
+	return "—"
+}
+
+func (m Model) none() string {
+	if m.opts.ascii {
+		return "-"
+	}
+	return "—"
+}
+
+func padLabel(label string) string {
+	if len(label) >= detailLabelWidth {
+		return label[:detailLabelWidth]
+	}
+	return label + strings.Repeat(" ", detailLabelWidth-len(label))
+}
+
+func padLine(left, right string, width int) string {
+	gap := width - lipgloss.Width(left) - lipgloss.Width(right)
+	if gap < 1 {
+		return clip(left, width)
+	}
+	return left + strings.Repeat(" ", gap) + right
+}
+
+func clip(line string, width int) string {
+	if width < 1 {
+		width = 1
+	}
+	return lipgloss.NewStyle().MaxWidth(width).Render(line)
+}
+
+func block(lines []string, width, height int) string {
+	if width < 1 {
+		width = 1
+	}
+	if height < 0 {
+		height = 0
+	}
+	out := make([]string, 0, height)
+	for _, line := range lines {
+		if len(out) >= height {
+			break
+		}
+		line = clip(line, width)
+		if pad := width - lipgloss.Width(line); pad > 0 {
+			line += strings.Repeat(" ", pad)
+		}
+		out = append(out, line)
+	}
+	blank := strings.Repeat(" ", width)
+	for len(out) < height {
+		out = append(out, blank)
+	}
+	return strings.Join(out, "\n")
+}
+
+func fitBlock(lines []string, width, height int) []string {
+	return strings.Split(block(lines, width, height), "\n")
+}
+
+func wrapText(text string, width int) []string {
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return []string{""}
+	}
+	lines := make([]string, 0, len(words)/4+1)
+	current := words[0]
+	for _, word := range words[1:] {
+		if len([]rune(current))+1+len([]rune(word)) <= width {
+			current += " " + word
+			continue
+		}
+		lines = append(lines, current)
+		current = word
+	}
+	return append(lines, current)
+}

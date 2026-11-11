@@ -378,6 +378,8 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-008 | No proxy bypass or direct-versus-proxied comparison occurs in v1.            | No HTTP probe or transport exists yet; the detector only reads and reports environment values and adds no bypass or A/B path.                                      | pass   |
 | 2026-11-12 | REQ-018 | A verdict is never produced without evidence.                                | `AggregateVerdict` returns `ErrNoResults` for an empty run and `ErrInvalidVerdictInput` for any result that fails `Validate`; no level is computed in either case. | pass   |
 | 2026-11-12 | REQ-018 | The rule is deterministic for identical check results.                       | One forward pass, fixed status precedence and baseline-order tie-break; map iteration only accumulates counts and the anchor set.                                  | pass   |
+| 2026-11-12 | REQ-025 | Status never depends on color alone.                                         | Every status renders as a symbol plus a status word; the monochrome and ASCII tests assert both and reject ANSI escapes.                                           | pass   |
+| 2026-11-12 | REQ-025 | Minimum terminal sizes are enforced by the UI.                               | `Layout()` stops below 40x10 and shows a resize message below 60x20; `View()` returns an empty string in the stopped state.                                        | pass   |
 
 # Evidence Matrix
 
@@ -469,3 +471,7 @@ recorded as part of REQ-002, not as a new requirement.
   recorded.
 - 2026-11-12 — REQ-003 anchor list signed off by `gothchibjo`; the requirement
   stays open on TUI and JSON visibility only.
+- 2026-11-12 — REQ-025 implements the master-detail dashboard in `internal/tui`
+  with path-layer grouping, adaptive layouts, resize handling and color,
+  monochrome and ASCII rendering; it stays open until the TUI walkthrough and
+  terminal matrix are recorded.
