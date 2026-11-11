@@ -383,6 +383,9 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-021 | Keyboard control is complete; mouse support remains optional.                | Every dashboard action has a key in `docs/key-map.md` and `helpLines()`, driven through `tea.KeyMsg` in tests; no mouse handler or mouse mode is registered.                    | pass   |
 | 2026-11-12 | REQ-004 | Inspection is read-only and never changes interface or route configuration.  | The adapter calls `net.Interfaces`, `Interface.Addrs`, reads `/proc/net/route` and `/proc/net/ipv6_route`, or runs `route -n get`; no write, sysctl or mutating command exists. | pass   |
 | 2026-11-12 | REQ-004 | macOS and Linux are the only v1 platforms.                                   | Build-tagged `darwin` and `linux` route adapters are the only implementations; every other platform returns `ErrUnsupported` and Windows is never presented as supported.       | pass   |
+| 2026-11-12 | REQ-006 | No DNS configuration is changed.                                             | The adapter only reads `/etc/resolv.conf` or runs `scutil --dns`; the check only sends queries through `miekg/dns` and never writes resolver state.                             | pass   |
+| 2026-11-12 | REQ-007 | Public DoH resolvers are allowed only as diagnostic probes.                  | The only DoH target is the pinned `DefaultDoHEndpoint`; it is queried once for the canary and never used for general traffic or enrichment.                                     | pass   |
+| 2026-11-12 | REQ-007 | No enrichment API is called.                                                 | The DoH JSON request is the only external HTTP call in the DNS check; no other service receives the canary or host data.                                                        | pass   |
 
 # Evidence Matrix
 
@@ -484,3 +487,9 @@ recorded as part of REQ-002, not as a new requirement.
 - 2026-11-12 — REQ-004 adds the read-only link and default-route adapter and the
   `local.interfaces` check; parser fixtures cover both v1 platforms and a
   missing route is reported as a distinct failure.
+- 2026-11-12 — REQ-006 adds the resolver configuration adapter and the
+  `dns.canary` check; NXDOMAIN, SERVFAIL and timeouts stay distinguishable and a
+  missing resolver configuration fails with a reason.
+- 2026-11-12 — REQ-007 compares the system answer with one public DoH probe,
+  records both answer sets and flags differences with the CDN and geo-DNS
+  caveat; a DoH failure stays separate from the system answer.
