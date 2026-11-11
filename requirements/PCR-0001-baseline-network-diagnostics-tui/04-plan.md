@@ -375,6 +375,7 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-11 | REQ-002 | A previous run is replaced, not merged, when the baseline is re-run.         | The runner holds no history and `Session` stores one current run per completed invocation.                                                             | pass   |
 | 2026-11-11 | REQ-003 | The anchor set remains multi-vendor.                                         | No anchor data exists yet; the planned set uses Cloudflare, Google, Apple and IANA, one anchor per vendor.                                             | pass   |
 | 2026-11-11 | REQ-003 | No single vendor determines the overall verdict alone.                       | Verdict logic is not implemented yet; REQ-018 will enforce anchor isolation, and the set has four vendors.                                             | pass   |
+| 2026-11-12 | REQ-008 | No proxy bypass or direct-versus-proxied comparison occurs in v1.            | No HTTP probe or transport exists yet; the detector only reads and reports environment values and adds no bypass or A/B path.                          | pass   |
 
 # Evidence Matrix
 
