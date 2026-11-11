@@ -371,8 +371,24 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | :--------- | :------ | :--------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- | :----- |
 | 2026-11-11 | REQ-001 | BR-03 remains approved; evidence fields cannot be dropped without a new PCR. | `02-business.md` is `approved`; frozen REQ-001 still requires check id, status, target, method, measured values, timestamp and diagnostic/error.       | pass   |
 | 2026-11-11 | REQ-001 | No result may present a status without evidence.                             | No implementation exists yet; the frozen model requires evidence for warn/fail and a stated reason for skipped, and the constructor will enforce both. | pass   |
+| 2026-11-11 | REQ-002 | The utility never prompts for or requests elevated privileges on startup.    | No startup or elevation code exists; `internal/` contains no sudo, Geteuid or exec call, and the runner performs no privilege operation.               | pass   |
+| 2026-11-11 | REQ-002 | A previous run is replaced, not merged, when the baseline is re-run.         | The runner holds no history and `Session` stores one current run per completed invocation.                                                             | pass   |
+
+# Evidence Matrix
+
+| REQ     | verification.method | evidence artifact                                                           | status (open/done/waived) |
+| :------ | :------------------ | :-------------------------------------------------------------------------- | :------------------------ |
+| REQ-001 | test                | `evidence/REQ-001-unit-tests.txt`; `evidence/REQ-001-schema-validation.txt` | open                      |
+
+REQ-001 stays open: the result model, validation and JSON envelope are proven,
+but the acceptance criterion "The TUI and JSON output expose the same evidence
+fields" needs the TUI adapter from REQ-021 and REQ-025.
 
 # Revisions
 
 - 2026-11-11 — draft v1 authored from frozen `03-technical.yaml` (analyst).
 - 2026-11-11 — plan approved by gothchibjo; `plan_approval` gate passed.
+- 2026-11-11 — REQ-001 evidence uses the test-only `jsonschema` validator to
+  produce the schema report; it is not a runtime dependency.
+- 2026-11-11 — REQ-002 implements the orchestration runner; the `cmd/egress`
+  entry point stays pending until a dashboard adapter exists.

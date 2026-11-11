@@ -1,0 +1,6 @@
+=== RUN   TestSchemaIsValidJSON
+--- PASS: TestSchemaIsValidJSON (0.00s)
+=== RUN   TestEncodeResultsMatchesSchema
+--- PASS: TestEncodeResultsMatchesSchema (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/report	0.244s

@@ -1,0 +1,50 @@
+=== RUN   TestValidate
+=== RUN   TestValidate/pass_without_measurements
+=== RUN   TestValidate/warn_with_measurement
+=== RUN   TestValidate/warn_with_error
+=== RUN   TestValidate/fail_with_error
+=== RUN   TestValidate/skipped_with_diagnostic
+=== RUN   TestValidate/skipped_with_error
+=== RUN   TestValidate/empty_check_id
+=== RUN   TestValidate/invalid_status
+=== RUN   TestValidate/empty_target
+=== RUN   TestValidate/empty_method
+=== RUN   TestValidate/zero_timestamp
+=== RUN   TestValidate/measurement_without_name
+=== RUN   TestValidate/measurement_without_value
+=== RUN   TestValidate/warn_without_evidence
+=== RUN   TestValidate/fail_without_evidence
+=== RUN   TestValidate/skipped_without_reason
+--- PASS: TestValidate (0.00s)
+    --- PASS: TestValidate/pass_without_measurements (0.00s)
+    --- PASS: TestValidate/warn_with_measurement (0.00s)
+    --- PASS: TestValidate/warn_with_error (0.00s)
+    --- PASS: TestValidate/fail_with_error (0.00s)
+    --- PASS: TestValidate/skipped_with_diagnostic (0.00s)
+    --- PASS: TestValidate/skipped_with_error (0.00s)
+    --- PASS: TestValidate/empty_check_id (0.00s)
+    --- PASS: TestValidate/invalid_status (0.00s)
+    --- PASS: TestValidate/empty_target (0.00s)
+    --- PASS: TestValidate/empty_method (0.00s)
+    --- PASS: TestValidate/zero_timestamp (0.00s)
+    --- PASS: TestValidate/measurement_without_name (0.00s)
+    --- PASS: TestValidate/measurement_without_value (0.00s)
+    --- PASS: TestValidate/warn_without_evidence (0.00s)
+    --- PASS: TestValidate/fail_without_evidence (0.00s)
+    --- PASS: TestValidate/skipped_without_reason (0.00s)
+=== RUN   TestNewResult
+--- PASS: TestNewResult (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/domain	(cached)
+=== RUN   TestEncodeResultsStableFields
+--- PASS: TestEncodeResultsStableFields (0.00s)
+=== RUN   TestEncodeResultsUsesEmptyArrays
+--- PASS: TestEncodeResultsUsesEmptyArrays (0.00s)
+=== RUN   TestEncodeResultsRejectsInvalidResult
+--- PASS: TestEncodeResultsRejectsInvalidResult (0.00s)
+=== RUN   TestSchemaIsValidJSON
+--- PASS: TestSchemaIsValidJSON (0.00s)
+=== RUN   TestEncodeResultsMatchesSchema
+--- PASS: TestEncodeResultsMatchesSchema (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/report	(cached)

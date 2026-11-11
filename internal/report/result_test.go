@@ -9,7 +9,10 @@ import (
 	"time"
 
 	"github.com/gothchibjo/egress/internal/domain"
+	"github.com/santhosh-tekuri/jsonschema/v5"
 )
+
+const schemaID = "https://github.com/gothchibjo/egress/schema/result-v1.json"
 
 func sampleResult() domain.Result {
 	return domain.Result{
@@ -106,5 +109,36 @@ func TestSchemaIsValidJSON(t *testing.T) {
 	}
 	if schema["$schema"] != "https://json-schema.org/draft/2020-12/schema" {
 		t.Fatalf("unexpected dialect: %v", schema["$schema"])
+	}
+}
+
+func TestEncodeResultsMatchesSchema(t *testing.T) {
+	skipped := sampleResult()
+	skipped.CheckID = "icmp.anchor"
+	skipped.Status = domain.StatusSkipped
+	skipped.Measurements = nil
+	skipped.Diagnostic = "raw sockets unavailable without elevation"
+
+	var buf bytes.Buffer
+	if err := EncodeResults(&buf, []domain.Result{sampleResult(), skipped}); err != nil {
+		t.Fatalf("EncodeResults() error = %v", err)
+	}
+
+	compiler := jsonschema.NewCompiler()
+	compiler.AssertFormat = true
+	if err := compiler.AddResource(schemaID, bytes.NewReader(Schema())); err != nil {
+		t.Fatalf("compile schema resource: %v", err)
+	}
+	schema, err := compiler.Compile(schemaID)
+	if err != nil {
+		t.Fatalf("compile schema: %v", err)
+	}
+
+	var instance any
+	if err := json.Unmarshal(buf.Bytes(), &instance); err != nil {
+		t.Fatalf("output is not JSON: %v", err)
+	}
+	if err := schema.Validate(instance); err != nil {
+		t.Fatalf("output does not match schema: %v", err)
 	}
 }
