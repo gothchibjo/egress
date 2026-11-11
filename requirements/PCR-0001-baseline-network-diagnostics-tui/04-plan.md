@@ -367,15 +367,17 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 
 # Guard Log
 
-| Date       | REQ     | Guard                                                                        | Check                                                                                                                                                  | Result |
-| :--------- | :------ | :--------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- | :----- |
-| 2026-11-11 | REQ-001 | BR-03 remains approved; evidence fields cannot be dropped without a new PCR. | `02-business.md` is `approved`; frozen REQ-001 still requires check id, status, target, method, measured values, timestamp and diagnostic/error.       | pass   |
-| 2026-11-11 | REQ-001 | No result may present a status without evidence.                             | No implementation exists yet; the frozen model requires evidence for warn/fail and a stated reason for skipped, and the constructor will enforce both. | pass   |
-| 2026-11-11 | REQ-002 | The utility never prompts for or requests elevated privileges on startup.    | No startup or elevation code exists; `internal/` contains no sudo, Geteuid or exec call, and the runner performs no privilege operation.               | pass   |
-| 2026-11-11 | REQ-002 | A previous run is replaced, not merged, when the baseline is re-run.         | The runner holds no history and `Session` stores one current run per completed invocation.                                                             | pass   |
-| 2026-11-11 | REQ-003 | The anchor set remains multi-vendor.                                         | No anchor data exists yet; the planned set uses Cloudflare, Google, Apple and IANA, one anchor per vendor.                                             | pass   |
-| 2026-11-11 | REQ-003 | No single vendor determines the overall verdict alone.                       | Verdict logic is not implemented yet; REQ-018 will enforce anchor isolation, and the set has four vendors.                                             | pass   |
-| 2026-11-12 | REQ-008 | No proxy bypass or direct-versus-proxied comparison occurs in v1.            | No HTTP probe or transport exists yet; the detector only reads and reports environment values and adds no bypass or A/B path.                          | pass   |
+| Date       | REQ     | Guard                                                                        | Check                                                                                                                                                              | Result |
+| :--------- | :------ | :--------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----- |
+| 2026-11-11 | REQ-001 | BR-03 remains approved; evidence fields cannot be dropped without a new PCR. | `02-business.md` is `approved`; frozen REQ-001 still requires check id, status, target, method, measured values, timestamp and diagnostic/error.                   | pass   |
+| 2026-11-11 | REQ-001 | No result may present a status without evidence.                             | No implementation exists yet; the frozen model requires evidence for warn/fail and a stated reason for skipped, and the constructor will enforce both.             | pass   |
+| 2026-11-11 | REQ-002 | The utility never prompts for or requests elevated privileges on startup.    | No startup or elevation code exists; `internal/` contains no sudo, Geteuid or exec call, and the runner performs no privilege operation.                           | pass   |
+| 2026-11-11 | REQ-002 | A previous run is replaced, not merged, when the baseline is re-run.         | The runner holds no history and `Session` stores one current run per completed invocation.                                                                         | pass   |
+| 2026-11-11 | REQ-003 | The anchor set remains multi-vendor.                                         | No anchor data exists yet; the planned set uses Cloudflare, Google, Apple and IANA, one anchor per vendor.                                                         | pass   |
+| 2026-11-11 | REQ-003 | No single vendor determines the overall verdict alone.                       | Verdict logic is not implemented yet; REQ-018 will enforce anchor isolation, and the set has four vendors.                                                         | pass   |
+| 2026-11-12 | REQ-008 | No proxy bypass or direct-versus-proxied comparison occurs in v1.            | No HTTP probe or transport exists yet; the detector only reads and reports environment values and adds no bypass or A/B path.                                      | pass   |
+| 2026-11-12 | REQ-018 | A verdict is never produced without evidence.                                | `AggregateVerdict` returns `ErrNoResults` for an empty run and `ErrInvalidVerdictInput` for any result that fails `Validate`; no level is computed in either case. | pass   |
+| 2026-11-12 | REQ-018 | The rule is deterministic for identical check results.                       | One forward pass, fixed status precedence and baseline-order tie-break; map iteration only accumulates counts and the anchor set.                                  | pass   |
 
 # Evidence Matrix
 
@@ -462,3 +464,6 @@ recorded as part of REQ-002, not as a new requirement.
   `plan_approval` remains passed.
 - 2026-11-12 — REQ-003 and REQ-008 evidence recorded; both stay open on their
   TUI and JSON acceptance criteria.
+- 2026-11-12 — REQ-018 implements the aggregate verdict and documents the rule
+  in `docs/verdict-rule.md`; it stays open until the rule review sign-off is
+  recorded.
