@@ -389,6 +389,8 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-009 | Unprivileged mode works without raw sockets.                                 | The default dial opens `udp4`/`udp6` ICMP sockets; the live unprivileged run on macOS passes and raw networks appear only in the elevated branch.                               | pass   |
 | 2026-11-12 | REQ-009 | Raw sockets are used only in explicitly elevated mode.                       | `dialICMP` selects `ip4:icmp` or `ip6:ipv6-icmp` only when `ICMPOptions.Elevated` is true; the probe never escalates and defaults to datagram sockets.                          | pass   |
 | 2026-11-12 | REQ-005 | No network configuration is changed.                                         | The gateway comes from the read-only route adapter and is probed with ICMP echo; no write or configuration call exists.                                                         | pass   |
+| 2026-11-12 | REQ-010 | Probes go only to configured anchors and documented destinations.            | `NewTCPChecks` iterates `domain.BaselineAnchors()` and the documented ports 443 and 53; no call site accepts an arbitrary address.                                              | pass   |
+| 2026-11-12 | REQ-010 | Per-probe timeouts are bounded.                                              | Every check uses `net.Dialer` with a 2 s default timeout and the caller context, so no connect can hang the run.                                                                | pass   |
 
 # Evidence Matrix
 
@@ -499,3 +501,6 @@ recorded as part of REQ-002, not as a new requirement.
 - 2026-11-12 — REQ-009 adds the ICMP adapter and per-destination checks for the
   gateway and each anchor with a bounded sample, loss, round-trip times and an
   elevation hint; REQ-005 reuses the same adapter as `gateway.reach`.
+- 2026-11-12 — REQ-010 adds `tcp.anchor.<id>.<port>` checks for ports 443 and 53
+  with connect latency and refused, timeout and reset classes; active rejection
+  and passive timeout are labelled distinctly.
