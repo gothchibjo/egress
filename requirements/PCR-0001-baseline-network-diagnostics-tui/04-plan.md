@@ -393,6 +393,8 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-010 | Per-probe timeouts are bounded.                                              | Every check uses `net.Dialer` with a 2 s default timeout and the caller context, so no connect can hang the run.                                                                | pass   |
 | 2026-11-12 | REQ-011 | No authentication or configuration change is performed.                      | The check issues one unauthenticated GET and never submits a form or changes settings; tests assert the method and an empty Authorization header.                               | pass   |
 | 2026-11-12 | REQ-011 | The canary request is the only HTTP request made by this check.              | One `client.Do` call per run with `http.ErrUseLastResponse`; the simulated redirect test asserts the portal handler is never reached.                                           | pass   |
+| 2026-11-12 | REQ-012 | The probe is read-only.                                                      | It opens a raw ICMP socket for the probe, sets DF on that socket only, and never writes interface MTU, route or host settings.                                                  | pass   |
+| 2026-11-12 | REQ-012 | Packet sizes stay within the documented test range.                          | `MTUOptions.normalized` clamps sizes to 576–1500 and falls back to the documented defaults; a test rejects out-of-range input.                                                  | pass   |
 
 # Evidence Matrix
 
@@ -509,3 +511,6 @@ recorded as part of REQ-002, not as a new requirement.
 - 2026-11-12 — REQ-011 adds `http.captive` with one unauthenticated GET,
   captured redirects and a body fingerprint; the expected response is documented
   in `docs/captive-portal-canary.md`.
+- 2026-11-12 — REQ-012 adds `mtu.pmtu` with a raw DF probe in elevated mode, the
+  documented 576–1500 size range and skipped reasons for unprivileged or
+  unreachable paths; simulated tests cover clean, blackhole and skip cases.
