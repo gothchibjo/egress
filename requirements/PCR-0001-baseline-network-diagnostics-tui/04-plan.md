@@ -391,6 +391,8 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-005 | No network configuration is changed.                                         | The gateway comes from the read-only route adapter and is probed with ICMP echo; no write or configuration call exists.                                                         | pass   |
 | 2026-11-12 | REQ-010 | Probes go only to configured anchors and documented destinations.            | `NewTCPChecks` iterates `domain.BaselineAnchors()` and the documented ports 443 and 53; no call site accepts an arbitrary address.                                              | pass   |
 | 2026-11-12 | REQ-010 | Per-probe timeouts are bounded.                                              | Every check uses `net.Dialer` with a 2 s default timeout and the caller context, so no connect can hang the run.                                                                | pass   |
+| 2026-11-12 | REQ-011 | No authentication or configuration change is performed.                      | The check issues one unauthenticated GET and never submits a form or changes settings; tests assert the method and an empty Authorization header.                               | pass   |
+| 2026-11-12 | REQ-011 | The canary request is the only HTTP request made by this check.              | One `client.Do` call per run with `http.ErrUseLastResponse`; the simulated redirect test asserts the portal handler is never reached.                                           | pass   |
 
 # Evidence Matrix
 
@@ -504,3 +506,6 @@ recorded as part of REQ-002, not as a new requirement.
 - 2026-11-12 — REQ-010 adds `tcp.anchor.<id>.<port>` checks for ports 443 and 53
   with connect latency and refused, timeout and reset classes; active rejection
   and passive timeout are labelled distinctly.
+- 2026-11-12 — REQ-011 adds `http.captive` with one unauthenticated GET,
+  captured redirects and a body fingerprint; the expected response is documented
+  in `docs/captive-portal-canary.md`.
