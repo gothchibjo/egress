@@ -1,11 +1,11 @@
 ---
 pcr: PCR-0001
 title: Baseline network diagnostics and TUI shell
-status: planning
+status: plan_approved
 basis: 03-technical.yaml (frozen)
 revised: 2026-11-11
-approved_by: null
-approved_at: null
+approved_by: gothchibjo
+approved_at: 2026-11-11
 ---
 
 # Plan Invariants
@@ -368,3 +368,4 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 # Revisions
 
 - 2026-11-11 — draft v1 authored from frozen `03-technical.yaml` (analyst).
+- 2026-11-11 — plan approved by gothchibjo; `plan_approval` gate passed.

@@ -6,7 +6,7 @@ frozen_by: gothchibjo
 frozen_at: 2026-11-11
 pipeline_gates:
   requirement_freeze: { required: true, passed: true }
-  plan_approval: { required: true, passed: false }
+  plan_approval: { required: true, passed: true }
   verification_evidence: { required: true, passed: false }
   guard_conditions: { required: true, passed: false }
 requirements:
