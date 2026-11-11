@@ -31,6 +31,6 @@ Four vendors, one anchor each: Cloudflare, Google, Apple, IANA.
 
 ## Sign-off
 
-Reviewer: pending. The list matches BR-10 and the frozen REQ-003 text; a
-sign-off by `gothchibjo` records approval of the destinations themselves. The
-requirement stays `open` until the TUI and JSON criteria are verifiable.
+Reviewer: gothchibjo, 2026-11-12. The destinations match BR-10 and the frozen
+REQ-003 text. The requirement stays `open` until the TUI and JSON visibility
+criteria and the single-failing-anchor warning are verifiable end to end.

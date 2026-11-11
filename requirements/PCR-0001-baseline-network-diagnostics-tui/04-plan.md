@@ -392,9 +392,9 @@ but the acceptance criterion "The TUI and JSON output expose the same evidence
 fields" needs the TUI adapter from REQ-021 and REQ-025.
 
 REQ-003 stays open: the catalog, its documentation and the traceability matrix
-exist, but anchor visibility needs the TUI and JSON adapters (REQ-025, REQ-022),
-the single-failing-anchor warning needs REQ-018, and the reviewer sign-off in
-`evidence/REQ-003-anchor-review.md` is still pending.
+exist, and `gothchibjo` signed off the destination list on 2026-11-12, but
+anchor visibility needs the TUI and JSON adapters (REQ-025, REQ-022) and the
+single-failing-anchor warning needs the REQ-018 integration.
 
 REQ-008 stays open: detection, source reporting, explicit absence and credential
 redaction are covered by unit tests, but acceptance criterion "Detection is
@@ -467,3 +467,5 @@ recorded as part of REQ-002, not as a new requirement.
 - 2026-11-12 — REQ-018 implements the aggregate verdict and documents the rule
   in `docs/verdict-rule.md`; it stays open until the rule review sign-off is
   recorded.
+- 2026-11-12 — REQ-003 anchor list signed off by `gothchibjo`; the requirement
+  stays open on TUI and JSON visibility only.
