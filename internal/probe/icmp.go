@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/gothchibjo/egress/internal/app"
 	"github.com/gothchibjo/egress/internal/domain"
 	"github.com/gothchibjo/egress/internal/platform"
 )
+
+// MaxICMPSamples caps the bounded echo sample per destination.
+const MaxICMPSamples = 10
 
 // ICMPOptions configures the ICMP reachability checks.
 type ICMPOptions struct {
@@ -26,6 +30,9 @@ type ICMPOptions struct {
 func (o ICMPOptions) normalized() ICMPOptions {
 	if o.Count <= 0 {
 		o.Count = 3
+	}
+	if o.Count > MaxICMPSamples {
+		o.Count = MaxICMPSamples
 	}
 	if o.Timeout <= 0 {
 		o.Timeout = time.Second
@@ -171,15 +178,20 @@ func (c ICMPCheck) Run(ctx context.Context) domain.Result {
 		domain.Measurement{Name: "packet_loss", Value: fmt.Sprintf("%.0f%%", loss)},
 	)
 	if received > 0 {
-		sort.Slice(rtts, func(i, j int) bool { return rtts[i] < rtts[j] })
+		ordered := append([]time.Duration(nil), rtts...)
+		sorted := append([]time.Duration(nil), rtts...)
+		sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
 		var total time.Duration
-		for _, rtt := range rtts {
+		for _, rtt := range sorted {
 			total += rtt
 		}
 		result.Measurements = append(result.Measurements,
-			domain.Measurement{Name: "rtt.min", Value: formatRTT(rtts[0])},
+			domain.Measurement{Name: "sample.size", Value: strconv.Itoa(received)},
+			domain.Measurement{Name: "rtt.min", Value: formatRTT(sorted[0])},
 			domain.Measurement{Name: "rtt.avg", Value: formatRTT(total / time.Duration(received))},
-			domain.Measurement{Name: "rtt.max", Value: formatRTT(rtts[received-1])},
+			domain.Measurement{Name: "rtt.median", Value: formatRTT(medianDuration(sorted))},
+			domain.Measurement{Name: "rtt.max", Value: formatRTT(sorted[received-1])},
+			domain.Measurement{Name: "jitter", Value: formatRTT(meanJitter(ordered))},
 		)
 	}
 
@@ -254,6 +266,35 @@ func resolveOne(ctx context.Context, host string) (net.IP, error) {
 
 func formatRTT(rtt time.Duration) string {
 	return rtt.Round(100 * time.Microsecond).String()
+}
+
+// medianDuration returns the middle value of a sorted sample.
+func medianDuration(sorted []time.Duration) time.Duration {
+	if len(sorted) == 0 {
+		return 0
+	}
+	middle := len(sorted) / 2
+	if len(sorted)%2 == 1 {
+		return sorted[middle]
+	}
+	return (sorted[middle-1] + sorted[middle]) / 2
+}
+
+// meanJitter returns the mean absolute difference between consecutive
+// round-trip times in sample order.
+func meanJitter(ordered []time.Duration) time.Duration {
+	if len(ordered) < 2 {
+		return 0
+	}
+	var total time.Duration
+	for i := 1; i < len(ordered); i++ {
+		difference := ordered[i] - ordered[i-1]
+		if difference < 0 {
+			difference = -difference
+		}
+		total += difference
+	}
+	return total / time.Duration(len(ordered)-1)
 }
 
 func icmpSocketHint(err error, family platform.Family, elevated bool) string {

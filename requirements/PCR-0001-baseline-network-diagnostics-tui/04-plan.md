@@ -395,6 +395,7 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-011 | The canary request is the only HTTP request made by this check.              | One `client.Do` call per run with `http.ErrUseLastResponse`; the simulated redirect test asserts the portal handler is never reached.                                           | pass   |
 | 2026-11-12 | REQ-012 | The probe is read-only.                                                      | It opens a raw ICMP socket for the probe, sets DF on that socket only, and never writes interface MTU, route or host settings.                                                  | pass   |
 | 2026-11-12 | REQ-012 | Packet sizes stay within the documented test range.                          | `MTUOptions.normalized` clamps sizes to 576–1500 and falls back to the documented defaults; a test rejects out-of-range input.                                                  | pass   |
+| 2026-11-12 | REQ-013 | The sample is bounded and cannot extend the baseline beyond its budget.      | `Count` is capped at `MaxICMPSamples` (10), each exchange uses the 1 s timeout, and the statistics reuse the REQ-009 sample without adding probes.                              | pass   |
 
 # Evidence Matrix
 
@@ -514,3 +515,6 @@ recorded as part of REQ-002, not as a new requirement.
 - 2026-11-12 — REQ-012 adds `mtu.pmtu` with a raw DF probe in elevated mode, the
   documented 576–1500 size range and skipped reasons for unprivileged or
   unreachable paths; simulated tests cover clean, blackhole and skip cases.
+- 2026-11-12 — REQ-013 adds sample size, median and jitter to every ICMP result,
+  derived from the existing bounded sample; odd, even, single-response and
+  all-loss cases are covered by tests.

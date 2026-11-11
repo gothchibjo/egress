@@ -105,9 +105,12 @@ func TestICMPCheckPass(t *testing.T) {
 		"packets.sent":     "3",
 		"packets.received": "3",
 		"packet_loss":      "0%",
+		"sample.size":      "3",
 		"rtt.min":          "10ms",
 		"rtt.avg":          "20ms",
+		"rtt.median":       "20ms",
 		"rtt.max":          "30ms",
+		"jitter":           "10ms",
 	}
 	for name, value := range want {
 		got, ok := findMeasurement(result, name)
@@ -333,6 +336,85 @@ func TestICMPCheckCancelledMidSample(t *testing.T) {
 	}
 	if values, _ := findMeasurement(result, "packets.sent"); values != "1" {
 		t.Fatalf("packets.sent = %q, want 1", values)
+	}
+}
+
+func TestICMPCheckSingleResponse(t *testing.T) {
+	conn := &fakeEchoConn{rtts: []time.Duration{15 * time.Millisecond}}
+	dial := &fakeDial{conn: conn}
+	check := testICMPCheck("icmp.anchor.example-com", "example.com", ICMPOptions{Count: 1}, dial)
+	result := check.Run(context.Background())
+
+	if result.Status != domain.StatusPass {
+		t.Fatalf("status = %q, want pass", result.Status)
+	}
+	for name, want := range map[string]string{
+		"sample.size": "1",
+		"rtt.median":  "15ms",
+		"jitter":      "0s",
+	} {
+		if got, _ := findMeasurement(result, name); got != want {
+			t.Fatalf("%s = %q, want %q", name, got, want)
+		}
+	}
+}
+
+func TestLatencyStatistics(t *testing.T) {
+	tests := []struct {
+		name    string
+		ordered []time.Duration
+		sorted  []time.Duration
+		median  time.Duration
+		jitter  time.Duration
+	}{
+		{
+			name:    "odd sample",
+			ordered: []time.Duration{30 * time.Millisecond, 10 * time.Millisecond, 20 * time.Millisecond},
+			sorted:  []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+			median:  20 * time.Millisecond,
+			jitter:  15 * time.Millisecond,
+		},
+		{
+			name:    "even sample",
+			ordered: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond, 40 * time.Millisecond},
+			sorted:  []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond, 40 * time.Millisecond},
+			median:  25 * time.Millisecond,
+			jitter:  10 * time.Millisecond,
+		},
+		{
+			name:    "single response",
+			ordered: []time.Duration{15 * time.Millisecond},
+			sorted:  []time.Duration{15 * time.Millisecond},
+			median:  15 * time.Millisecond,
+			jitter:  0,
+		},
+		{
+			name:    "two responses",
+			ordered: []time.Duration{10 * time.Millisecond, 30 * time.Millisecond},
+			sorted:  []time.Duration{10 * time.Millisecond, 30 * time.Millisecond},
+			median:  20 * time.Millisecond,
+			jitter:  20 * time.Millisecond,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := medianDuration(test.sorted); got != test.median {
+				t.Fatalf("median = %v, want %v", got, test.median)
+			}
+			if got := meanJitter(test.ordered); got != test.jitter {
+				t.Fatalf("jitter = %v, want %v", got, test.jitter)
+			}
+		})
+	}
+}
+
+func TestICMPOptionsCapSample(t *testing.T) {
+	if got := (ICMPOptions{Count: 100}).normalized().Count; got != MaxICMPSamples {
+		t.Fatalf("count = %d, want %d", got, MaxICMPSamples)
+	}
+	if got := (ICMPOptions{}).normalized().Count; got != 3 {
+		t.Fatalf("default count = %d, want 3", got)
 	}
 }
 
