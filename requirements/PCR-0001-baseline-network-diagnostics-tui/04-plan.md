@@ -380,6 +380,7 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-018 | The rule is deterministic for identical check results.                       | One forward pass, fixed status precedence and baseline-order tie-break; map iteration only accumulates counts and the anchor set.                                  | pass   |
 | 2026-11-12 | REQ-025 | Status never depends on color alone.                                         | Every status renders as a symbol plus a status word; the monochrome and ASCII tests assert both and reject ANSI escapes.                                           | pass   |
 | 2026-11-12 | REQ-025 | Minimum terminal sizes are enforced by the UI.                               | `Layout()` stops below 40x10 and shows a resize message below 60x20; `View()` returns an empty string in the stopped state.                                        | pass   |
+| 2026-11-12 | REQ-021 | Keyboard control is complete; mouse support remains optional.                | Every dashboard action has a key in `docs/key-map.md` and `helpLines()`, driven through `tea.KeyMsg` in tests; no mouse handler or mouse mode is registered.       | pass   |
 
 # Evidence Matrix
 
@@ -475,3 +476,6 @@ recorded as part of REQ-002, not as a new requirement.
   with path-layer grouping, adaptive layouts, resize handling and color,
   monochrome and ASCII rendering; it stays open until the TUI walkthrough and
   terminal matrix are recorded.
+- 2026-11-12 — REQ-021 adds navigation, check detail, help overlay and the
+  Ctrl-C confirmation to the dashboard; `docs/key-map.md` records the key map
+  for review.

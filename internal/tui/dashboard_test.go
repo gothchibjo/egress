@@ -227,8 +227,12 @@ func TestStatusIsReadableWithoutColor(t *testing.T) {
 			t.Fatalf("status marker %q is missing", marker)
 		}
 	}
-	if !strings.Contains(view, "✓ pass") || !strings.Contains(view, "✗ fail") {
+	if !strings.Contains(view, "✓ pass") {
 		t.Fatal("detail pane does not pair a marker with a status word")
+	}
+	failing := model.Select(3).View()
+	if !strings.Contains(failing, "✗ fail") {
+		t.Fatal("failing detail does not pair a marker with a status word")
 	}
 	if strings.Contains(view, "\x1b") {
 		t.Fatal("colorless view contains ANSI escapes")

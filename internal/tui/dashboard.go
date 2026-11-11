@@ -66,18 +66,19 @@ func WithElapsed(d time.Duration) Option {
 	return func(o *options) { o.elapsed = d; o.hasElapsed = true }
 }
 
-// Model is the dashboard. It renders a completed run and keeps the selected
-// check across resizes.
+// Model is the dashboard. It renders a completed run, keeps the selected check
+// across resizes and handles keyboard navigation.
 type Model struct {
-	results    []domain.Result
-	verdict    domain.Verdict
-	hasVerdict bool
-	elapsed    time.Duration
-	hasElapsed bool
-	selected   int
-	width      int
-	height     int
-	opts       options
+	results     []domain.Result
+	verdict     domain.Verdict
+	hasVerdict  bool
+	selected    int
+	width       int
+	height      int
+	view        viewState
+	helpReturn  viewState
+	confirmQuit bool
+	opts        options
 }
 
 // New builds a dashboard for one run. The verdict is produced by
@@ -111,13 +112,16 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-// Update implements tea.Model. Resize handling lives here; key handling is
-// added by REQ-021.
+// Update implements tea.Model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if size, ok := msg.(tea.WindowSizeMsg); ok {
-		m = m.Resize(size.Width, size.Height)
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		return m.Resize(msg.Width, msg.Height), nil
+	case tea.KeyMsg:
+		return m.updateKey(msg)
+	default:
+		return m, nil
 	}
-	return m, nil
 }
 
 // Resize sets the terminal size and keeps the selected check.
@@ -183,6 +187,15 @@ func (m *Model) clampSelection() {
 
 // View implements tea.Model.
 func (m Model) View() string {
+	if m.confirmQuit {
+		return m.renderConfirm()
+	}
+	switch m.view {
+	case viewHelp:
+		return m.renderHelp()
+	case viewDetail:
+		return m.renderDetailPage()
+	}
 	switch m.Layout() {
 	case LayoutStopped:
 		return ""
@@ -193,4 +206,9 @@ func (m Model) View() string {
 	default:
 		return m.renderNormal()
 	}
+}
+
+// move shifts the selection by delta, clamped to the result range.
+func (m Model) move(delta int) Model {
+	return m.Select(m.selected + delta)
 }

@@ -74,7 +74,7 @@ func (m Model) verdictLabel() string {
 
 func (m Model) renderNormal() string {
 	header := m.renderHeader()
-	footer := m.renderFooter(true)
+	footer := m.renderFooter()
 	bodyHeight := m.height - len(header) - len(footer)
 	if bodyHeight < 1 {
 		bodyHeight = 1
@@ -106,7 +106,7 @@ func (m Model) renderNormal() string {
 
 func (m Model) renderCompact() string {
 	header := m.renderHeader()
-	footer := m.renderFooter(false)
+	footer := m.renderFooter()
 	bodyHeight := m.height - len(header) - len(footer)
 	if bodyHeight < 5 {
 		bodyHeight = 5
@@ -162,22 +162,12 @@ func (m Model) renderHeader() []string {
 	return []string{padLine(left, right, m.width), m.rule(m.width)}
 }
 
-func (m Model) renderFooter(legend bool) []string {
+func (m Model) renderFooter() []string {
 	position := " no results"
 	if len(m.results) > 0 {
 		position = fmt.Sprintf(" %d/%d selected", m.selected+1, len(m.results))
 	}
-	right := ""
-	if legend {
-		right = fmt.Sprintf(
-			"%s pass  %s warn  %s fail  %s skip ",
-			m.marker(domain.StatusPass),
-			m.marker(domain.StatusWarn),
-			m.marker(domain.StatusFail),
-			m.marker(domain.StatusSkipped),
-		)
-	}
-	return []string{m.rule(m.width), padLine(position, right, m.width)}
+	return []string{m.rule(m.width), padLine(position, " "+m.footerHints(), m.width)}
 }
 
 func (m Model) listLines(width, height int) []string {
@@ -435,4 +425,85 @@ func wrapText(text string, width int) []string {
 		current = word
 	}
 	return append(lines, current)
+}
+
+func (m Model) renderPageHeader(title, right string) []string {
+	left := " egress " + m.dash() + " " + title
+	if m.opts.color {
+		left = m.theme().heading.Render(left)
+	}
+	return []string{padLine(left, right, m.width), m.rule(m.width)}
+}
+
+func (m Model) renderHintFooter(hints string) []string {
+	return []string{m.rule(m.width), padLine("", " "+hints, m.width)}
+}
+
+func (m Model) renderHelp() string {
+	switch m.Layout() {
+	case LayoutStopped:
+		return ""
+	case LayoutTooSmall:
+		return m.renderTooSmall()
+	}
+	header := m.renderPageHeader("HELP", "")
+	footer := m.renderHintFooter("? close" + m.separator() + "esc back")
+	bodyHeight := m.height - len(header) - len(footer)
+	if bodyHeight < 1 {
+		bodyHeight = 1
+	}
+	body := block(helpLines(), m.width, bodyHeight)
+	lines := append(header, strings.Split(body, "\n")...)
+	lines = append(lines, footer...)
+	return strings.Join(lines, "\n")
+}
+
+func (m Model) renderDetailPage() string {
+	switch m.Layout() {
+	case LayoutStopped:
+		return ""
+	case LayoutTooSmall:
+		return m.renderTooSmall()
+	}
+	position := ""
+	if len(m.results) > 0 {
+		position = fmt.Sprintf("%d/%d ", m.selected+1, len(m.results))
+	}
+	header := m.renderPageHeader("DETAIL", position)
+	footer := m.renderHintFooter(m.footerHints())
+	bodyHeight := m.height - len(header) - len(footer)
+	if bodyHeight < 1 {
+		bodyHeight = 1
+	}
+	body := block(m.detailLines(m.width, bodyHeight), m.width, bodyHeight)
+	lines := append(header, strings.Split(body, "\n")...)
+	lines = append(lines, footer...)
+	return strings.Join(lines, "\n")
+}
+
+func (m Model) renderConfirm() string {
+	switch m.Layout() {
+	case LayoutStopped:
+		return ""
+	case LayoutTooSmall:
+		return m.renderTooSmall()
+	}
+	header := m.renderPageHeader("QUIT?", "")
+	footer := m.renderHintFooter("y quit" + m.separator() + "n cancel")
+	bodyHeight := m.height - len(header) - len(footer)
+	if bodyHeight < 1 {
+		bodyHeight = 1
+	}
+	body := block([]string{
+		"",
+		" Quit egress?",
+		"",
+		" y  quit",
+		" n  cancel",
+		"",
+		" Ctrl-C again also quits.",
+	}, m.width, bodyHeight)
+	lines := append(header, strings.Split(body, "\n")...)
+	lines = append(lines, footer...)
+	return strings.Join(lines, "\n")
 }
