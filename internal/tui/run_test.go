@@ -133,3 +133,93 @@ func TestRunCompleteWithoutResults(t *testing.T) {
 		t.Fatal("empty run has no placeholder")
 	}
 }
+
+func TestCancelKeysRequestRunnerCancellation(t *testing.T) {
+	current, all := 0, 0
+	model := New(nil, domain.Verdict{}, WithoutColor(), WithCancelHooks(
+		func() { current++ },
+		func() { all++ },
+	)).Resize(100, 30)
+
+	model, _ = pressKey(t, model, "x")
+	model, _ = pressKey(t, model, "X")
+	if current != 0 || all != 0 {
+		t.Fatal("cancel keys fired while no baseline was running")
+	}
+
+	model = model.StartRunning()
+	model, _ = pressKey(t, model, "x")
+	if current != 1 {
+		t.Fatalf("x calls = %d, want 1", current)
+	}
+	if view := model.View(); !strings.Contains(view, "cancelling current check") {
+		t.Fatal("dashboard does not report the current-check cancellation")
+	}
+
+	model, _ = pressKey(t, model, "X")
+	if all != 1 {
+		t.Fatalf("X calls = %d, want 1", all)
+	}
+	if view := model.View(); !strings.Contains(view, "cancelling baseline") {
+		t.Fatal("dashboard does not report the baseline cancellation")
+	}
+
+	model, _ = pressKey(t, model, "esc")
+	if current != 1 || all != 1 {
+		t.Fatal("Esc cancelled the baseline")
+	}
+}
+
+func TestFooterShowsCancelHintsWhileRunning(t *testing.T) {
+	model := New(nil, domain.Verdict{}, WithoutColor()).Resize(100, 30).StartRunning()
+	view := model.View()
+	for _, hint := range []string{"x cancel check", "X cancel run"} {
+		if !strings.Contains(view, hint) {
+			t.Fatalf("running footer is missing %q", hint)
+		}
+	}
+}
+
+func TestConfirmQuitCancelsRunningBaseline(t *testing.T) {
+	cancelled := 0
+	model := New(nil, domain.Verdict{}, WithoutColor(), WithCancelHooks(
+		func() {},
+		func() { cancelled++ },
+	)).Resize(100, 30).StartRunning()
+
+	model, _ = pressKey(t, model, "ctrl+c")
+	model, cmd := pressKey(t, model, "y")
+	if cancelled != 1 {
+		t.Fatalf("cancel-all calls = %d, want 1", cancelled)
+	}
+	assertQuit(t, cmd)
+}
+
+func TestCancelledRunIsLabelled(t *testing.T) {
+	model := New(nil, domain.Verdict{}, WithoutColor()).Resize(100, 30).StartRunning()
+	model = applyMessage(t, model, RunCompleteMsg{Run: app.Run{
+		StartedAt:  runStart,
+		FinishedAt: runStart.Add(time.Second),
+		Results:    []domain.Result{testResult("local.interfaces", "en0", domain.StatusPass)},
+		Cancelled:  true,
+	}})
+
+	view := model.View()
+	if !strings.Contains(view, "CANCELLED") {
+		t.Fatal("cancelled run is not labelled")
+	}
+	if !strings.Contains(view, "pass 1") {
+		t.Fatal("partial results are not shown")
+	}
+}
+
+func TestHelpDocumentsCancelKeys(t *testing.T) {
+	model := New(nil, domain.Verdict{}, WithoutColor()).Resize(100, 30).StartRunning()
+	model, _ = pressKey(t, model, "?")
+	view := model.View()
+	for _, want := range []string{"x / X", "cancel check / baseline"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("help is missing %q", want)
+		}
+	}
+}

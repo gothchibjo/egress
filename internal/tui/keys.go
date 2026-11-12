@@ -44,6 +44,14 @@ func (m Model) updateDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "?":
 		m.helpReturn = viewDashboard
 		m.view = viewHelp
+	case "x":
+		if m.cancelCurrent() {
+			m.progress = "cancelling current check…"
+		}
+	case "X":
+		if m.cancelAll() {
+			m.progress = "cancelling baseline…"
+		}
 	case "q":
 		return m, tea.Quit
 	case "ctrl+c":
@@ -64,6 +72,14 @@ func (m Model) updateDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.Select(len(rows(m.results)) - 1), nil
 	case "esc":
 		m.view = viewDashboard
+	case "x":
+		if m.cancelCurrent() {
+			m.progress = "cancelling current check…"
+		}
+	case "X":
+		if m.cancelAll() {
+			m.progress = "cancelling baseline…"
+		}
 	case "?":
 		m.helpReturn = viewDetail
 		m.view = viewHelp
@@ -90,11 +106,31 @@ func (m Model) updateHelpKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) updateConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "y", "Y", "ctrl+c", "q":
+		if m.running && m.opts.cancelAll != nil {
+			m.opts.cancelAll()
+		}
 		return m, tea.Quit
 	case "n", "N", "esc":
 		m.confirmQuit = false
 	}
 	return m, nil
+}
+
+// cancelCurrent and cancelAll report whether a cancellation was requested.
+func (m Model) cancelCurrent() bool {
+	if !m.running || m.opts.cancelCurrent == nil {
+		return false
+	}
+	m.opts.cancelCurrent()
+	return true
+}
+
+func (m Model) cancelAll() bool {
+	if !m.running || m.opts.cancelAll == nil {
+		return false
+	}
+	m.opts.cancelAll()
+	return true
 }
 
 // separator joins footer hints without introducing non-ASCII text.
@@ -108,6 +144,9 @@ func (m Model) separator() string {
 // footerHints returns the contextual key hints for the active page.
 func (m Model) footerHints() string {
 	sep := m.separator()
+	if m.running {
+		return "x cancel check" + sep + "X cancel run" + sep + "q quit"
+	}
 	switch m.view {
 	case viewDetail:
 		return "↑/k ↓/j move" + sep + "esc back" + sep + "? help" + sep + "q quit"
@@ -130,6 +169,7 @@ func helpLines() []string {
 		"   enter    open the selected check",
 		"   esc      go back",
 		" ACTIONS",
+		"   x / X    cancel check / baseline",
 		"   q        quit",
 		"   ctrl+c   quit with confirmation",
 		"   ?        close help",

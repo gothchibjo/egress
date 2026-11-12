@@ -71,6 +71,8 @@ func (m Model) verdictLabel() string {
 		return "ERROR"
 	case m.running:
 		return "RUNNING"
+	case m.cancelled:
+		return "CANCELLED"
 	case !m.hasVerdict:
 		return "NO VERDICT"
 	default:

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -163,5 +164,183 @@ func TestSessionReplacesPreviousRun(t *testing.T) {
 	}
 	if second.Results[0].Measurements[0].Value != "run-2" {
 		t.Fatalf("second run value = %q", second.Results[0].Measurements[0].Value)
+	}
+}
+
+func TestRunnerTimesOutAStuckCheck(t *testing.T) {
+	release := make(chan struct{})
+	stuck := fakeCheck{id: "stuck", run: func(context.Context) domain.Result {
+		<-release
+		return resultFor("stuck", "late")
+	}}
+	next := fakeCheck{id: "next", run: func(context.Context) domain.Result {
+		return resultFor("next", "1")
+	}}
+	runner := New([]Check{stuck, next}, WithCheckTimeout(25*time.Millisecond))
+
+	start := time.Now()
+	run, err := runner.Run(context.Background(), nil)
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if elapsed > time.Second {
+		t.Fatalf("stuck check held the runner for %v", elapsed)
+	}
+	if len(run.Results) != 2 {
+		t.Fatalf("results = %d, want 2", len(run.Results))
+	}
+	first := run.Results[0]
+	if first.Status != domain.StatusFail {
+		t.Fatalf("timed-out status = %q, want fail", first.Status)
+	}
+	if len(first.Measurements) == 0 || first.Measurements[0].Name != "timeout" {
+		t.Fatalf("timed-out result has no timeout evidence: %+v", first)
+	}
+	if !strings.Contains(first.Diagnostic, "exceeded") {
+		t.Fatalf("diagnostic = %q", first.Diagnostic)
+	}
+	if run.Results[1].Status != domain.StatusPass {
+		t.Fatalf("second check status = %q, want pass", run.Results[1].Status)
+	}
+	close(release)
+}
+
+func TestRunnerBudgetStopsTheRemainingChecks(t *testing.T) {
+	release := make(chan struct{})
+	first := fakeCheck{id: "slow", run: func(context.Context) domain.Result {
+		<-release
+		return resultFor("slow", "1")
+	}}
+	second := fakeCheck{id: "never", run: func(context.Context) domain.Result {
+		return resultFor("never", "1")
+	}}
+	runner := New([]Check{first, second}, WithBudget(30*time.Millisecond), WithCheckTimeout(time.Second))
+
+	start := time.Now()
+	run, err := runner.Run(context.Background(), nil)
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if elapsed > time.Second {
+		t.Fatalf("budget did not stop the run: %v", elapsed)
+	}
+	if run.Cancelled {
+		t.Fatal("budget exhaustion was labelled as user cancellation")
+	}
+	if len(run.Results) != 2 {
+		t.Fatalf("results = %d, want 2", len(run.Results))
+	}
+	if run.Results[0].Status != domain.StatusFail || !strings.Contains(run.Results[0].Diagnostic, "budget") {
+		t.Fatalf("first result = %+v", run.Results[0])
+	}
+	if run.Results[1].Status != domain.StatusSkipped || !strings.Contains(run.Results[1].Diagnostic, "budget") {
+		t.Fatalf("second result = %+v", run.Results[1])
+	}
+	close(release)
+}
+
+func TestRunnerCancelCurrentContinues(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	first := fakeCheck{id: "first", run: func(context.Context) domain.Result {
+		close(started)
+		<-release
+		return resultFor("first", "late")
+	}}
+	second := fakeCheck{id: "second", run: func(context.Context) domain.Result {
+		return resultFor("second", "1")
+	}}
+	runner := New([]Check{first, second}, WithCheckTimeout(time.Second))
+
+	done := make(chan Run, 1)
+	go func() {
+		run, err := runner.Run(context.Background(), nil)
+		if err != nil {
+			t.Errorf("Run() error = %v", err)
+		}
+		done <- run
+	}()
+
+	<-started
+	if !runner.CancelCurrent() {
+		t.Fatal("CancelCurrent() reported no running check")
+	}
+	run := <-done
+	close(release)
+
+	if run.Cancelled {
+		t.Fatal("CancelCurrent() cancelled the whole run")
+	}
+	if run.Results[0].Status != domain.StatusSkipped || !strings.Contains(run.Results[0].Diagnostic, "cancelled by user") {
+		t.Fatalf("first result = %+v", run.Results[0])
+	}
+	if run.Results[1].Status != domain.StatusPass {
+		t.Fatalf("second result = %+v", run.Results[1])
+	}
+}
+
+func TestRunnerCancelAllKeepsCompletedResults(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	first := fakeCheck{id: "first", run: func(context.Context) domain.Result {
+		return resultFor("first", "1")
+	}}
+	second := fakeCheck{id: "second", run: func(context.Context) domain.Result {
+		close(started)
+		<-release
+		return resultFor("second", "late")
+	}}
+	third := fakeCheck{id: "third", run: func(context.Context) domain.Result {
+		return resultFor("third", "1")
+	}}
+	runner := New([]Check{first, second, third}, WithCheckTimeout(time.Second))
+
+	done := make(chan Run, 1)
+	go func() {
+		run, err := runner.Run(context.Background(), nil)
+		if err != nil {
+			t.Errorf("Run() error = %v", err)
+		}
+		done <- run
+	}()
+
+	<-started
+	if !runner.CancelAll() {
+		t.Fatal("CancelAll() reported no running baseline")
+	}
+	run := <-done
+	close(release)
+
+	if !run.Cancelled {
+		t.Fatal("cancelled run is not labelled")
+	}
+	if len(run.Results) != 3 {
+		t.Fatalf("results = %d, want 3", len(run.Results))
+	}
+	if run.Results[0].Status != domain.StatusPass {
+		t.Fatalf("completed result was lost: %+v", run.Results[0])
+	}
+	if run.Results[1].Status != domain.StatusSkipped || !strings.Contains(run.Results[1].Diagnostic, "cancelled") {
+		t.Fatalf("running result = %+v", run.Results[1])
+	}
+	if run.Results[2].Status != domain.StatusSkipped {
+		t.Fatalf("remaining result = %+v", run.Results[2])
+	}
+}
+
+func TestRunnerCancelWhenIdle(t *testing.T) {
+	runner := New(nil)
+	if runner.CancelCurrent() {
+		t.Fatal("CancelCurrent() succeeded without a run")
+	}
+	if runner.CancelAll() {
+		t.Fatal("CancelAll() succeeded without a run")
+	}
+
+	session := NewSession(runner)
+	if session.CancelCurrent() || session.CancelAll() {
+		t.Fatal("session cancelled an idle runner")
 	}
 }

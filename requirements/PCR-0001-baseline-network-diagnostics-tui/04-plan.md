@@ -3,7 +3,7 @@ pcr: PCR-0001
 title: Baseline network diagnostics and TUI shell
 status: implementing
 basis: 03-technical.yaml (frozen)
-revised: 2026-11-11
+revised: 2026-11-12
 approved_by: gothchibjo
 approved_at: 2026-11-11
 ---
@@ -396,6 +396,9 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-012 | The probe is read-only.                                                      | It opens a raw ICMP socket for the probe, sets DF on that socket only, and never writes interface MTU, route or host settings.                                                  | pass   |
 | 2026-11-12 | REQ-012 | Packet sizes stay within the documented test range.                          | `MTUOptions.normalized` clamps sizes to 576–1500 and falls back to the documented defaults; a test rejects out-of-range input.                                                  | pass   |
 | 2026-11-12 | REQ-013 | The sample is bounded and cannot extend the baseline beyond its budget.      | `Count` is capped at `MaxICMPSamples` (10), each exchange uses the 1 s timeout, and the statistics reuse the REQ-009 sample without adding probes.                              | pass   |
+| 2026-11-12 | REQ-014 | The user can quit immediately at any point.                                  | `q` quits from dashboard, detail and help; Ctrl-C asks once and then quits; no state blocks the quit path.                                                                      | pass   |
+| 2026-11-12 | REQ-014 | No probe can hang the session beyond its timeout.                            | Every check runs under an 8 s per-check context and the run under a 30 s budget; a probe that ignores its context yields a timeout result and the runner moves on.              | pass   |
+| 2026-11-12 | REQ-014 | Completed checks remain visible and exportable after cancellation.           | `CancelAll` stops the current check, fills the remaining entries with skipped results and keeps the run as the session current run, which the dashboard renders.                | pass   |
 
 # Evidence Matrix
 
@@ -521,3 +524,6 @@ recorded as part of REQ-002, not as a new requirement.
 - 2026-11-12 — REQ-002 wiring adds `cmd/egress` with terminal detection, the
   full baseline check list, one session and the dashboard hand-off; progress
   from slow checks appears in the footer. Non-interactive output stays REQ-022.
+- 2026-11-12 — REQ-014 adds the 30 s budget, the 8 s per-check timeout and
+  `x`/`X` cancellation; Ctrl-C confirms, cancels and quits, cancelled runs are
+  labelled and partial results stay visible.

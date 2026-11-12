@@ -19,23 +19,27 @@ implemented. The requirement is defined by [REQ-021].
 
 ## Keys
 
-| Context           | Key        | Action                          |
-| :---------------- | :--------- | :------------------------------ |
-| Dashboard, detail | `↑`, `k`   | move selection up               |
-| Dashboard, detail | `↓`, `j`   | move selection down             |
-| Dashboard, detail | `g`        | select the first check          |
-| Dashboard, detail | `G`        | select the last check           |
-| Dashboard         | `enter`    | open the selected check detail  |
-| Detail, help      | `esc`      | go back one page                |
-| Dashboard, detail | `?`        | open help                       |
-| Help              | `?`, `esc` | close help and return           |
-| Dashboard, detail | `q`        | quit immediately                |
-| Dashboard, detail | `ctrl+c`   | ask for confirmation, then quit |
-| Confirmation      | `y`        | quit                            |
-| Confirmation      | `n`, `esc` | cancel and stay                 |
+| Context           | Key        | Action                            |
+| :---------------- | :--------- | :-------------------------------- |
+| Dashboard, detail | `↑`, `k`   | move selection up                 |
+| Dashboard, detail | `↓`, `j`   | move selection down               |
+| Dashboard, detail | `g`        | select the first check            |
+| Dashboard, detail | `G`        | select the last check             |
+| Dashboard         | `enter`    | open the selected check detail    |
+| Running baseline  | `x`        | cancel the current check          |
+| Running baseline  | `X`        | cancel the baseline, keep results |
+| Detail, help      | `esc`      | go back one page                  |
+| Dashboard, detail | `?`        | open help                         |
+| Help              | `?`, `esc` | close help and return             |
+| Dashboard, detail | `q`        | quit immediately                  |
+| Dashboard, detail | `ctrl+c`   | ask for confirmation, then quit   |
+| Confirmation      | `y`        | quit                              |
+| Confirmation      | `n`, `esc` | cancel and stay                   |
 
-`esc` never quits and never changes the selection; on the dashboard it does
-nothing. `ctrl+c` asks before quitting; `q` is the immediate exit.
+`esc` never quits, never cancels a check and never changes the selection; on the
+dashboard it does nothing. `ctrl+c` asks before quitting; `q` is the immediate
+exit. `x` stops only the running check and lets the baseline continue; `X` stops
+the baseline but keeps completed results and labels the run `cancelled`.
 
 ## Pages
 

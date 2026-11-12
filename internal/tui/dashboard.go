@@ -39,10 +39,12 @@ const (
 )
 
 type options struct {
-	color      bool
-	ascii      bool
-	elapsed    time.Duration
-	hasElapsed bool
+	color         bool
+	ascii         bool
+	elapsed       time.Duration
+	hasElapsed    bool
+	cancelCurrent func()
+	cancelAll     func()
 }
 
 // Option configures the dashboard rendering.
@@ -68,6 +70,14 @@ func WithElapsed(d time.Duration) Option {
 	return func(o *options) { o.elapsed = d; o.hasElapsed = true }
 }
 
+// WithCancelHooks wires the runner cancellation controls into the keyboard.
+func WithCancelHooks(cancelCurrent, cancelAll func()) Option {
+	return func(o *options) {
+		o.cancelCurrent = cancelCurrent
+		o.cancelAll = cancelAll
+	}
+}
+
 // Model is the dashboard. It renders a completed run, keeps the selected check
 // across resizes and handles keyboard navigation.
 type Model struct {
@@ -81,6 +91,7 @@ type Model struct {
 	helpReturn  viewState
 	confirmQuit bool
 	running     bool
+	cancelled   bool
 	progress    string
 	runErr      string
 	opts        options
@@ -147,6 +158,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // StartRunning marks the dashboard as waiting for the baseline.
 func (m Model) StartRunning() Model {
 	m.running = true
+	m.cancelled = false
 	m.progress = ""
 	m.runErr = ""
 	return m
@@ -155,6 +167,7 @@ func (m Model) StartRunning() Model {
 // finishRun replaces the dashboard content with a completed run.
 func (m Model) finishRun(run app.Run) Model {
 	m.running = false
+	m.cancelled = run.Cancelled
 	m.progress = ""
 	m.runErr = ""
 	m.results = append([]domain.Result(nil), run.Results...)

@@ -4,6 +4,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,15 +34,24 @@ type Run struct {
 	StartedAt  time.Time
 	FinishedAt time.Time
 	Results    []domain.Result
+	Cancelled  bool
 }
 
-// Runner executes baseline checks one at a time.
+// Runner executes baseline checks one at a time under a time budget.
 type Runner struct {
-	checks    []Check
-	now       func() time.Time
-	interval  time.Duration
-	threshold time.Duration
-	running   atomic.Bool
+	checks       []Check
+	now          func() time.Time
+	interval     time.Duration
+	threshold    time.Duration
+	budget       time.Duration
+	checkTimeout time.Duration
+	running      atomic.Bool
+
+	mu               sync.Mutex
+	runCancel        context.CancelFunc
+	checkCancel      context.CancelFunc
+	cancelRequested  atomic.Bool
+	currentCancelled atomic.Bool
 }
 
 // Option configures a Runner.
@@ -72,13 +82,29 @@ func WithSlowCheckThreshold(d time.Duration) Option {
 	}
 }
 
+// WithBudget sets the overall baseline budget.
+func WithBudget(d time.Duration) Option {
+	return func(r *Runner) {
+		r.budget = d
+	}
+}
+
+// WithCheckTimeout sets the per-check timeout.
+func WithCheckTimeout(d time.Duration) Option {
+	return func(r *Runner) {
+		r.checkTimeout = d
+	}
+}
+
 // New returns a runner for the given checks.
 func New(checks []Check, opts ...Option) *Runner {
 	r := &Runner{
-		checks:    append([]Check(nil), checks...),
-		now:       time.Now,
-		interval:  100 * time.Millisecond,
-		threshold: time.Second,
+		checks:       append([]Check(nil), checks...),
+		now:          time.Now,
+		interval:     100 * time.Millisecond,
+		threshold:    time.Second,
+		budget:       30 * time.Second,
+		checkTimeout: 8 * time.Second,
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -86,34 +112,108 @@ func New(checks []Check, opts ...Option) *Runner {
 	return r
 }
 
+// CancelCurrent stops the check that is running and continues the baseline.
+func (r *Runner) CancelCurrent() bool {
+	r.mu.Lock()
+	cancel := r.checkCancel
+	r.mu.Unlock()
+	if cancel == nil {
+		return false
+	}
+	r.currentCancelled.Store(true)
+	cancel()
+	return true
+}
+
+// CancelAll stops the baseline and keeps the results collected so far.
+func (r *Runner) CancelAll() bool {
+	r.mu.Lock()
+	cancel := r.runCancel
+	r.mu.Unlock()
+	if cancel == nil {
+		return false
+	}
+	r.cancelRequested.Store(true)
+	cancel()
+	return true
+}
+
 // Run executes every check in order and returns one run. It never merges with a
-// previous run, and it rejects a second concurrent invocation.
+// previous run, it rejects a second concurrent invocation and it bounds the run
+// with the configured budget.
 func (r *Runner) Run(ctx context.Context, progress func(Progress)) (Run, error) {
 	if !r.running.CompareAndSwap(false, true) {
 		return Run{}, ErrAlreadyRunning
 	}
 	defer r.running.Store(false)
+	r.cancelRequested.Store(false)
+	r.currentCancelled.Store(false)
+
+	runCtx, cancelRun := context.WithCancel(ctx)
+	if r.budget > 0 {
+		runCtx, cancelRun = context.WithTimeout(ctx, r.budget)
+	}
+	defer cancelRun()
+
+	r.mu.Lock()
+	r.runCancel = cancelRun
+	r.mu.Unlock()
+	defer func() {
+		r.mu.Lock()
+		r.runCancel = nil
+		r.checkCancel = nil
+		r.mu.Unlock()
+	}()
 
 	run := Run{
 		StartedAt: r.now(),
 		Results:   make([]domain.Result, 0, len(r.checks)),
 	}
 	for i, check := range r.checks {
-		run.Results = append(run.Results, r.runCheck(ctx, check, i, progress))
+		if runCtx.Err() != nil {
+			run.Results = append(run.Results, r.skippedCheck(check, runCtx))
+			continue
+		}
+		run.Results = append(run.Results, r.runCheck(runCtx, check, i, progress))
 	}
 	run.FinishedAt = r.now()
+	run.Cancelled = r.cancelRequested.Load() || ctx.Err() != nil
 	return run, nil
 }
 
-func (r *Runner) runCheck(ctx context.Context, check Check, index int, progress func(Progress)) domain.Result {
+func (r *Runner) runCheck(runCtx context.Context, check Check, index int, progress func(Progress)) domain.Result {
 	start := r.now()
+	var checkCtx context.Context
+	var cancelCheck context.CancelFunc
+	if r.checkTimeout > 0 {
+		checkCtx, cancelCheck = context.WithTimeout(runCtx, r.checkTimeout)
+	} else {
+		checkCtx, cancelCheck = context.WithCancel(runCtx)
+	}
+	defer cancelCheck()
+
+	r.mu.Lock()
+	r.checkCancel = cancelCheck
+	r.currentCancelled.Store(false)
+	r.mu.Unlock()
+	defer func() {
+		r.mu.Lock()
+		r.checkCancel = nil
+		r.mu.Unlock()
+	}()
+
 	done := make(chan domain.Result, 1)
 	go func() {
-		done <- check.Run(ctx)
+		done <- check.Run(checkCtx)
 	}()
 
 	if progress == nil || r.interval <= 0 {
-		return <-done
+		select {
+		case result := <-done:
+			return result
+		case <-checkCtx.Done():
+			return r.stoppedCheck(check, runCtx, done)
+		}
 	}
 
 	ticker := time.NewTicker(r.interval)
@@ -132,7 +232,60 @@ func (r *Runner) runCheck(ctx context.Context, check Check, index int, progress 
 					Elapsed: elapsed,
 				})
 			}
+		case <-checkCtx.Done():
+			return r.stoppedCheck(check, runCtx, done)
 		}
+	}
+}
+
+// stoppedCheck classifies a check that did not return before its context ended.
+func (r *Runner) stoppedCheck(check Check, runCtx context.Context, done <-chan domain.Result) domain.Result {
+	select {
+	case result := <-done:
+		return result
+	default:
+	}
+
+	switch {
+	case r.currentCancelled.Load():
+		return r.skippedResult(check.ID(), "check cancelled by user")
+	case runCtx.Err() == nil:
+		return r.timeoutResult(check, r.checkTimeout, "check exceeded its timeout")
+	case errors.Is(runCtx.Err(), context.DeadlineExceeded):
+		return r.timeoutResult(check, r.budget, "baseline budget exhausted while the check ran")
+	default:
+		return r.skippedResult(check.ID(), "baseline cancelled while the check ran")
+	}
+}
+
+func (r *Runner) skippedCheck(check Check, runCtx context.Context) domain.Result {
+	if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
+		return r.skippedResult(check.ID(), "baseline budget exhausted before the check ran")
+	}
+	return r.skippedResult(check.ID(), "baseline cancelled before the check ran")
+}
+
+func (r *Runner) skippedResult(id domain.CheckID, reason string) domain.Result {
+	return domain.Result{
+		CheckID:    id,
+		Status:     domain.StatusSkipped,
+		Target:     string(id),
+		Method:     "runner",
+		Timestamp:  r.now(),
+		Diagnostic: reason,
+	}
+}
+
+func (r *Runner) timeoutResult(check Check, timeout time.Duration, reason string) domain.Result {
+	value := timeout.Round(time.Millisecond).String()
+	return domain.Result{
+		CheckID:      check.ID(),
+		Status:       domain.StatusFail,
+		Target:       string(check.ID()),
+		Method:       "runner timeout",
+		Measurements: []domain.Measurement{{Name: "timeout", Value: value}},
+		Timestamp:    r.now(),
+		Diagnostic:   fmt.Sprintf("%s (%s)", reason, value),
 	}
 }
 
@@ -158,6 +311,16 @@ func (s *Session) Run(ctx context.Context, progress func(Progress)) (Run, error)
 	s.current = &run
 	s.mu.Unlock()
 	return run, nil
+}
+
+// CancelCurrent stops the running check and continues the baseline.
+func (s *Session) CancelCurrent() bool {
+	return s.runner.CancelCurrent()
+}
+
+// CancelAll stops the baseline and keeps partial results.
+func (s *Session) CancelAll() bool {
+	return s.runner.CancelAll()
 }
 
 // Current returns the latest completed run.

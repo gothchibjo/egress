@@ -27,7 +27,10 @@ func run(stdout, stderr *os.File) int {
 
 	checks := probe.BaselineChecks(probe.BaselineOptions{Elevated: os.Geteuid() == 0})
 	session := app.NewSession(app.New(checks))
-	model := tui.New(nil, domain.Verdict{}).StartRunning()
+	model := tui.New(nil, domain.Verdict{}, tui.WithCancelHooks(
+		func() { session.CancelCurrent() },
+		func() { session.CancelAll() },
+	)).StartRunning()
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithOutput(stdout), tea.WithInput(os.Stdin))
 
 	ctx, cancel := context.WithCancel(context.Background())
