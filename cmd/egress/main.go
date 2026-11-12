@@ -43,6 +43,7 @@ type baselineRunner interface {
 var (
 	detectPrivilege  = platform.DetectPrivilege
 	readDestinations = probe.OutboundDestinations
+	detectContext    = platform.DetectNetworkContext
 )
 
 func main() {
@@ -101,21 +102,25 @@ func runWith(args []string, stdout, stderr io.Writer, newSession func(elevated b
 	if destinationErr != nil {
 		fmt.Fprintln(stderr, "egress: destination list unavailable:", destinationErr)
 	}
+	networkContext, contextErr := detectContext()
+	if contextErr != nil {
+		fmt.Fprintln(stderr, "egress: interface list unavailable:", contextErr)
+	}
 
 	session := newSession(privilege.RawICMP)
 	if options.json || !isTerminal(stdout) {
-		return runJSON(stdout, stderr, session, mode, destinations)
+		return runJSON(stdout, stderr, session, mode, destinations, networkContext)
 	}
 	file, ok := stdout.(*os.File)
 	if !ok {
-		return runJSON(stdout, stderr, session, mode, destinations)
+		return runJSON(stdout, stderr, session, mode, destinations, networkContext)
 	}
-	return runTUI(file, stderr, session, mode, destinations, destinationErr)
+	return runTUI(file, stderr, session, mode, destinations, destinationErr, networkContext, contextErr)
 }
 
 // runJSON runs one baseline and prints the JSON envelope. It never touches the
 // terminal, so the output stays free of control sequences.
-func runJSON(stdout, stderr io.Writer, session baselineRunner, mode string, destinations []domain.Destination) int {
+func runJSON(stdout, stderr io.Writer, session baselineRunner, mode string, destinations []domain.Destination, networkContext platform.NetworkContext) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
@@ -126,6 +131,7 @@ func runJSON(stdout, stderr io.Writer, session baselineRunner, mode string, dest
 	}
 	envelope := report.BuildEnvelope(baseline.Results, mode, destinations)
 	envelope.Cancelled = baseline.Cancelled
+	envelope.Context = &networkContext
 	if err := report.Encode(stdout, envelope); err != nil {
 		fmt.Fprintln(stderr, "egress:", err)
 		return exitError
@@ -134,10 +140,11 @@ func runJSON(stdout, stderr io.Writer, session baselineRunner, mode string, dest
 }
 
 // runTUI wires the baseline session to the dashboard and returns its outcome.
-func runTUI(stdout *os.File, stderr io.Writer, session baselineRunner, mode string, destinations []domain.Destination, destinationErr error) int {
+func runTUI(stdout *os.File, stderr io.Writer, session baselineRunner, mode string, destinations []domain.Destination, destinationErr error, networkContext platform.NetworkContext, contextErr error) int {
 	model := tui.New(nil, domain.Verdict{},
 		tui.WithMode(mode),
 		tui.WithDestinations(destinations, destinationErr),
+		tui.WithContext(networkContext, contextErr),
 		tui.WithCancelHooks(
 			func() { session.CancelCurrent() },
 			func() { session.CancelAll() },

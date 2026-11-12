@@ -34,6 +34,9 @@ func (m Model) promptExport() Model {
 func (m Model) writeExport(path string, replace bool) Model {
 	envelope := report.BuildEnvelope(m.results, m.opts.mode, m.opts.destinations)
 	envelope.Cancelled = m.cancelled
+	if m.opts.networkContext != nil {
+		envelope.Context = m.opts.networkContext
+	}
 	err := m.opts.writeExport(path, envelope, replace)
 	switch {
 	case errors.Is(err, report.ErrExportExists):

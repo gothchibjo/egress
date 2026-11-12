@@ -44,6 +44,42 @@
         "summary": { "type": "string", "minLength": 1 }
       }
     },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proxies", "vpn"],
+      "properties": {
+        "proxies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "source", "value"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "source": { "type": "string", "minLength": 1 },
+              "value": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "vpn": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "kind", "state", "addresses", "default_route", "source"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "kind": { "enum": ["tun", "tap", "wireguard", "ppp", "ipsec"] },
+              "state": { "enum": ["up", "down"] },
+              "addresses": { "type": "array", "items": { "type": "string" } },
+              "default_route": { "type": "boolean" },
+              "source": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
     "destinations": {
       "type": "array",
       "items": {

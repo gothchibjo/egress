@@ -410,6 +410,7 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-020 | No telemetry or enrichment API is added.                                     | The module has no analytics, crash-report, update or enrichment dependency; HTTP exists only in the DoH comparison and the captive canary.                                                                                      | pass   |
 | 2026-11-12 | REQ-022 | No secrets or unrelated host data are exported.                              | The envelope carries results, verdict, classification and the documented destination list only; it has no environment, credential or file-system fields.                                                                        | pass   |
 | 2026-11-12 | REQ-022 | Non-interactive output contains no terminal control sequences.               | JSON mode never builds the dashboard; the CLI test asserts stdout has no ESC byte and the output is valid JSON.                                                                                                                 | pass   |
+| 2026-11-12 | REQ-023 | Context is informational only.                                               | `platform.DetectNetworkContext` reads interfaces, default routes and proxy variables; no probe, verdict or destination consumes it, and no bypass or A/B path exists.                                                           | pass   |
 
 # Evidence Matrix
 
@@ -562,3 +563,10 @@ recorded as part of REQ-002, not as a new requirement.
 - 2026-11-12 — REQ-021 keeps long evidence reachable: the dashboard pane marks
   truncation, the detail page scrolls with arrows, `PgUp`/`PgDn` and `g`/`G`,
   and `h`/`l` switch checks instead of moving an invisible selection.
+- 2026-11-12 — REQ-023 reports proxy variables and tunnel-like interfaces as
+  read-only context on the `c` page and in the JSON envelope, with sources,
+  explicit absence, redacted proxy credentials and no effect on probes.
+- 2026-11-12 — REQ-023 prints the provenance rule once in the context preamble
+  instead of repeating it per interface; the `[default route]` marker carries
+  the only difference the TUI needs, and the JSON keeps the full source per
+  entry.

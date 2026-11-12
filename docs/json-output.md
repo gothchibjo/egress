@@ -31,9 +31,11 @@ the results collected so far. The behaviour is defined by [REQ-022].
 | :--------------- | :--------- | :--------------------------------------------------------- |
 | `schema_version` | always     | `v1`                                                       |
 | `mode`           | always     | `elevated` or `unprivileged`                               |
+| `cancelled`      | on cancel  | `true` when the run was stopped early                      |
 | `results`        | always     | one object per check, the same evidence the TUI shows      |
 | `verdict`        | finished   | aggregate level, status counts and the most useful finding |
 | `classification` | on failure | failing path scope and the locally testable summary        |
+| `context`        | always     | proxy and tunnel context with its source                   |
 | `destinations`   | always     | the documented outbound endpoints                          |
 
 Optional sections are omitted instead of written empty. The schema lives in

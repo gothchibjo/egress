@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gothchibjo/egress/internal/domain"
+	"github.com/gothchibjo/egress/internal/platform"
 )
 
 // SchemaVersion identifies the stable JSON envelope.
@@ -27,13 +28,14 @@ var resultSchema []byte
 // Envelope is the stable JSON document shared by the TUI export and CLI output.
 // Optional sections are omitted when the session did not produce them.
 type Envelope struct {
-	SchemaVersion  string                 `json:"schema_version"`
-	Mode           string                 `json:"mode,omitempty"`
-	Cancelled      bool                   `json:"cancelled,omitempty"`
-	Results        []domain.Result        `json:"results"`
-	Verdict        *domain.Verdict        `json:"verdict,omitempty"`
-	Classification *domain.Classification `json:"classification,omitempty"`
-	Destinations   []domain.Destination   `json:"destinations,omitempty"`
+	SchemaVersion  string                   `json:"schema_version"`
+	Mode           string                   `json:"mode,omitempty"`
+	Cancelled      bool                     `json:"cancelled,omitempty"`
+	Results        []domain.Result          `json:"results"`
+	Verdict        *domain.Verdict          `json:"verdict,omitempty"`
+	Classification *domain.Classification   `json:"classification,omitempty"`
+	Destinations   []domain.Destination     `json:"destinations,omitempty"`
+	Context        *platform.NetworkContext `json:"context,omitempty"`
 }
 
 // BuildEnvelope assembles a complete document from one finished session so the

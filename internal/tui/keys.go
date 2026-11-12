@@ -10,6 +10,7 @@ const (
 	viewDetail
 	viewHelp
 	viewDestinations
+	viewContext
 )
 
 // updateKey dispatches a key press to the active page. Every action has a key;
@@ -26,6 +27,8 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateHelpKey(msg)
 	case viewDestinations:
 		return m.updateDestinationsKey(msg)
+	case viewContext:
+		return m.updateContextKey(msg)
 	case viewDetail:
 		return m.updateDetailKey(msg)
 	default:
@@ -55,6 +58,8 @@ func (m Model) updateDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.destinationsReturn = viewDashboard
 		m.destinationOffset = 0
 		m.view = viewDestinations
+	case "c":
+		return m.openContext(viewDashboard), nil
 	case "e":
 		return m.exportCurrent(), nil
 	case "E":
@@ -110,6 +115,40 @@ func (m Model) updateDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.destinationsReturn = viewDetail
 		m.destinationOffset = 0
 		m.view = viewDestinations
+	case "c":
+		return m.openContext(viewDetail), nil
+	case "q":
+		return m, tea.Quit
+	case "ctrl+c":
+		m.confirmQuit = true
+	}
+	return m, nil
+}
+
+// openContext shows the read-only proxy and tunnel context page.
+func (m Model) openContext(returnTo viewState) Model {
+	m.contextReturn = returnTo
+	m.contextOffset = 0
+	m.view = viewContext
+	return m
+}
+
+func (m Model) updateContextKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "up", "k":
+		m.contextOffset = clampOffset(m.contextOffset-1, m.contextMaxOffset())
+	case "down", "j":
+		m.contextOffset = clampOffset(m.contextOffset+1, m.contextMaxOffset())
+	case "g":
+		m.contextOffset = 0
+	case "G":
+		m.contextOffset = m.contextMaxOffset()
+	case "esc", "c":
+		m.view = m.contextReturn
+		m.contextOffset = 0
+	case "?":
+		m.helpReturn = viewContext
+		m.view = viewHelp
 	case "q":
 		return m, tea.Quit
 	case "ctrl+c":
@@ -211,7 +250,7 @@ func (m Model) footerHints() string {
 	switch m.view {
 	case viewDetail:
 		return "↑/k ↓/j scroll" + sep + "h/l check" + sep + "esc back" + sep + "? help"
-	case viewDestinations:
+	case viewDestinations, viewContext:
 		return "j/k scroll" + sep + "esc back" + sep + "? help" + sep + "q quit"
 	case viewHelp:
 		return "? close" + sep + "esc back"
@@ -231,7 +270,7 @@ func helpLines() []string {
 		"   h/l [ ]    previous / next check",
 		"   PgUp/PgDn  scroll one page",
 		"   enter      open · esc back",
-		"   d          destinations",
+		"   c / d      context / destinations",
 		" ACTIONS",
 		"   e / E      export default / path",
 		"   x / X      cancel check / baseline",

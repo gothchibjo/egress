@@ -1,14 +1,17 @@
 package report
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gothchibjo/egress/internal/domain"
+	"github.com/gothchibjo/egress/internal/platform"
 )
 
 func localPass() domain.Result {
@@ -170,5 +173,47 @@ func TestWriteFileRejectsInvalidEnvelopeAndLeavesNoFile(t *testing.T) {
 	}
 	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("invalid export left a file: %v", err)
+	}
+}
+
+func TestEnvelopeWithContextMatchesSchema(t *testing.T) {
+	envelope := BuildEnvelope([]domain.Result{localPass()}, "unprivileged", nil)
+	envelope.Context = &platform.NetworkContext{
+		Proxies: []platform.ProxySetting{
+			{Name: "HTTPS_PROXY", Source: "https_proxy", Value: "http://***@proxy.example:8080"},
+		},
+		VPN: []platform.VPNInterface{
+			{
+				Name:         "utun3",
+				Kind:         "tun",
+				State:        "up",
+				Addresses:    []string{"10.8.0.2/32"},
+				DefaultRoute: true,
+				Source:       "interface name and default route",
+			},
+		},
+	}
+
+	doc := encodeToMap(t, envelope)
+	if err := compileSchema(t).Validate(doc); err != nil {
+		t.Fatalf("envelope with context does not match schema: %v", err)
+	}
+}
+
+func TestEncodeContextStatesAbsence(t *testing.T) {
+	envelope := BuildEnvelope([]domain.Result{localPass()}, "unprivileged", nil)
+	envelope.Context = &platform.NetworkContext{
+		Proxies: []platform.ProxySetting{},
+		VPN:     []platform.VPNInterface{},
+	}
+
+	var buf bytes.Buffer
+	if err := Encode(&buf, envelope); err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+	for _, want := range []string{`"proxies":[]`, `"vpn":[]`} {
+		if !strings.Contains(buf.String(), want) {
+			t.Fatalf("absent context is not explicit: %s", buf.String())
+		}
 	}
 }

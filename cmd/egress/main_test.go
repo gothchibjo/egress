@@ -64,12 +64,20 @@ func stubSession(run app.Run, err error) func(bool) baselineRunner {
 func withStubs(t *testing.T, destinations []domain.Destination) {
 	t.Helper()
 	previousPrivilege, previousDestinations := detectPrivilege, readDestinations
+	previousContext := detectContext
 	t.Cleanup(func() {
 		detectPrivilege = previousPrivilege
 		readDestinations = previousDestinations
+		detectContext = previousContext
 	})
 	detectPrivilege = func() platform.Privilege { return platform.Privilege{} }
 	readDestinations = func() ([]domain.Destination, error) { return destinations, nil }
+	detectContext = func() (platform.NetworkContext, error) {
+		return platform.NetworkContext{
+			Proxies: []platform.ProxySetting{},
+			VPN:     []platform.VPNInterface{},
+		}, nil
+	}
 }
 
 func TestIsTerminalRejectsPipe(t *testing.T) {
@@ -259,5 +267,46 @@ func TestRunRejectsPositionalArguments(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "unexpected argument") {
 		t.Fatalf("stderr = %q", stderr.String())
+	}
+}
+
+func TestRunJSONEmitsNetworkContext(t *testing.T) {
+	withStubs(t, nil)
+	detectContext = func() (platform.NetworkContext, error) {
+		return platform.NetworkContext{
+			Proxies: []platform.ProxySetting{
+				{Name: "HTTPS_PROXY", Source: "https_proxy", Value: "http://***@proxy.example:8080"},
+			},
+			VPN: []platform.VPNInterface{
+				{
+					Name:         "utun3",
+					Kind:         "tun",
+					State:        "up",
+					Addresses:    []string{"10.8.0.2/32"},
+					DefaultRoute: true,
+					Source:       "interface name and default route",
+				},
+			},
+		}, nil
+	}
+	baseline := app.Run{Results: []domain.Result{passResult("local.interfaces", "en0")}}
+
+	var stdout, stderr bytes.Buffer
+	if code := runWith([]string{"--json"}, &stdout, &stderr, stubSession(baseline, nil)); code != exitHealthy {
+		t.Fatalf("exit code = %d", code)
+	}
+
+	var doc report.Envelope
+	if err := json.Unmarshal(stdout.Bytes(), &doc); err != nil {
+		t.Fatalf("stdout is not JSON: %v", err)
+	}
+	if doc.Context == nil {
+		t.Fatal("envelope has no context")
+	}
+	if len(doc.Context.Proxies) != 1 || doc.Context.Proxies[0].Source != "https_proxy" {
+		t.Fatalf("proxies = %+v", doc.Context.Proxies)
+	}
+	if len(doc.Context.VPN) != 1 || doc.Context.VPN[0].Name != "utun3" {
+		t.Fatalf("vpn = %+v", doc.Context.VPN)
 	}
 }

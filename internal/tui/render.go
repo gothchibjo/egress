@@ -600,6 +600,87 @@ func (m Model) detailMaxOffset() int {
 	return total - height
 }
 
+func (m Model) renderContext() string {
+	switch m.Layout() {
+	case LayoutStopped:
+		return ""
+	case LayoutTooSmall:
+		return m.renderTooSmall()
+	}
+	header := m.renderPageHeader("CONTEXT", "")
+	footer := m.renderHintFooter(m.footerHints())
+	bodyHeight := m.contextBodyHeight()
+
+	lines := m.contextLines()
+	offset := clampOffset(m.contextOffset, m.contextMaxOffset())
+	body := block(lines[offset:], m.width, bodyHeight)
+	out := append(header, strings.Split(body, "\n")...)
+	out = append(out, footer...)
+	return strings.Join(out, "\n")
+}
+
+func (m Model) contextBodyHeight() int {
+	header := m.renderPageHeader("CONTEXT", "")
+	footer := m.renderHintFooter("")
+	height := m.height - len(header) - len(footer)
+	if height < 1 {
+		height = 1
+	}
+	return height
+}
+
+func (m Model) contextMaxOffset() int {
+	total := len(m.contextLines())
+	height := m.contextBodyHeight()
+	if total <= height {
+		return 0
+	}
+	return total - height
+}
+
+// contextLines renders the read-only proxy and tunnel context.
+func (m Model) contextLines() []string {
+	lines := []string{"", " Read-only context. It never changes which probes run."}
+	for _, part := range wrapText("Sources: proxy variables from the environment; tunnel interface names, with the default route marked when it applies.", m.width-2) {
+		lines = append(lines, " "+part)
+	}
+	lines = append(lines, "")
+	if m.opts.contextErr != "" {
+		lines = append(lines, " Interface list unavailable: "+m.opts.contextErr, "")
+	}
+	if m.opts.networkContext == nil {
+		return append(lines, " No context was collected in this session.")
+	}
+
+	context := m.opts.networkContext
+	lines = append(lines, " "+m.theme().heading.Render("PROXY"))
+	if len(context.Proxies) == 0 {
+		lines = append(lines, "   none detected")
+	}
+	for _, proxy := range context.Proxies {
+		lines = append(lines,
+			"   "+proxy.Name+"  "+proxy.Value,
+			"     source  environment ("+proxy.Source+")",
+		)
+	}
+
+	lines = append(lines, "", " "+m.theme().heading.Render("VPN"))
+	if len(context.VPN) == 0 {
+		lines = append(lines, "   none detected")
+	}
+	for _, iface := range context.VPN {
+		summary := iface.Kind + "  " + iface.State
+		if iface.DefaultRoute {
+			summary += "  [default route]"
+		}
+		lines = append(lines, "   "+iface.Name+"  "+summary)
+		if len(iface.Addresses) > 0 {
+			lines = append(lines, "     addresses  "+strings.Join(iface.Addresses, ", "))
+		}
+	}
+	return lines
+}
+
 func (m Model) renderDestinations() string {
 	switch m.Layout() {
 	case LayoutStopped:

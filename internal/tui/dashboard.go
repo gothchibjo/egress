@@ -10,6 +10,7 @@ import (
 
 	"github.com/gothchibjo/egress/internal/app"
 	"github.com/gothchibjo/egress/internal/domain"
+	"github.com/gothchibjo/egress/internal/platform"
 	"github.com/gothchibjo/egress/internal/report"
 )
 
@@ -49,6 +50,8 @@ type options struct {
 	destinationErr string
 	writeExport    ExportFunc
 	now            func() time.Time
+	networkContext *platform.NetworkContext
+	contextErr     string
 	cancelCurrent  func()
 	cancelAll      func()
 }
@@ -105,6 +108,18 @@ func WithCancelHooks(cancelCurrent, cancelAll func()) Option {
 	}
 }
 
+// WithContext supplies the read-only proxy and tunnel context. A detection
+// error is shown on the context page instead of hiding the proxied part.
+func WithContext(context platform.NetworkContext, err error) Option {
+	return func(o *options) {
+		copied := context
+		o.networkContext = &copied
+		if err != nil {
+			o.contextErr = err.Error()
+		}
+	}
+}
+
 // WithExporter overrides how the dashboard writes JSON exports.
 func WithExporter(write ExportFunc) Option {
 	return func(o *options) { o.writeExport = write }
@@ -124,6 +139,8 @@ type Model struct {
 	destinationsReturn viewState
 	destinationOffset  int
 	detailOffset       int
+	contextReturn      viewState
+	contextOffset      int
 	confirmQuit        bool
 	running            bool
 	cancelled          bool
@@ -330,6 +347,8 @@ func (m Model) View() string {
 		return m.renderDetailPage()
 	case viewDestinations:
 		return m.renderDestinations()
+	case viewContext:
+		return m.renderContext()
 	}
 	switch m.Layout() {
 	case LayoutStopped:
