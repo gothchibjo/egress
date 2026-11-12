@@ -546,3 +546,6 @@ recorded as part of REQ-002, not as a new requirement.
 - 2026-11-12 — REQ-019 classifies each run as local-link, gateway, dns or
   upstream from the collected checks, shows the scope and a locally-testable
   summary in the dashboard, and keeps the wording free of censorship claims.
+- 2026-11-12 — REQ-019 renders the classification sentence as a rule-bounded
+  band with wrapping and a two-line cap, one line in the compact layout, so it
+  no longer floats between the header and the result list or clips mid-word.

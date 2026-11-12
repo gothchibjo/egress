@@ -81,7 +81,7 @@ func (m Model) verdictLabel() string {
 }
 
 func (m Model) renderNormal() string {
-	header := m.renderHeader()
+	header := append(m.renderHeader(), m.renderScopeBand(m.width)...)
 	footer := m.renderFooter()
 	bodyHeight := m.height - len(header) - len(footer)
 	if bodyHeight < 1 {
@@ -113,7 +113,7 @@ func (m Model) renderNormal() string {
 }
 
 func (m Model) renderCompact() string {
-	header := m.renderHeader()
+	header := append(m.renderHeader(), m.renderScopeBand(m.width)...)
 	footer := m.renderFooter()
 	bodyHeight := m.height - len(header) - len(footer)
 	if bodyHeight < 5 {
@@ -173,11 +173,40 @@ func (m Model) renderHeader() []string {
 	if m.opts.hasElapsed {
 		right += fmt.Sprintf(" %s", m.opts.elapsed.Round(10*time.Millisecond))
 	}
-	lines := []string{padLine(left, right, m.width), m.rule(m.width)}
-	if m.summary != "" {
-		lines = append(lines, padLine(" "+m.summary, "", m.width))
+	return []string{padLine(left, right, m.width), m.rule(m.width)}
+}
+
+// renderScopeBand renders the classification sentence as a band closed by a
+// rule. The header rule above it and the returned rule below it keep the
+// sentence inside the frame instead of letting it float between the header and
+// the result list.
+func (m Model) renderScopeBand(width int) []string {
+	if m.summary == "" {
+		return nil
 	}
-	return lines
+	limit := 2
+	if m.Layout() == LayoutCompact {
+		limit = 1
+	}
+	if width < 4 {
+		width = 4
+	}
+
+	parts := wrapText(m.summary, width-2)
+	if len(parts) > limit {
+		parts = parts[:limit]
+		parts[limit-1] = clip(parts[limit-1], width-3) + "…"
+	}
+
+	lines := make([]string, 0, len(parts)+1)
+	for _, part := range parts {
+		line := " " + part
+		if m.opts.color {
+			line = m.theme().muted.Render(line)
+		}
+		lines = append(lines, padLine(line, "", width))
+	}
+	return append(lines, m.rule(width))
 }
 
 func (m Model) renderFooter() []string {
