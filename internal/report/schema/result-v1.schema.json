@@ -7,41 +7,41 @@
   "required": ["schema_version", "results"],
   "properties": {
     "schema_version": { "const": "v1" },
+    "mode": { "enum": ["unprivileged", "elevated"] },
+    "cancelled": { "type": "boolean" },
     "results": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "check_id",
-          "status",
-          "target",
-          "method",
-          "measurements",
-          "timestamp"
-        ],
-        "properties": {
-          "check_id": { "type": "string", "minLength": 1 },
-          "status": { "enum": ["pass", "warn", "fail", "skipped"] },
-          "target": { "type": "string", "minLength": 1 },
-          "method": { "type": "string", "minLength": 1 },
-          "measurements": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["name", "value"],
-              "properties": {
-                "name": { "type": "string", "minLength": 1 },
-                "value": { "type": "string", "minLength": 1 },
-                "unit": { "type": "string" }
-              }
-            }
-          },
-          "timestamp": { "type": "string", "format": "date-time" },
-          "diagnostic": { "type": "string" },
-          "error": { "type": "string" }
-        }
+      "items": { "$ref": "#/$defs/result" }
+    },
+    "verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verdict", "counts"],
+      "properties": {
+        "verdict": { "enum": ["healthy", "degraded", "blocked"] },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pass", "warn", "fail", "skipped"],
+          "properties": {
+            "pass": { "type": "integer", "minimum": 0 },
+            "warn": { "type": "integer", "minimum": 0 },
+            "fail": { "type": "integer", "minimum": 0 },
+            "skipped": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "finding": { "$ref": "#/$defs/result" }
+      }
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "summary"],
+      "properties": {
+        "scope": {
+          "enum": ["none", "local-link", "gateway", "dns", "upstream"]
+        },
+        "summary": { "type": "string", "minLength": 1 }
       }
     },
     "destinations": {
@@ -61,6 +61,42 @@
           },
           "purpose": { "type": "string", "minLength": 1 }
         }
+      }
+    }
+  },
+  "$defs": {
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check_id",
+        "status",
+        "target",
+        "method",
+        "measurements",
+        "timestamp"
+      ],
+      "properties": {
+        "check_id": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["pass", "warn", "fail", "skipped"] },
+        "target": { "type": "string", "minLength": 1 },
+        "method": { "type": "string", "minLength": 1 },
+        "measurements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "value"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "value": { "type": "string", "minLength": 1 },
+              "unit": { "type": "string" }
+            }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "diagnostic": { "type": "string" },
+        "error": { "type": "string" }
       }
     }
   }

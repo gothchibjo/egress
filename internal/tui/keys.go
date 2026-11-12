@@ -18,6 +18,9 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.confirmQuit {
 		return m.updateConfirmKey(msg)
 	}
+	if m.exportPrompt || m.exportOverwrite != "" {
+		return m.updateExportKey(msg)
+	}
 	switch m.view {
 	case viewHelp:
 		return m.updateHelpKey(msg)
@@ -51,6 +54,10 @@ func (m Model) updateDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.destinationsReturn = viewDashboard
 		m.destinationOffset = 0
 		m.view = viewDestinations
+	case "e":
+		return m.exportCurrent(), nil
+	case "E":
+		return m.promptExport(), nil
 	case "x":
 		if m.cancelCurrent() {
 			m.progress = "cancelling current check…"
@@ -218,7 +225,7 @@ func helpLines() []string {
 		"   d        outbound destinations",
 		" ACTIONS",
 		"   x / X    cancel check / baseline",
-		"   q        quit",
+		"   e / E    export JSON (default / path)",
 		"   ctrl+c   quit with confirmation",
 		" VERDICT",
 		"   healthy  every check passed or was skipped",

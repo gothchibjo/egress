@@ -1,0 +1,24 @@
+=== RUN   TestBuildEnvelopeDerivesVerdictAndScope
+--- PASS: TestBuildEnvelopeDerivesVerdictAndScope (0.00s)
+=== RUN   TestBuildEnvelopeBlockedByNonAnchorFailure
+--- PASS: TestBuildEnvelopeBlockedByNonAnchorFailure (0.00s)
+=== RUN   TestBuildEnvelopeOmitsHealthyClassification
+--- PASS: TestBuildEnvelopeOmitsHealthyClassification (0.00s)
+=== RUN   TestEnvelopeWithVerdictMatchesSchema
+--- PASS: TestEnvelopeWithVerdictMatchesSchema (0.00s)
+=== RUN   TestDefaultExportName
+--- PASS: TestDefaultExportName (0.00s)
+=== RUN   TestWriteFileRefusesToOverwrite
+--- PASS: TestWriteFileRefusesToOverwrite (0.00s)
+=== RUN   TestWriteFileReplaceOverwrites
+--- PASS: TestWriteFileReplaceOverwrites (0.00s)
+=== RUN   TestWriteFileRejectsInvalidEnvelopeAndLeavesNoFile
+--- PASS: TestWriteFileRejectsInvalidEnvelopeAndLeavesNoFile (0.00s)
+=== RUN   TestSchemaIsValidJSON
+--- PASS: TestSchemaIsValidJSON (0.00s)
+=== RUN   TestEncodeResultsMatchesSchema
+--- PASS: TestEncodeResultsMatchesSchema (0.00s)
+=== RUN   TestEncodeDestinationsMatchSchema
+--- PASS: TestEncodeDestinationsMatchSchema (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/report	0.191s

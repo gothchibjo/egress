@@ -10,6 +10,7 @@ import (
 
 	"github.com/gothchibjo/egress/internal/app"
 	"github.com/gothchibjo/egress/internal/domain"
+	"github.com/gothchibjo/egress/internal/report"
 )
 
 // Layout thresholds for the dashboard.
@@ -46,9 +47,15 @@ type options struct {
 	mode           string
 	destinations   []domain.Destination
 	destinationErr string
+	writeExport    ExportFunc
+	now            func() time.Time
 	cancelCurrent  func()
 	cancelAll      func()
 }
+
+// ExportFunc writes one JSON export. When replace is false, an existing file
+// must be reported as report.ErrExportExists instead of overwritten.
+type ExportFunc func(path string, envelope report.Envelope, replace bool) error
 
 // Option configures the dashboard rendering.
 type Option func(*options)
@@ -98,6 +105,11 @@ func WithCancelHooks(cancelCurrent, cancelAll func()) Option {
 	}
 }
 
+// WithExporter overrides how the dashboard writes JSON exports.
+func WithExporter(write ExportFunc) Option {
+	return func(o *options) { o.writeExport = write }
+}
+
 // Model is the dashboard. It renders a completed run, keeps the selected check
 // across resizes and handles keyboard navigation.
 type Model struct {
@@ -118,6 +130,10 @@ type Model struct {
 	runErr             string
 	scope              string
 	summary            string
+	notice             string
+	exportPrompt       bool
+	exportInput        string
+	exportOverwrite    string
 	opts               options
 }
 
@@ -134,6 +150,17 @@ func New(results []domain.Result, verdict domain.Verdict, opts ...Option) Model 
 	}
 	for _, opt := range opts {
 		opt(&model.opts)
+	}
+	if model.opts.writeExport == nil {
+		model.opts.writeExport = func(path string, envelope report.Envelope, replace bool) error {
+			if replace {
+				return report.WriteFileReplace(path, envelope)
+			}
+			return report.WriteFile(path, envelope)
+		}
+	}
+	if model.opts.now == nil {
+		model.opts.now = time.Now
 	}
 	model.clampSelection()
 	return model
@@ -185,6 +212,7 @@ func (m Model) StartRunning() Model {
 	m.cancelled = false
 	m.progress = ""
 	m.runErr = ""
+	m.notice = ""
 	return m
 }
 
@@ -200,6 +228,7 @@ func (m Model) finishRun(run app.Run) Model {
 	m.hasVerdict = false
 	m.scope = ""
 	m.summary = ""
+	m.notice = ""
 	if verdict, err := domain.AggregateVerdict(run.Results); err == nil {
 		m.verdict = verdict
 		m.hasVerdict = true
@@ -222,6 +251,7 @@ func (m Model) failRun(err error) Model {
 	m.runErr = err.Error()
 	m.scope = ""
 	m.summary = ""
+	m.notice = ""
 	return m
 }
 

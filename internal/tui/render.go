@@ -216,6 +216,9 @@ func (m Model) renderScopeBand(width int) []string {
 }
 
 func (m Model) renderFooter() []string {
+	if footer := m.exportFooter(); footer != nil {
+		return footer
+	}
 	position := " no results"
 	switch {
 	case m.running && m.progress != "":
@@ -223,7 +226,12 @@ func (m Model) renderFooter() []string {
 	case len(m.results) > 0:
 		position = fmt.Sprintf(" %d/%d selected", m.selected+1, len(m.results))
 	}
-	return []string{m.rule(m.width), padLine(position, " "+m.footerHints(), m.width)}
+	lines := make([]string, 0, 3)
+	if m.notice != "" {
+		lines = append(lines, padLine(" "+m.notice, "", m.width))
+	}
+	lines = append(lines, m.rule(m.width), padLine(position, " "+m.footerHints(), m.width))
+	return lines
 }
 
 func (m Model) listLines(width, height int) []string {

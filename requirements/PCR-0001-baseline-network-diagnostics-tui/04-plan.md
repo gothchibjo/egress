@@ -408,6 +408,8 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-019 | Missing connectivity is never presented as censorship.                       | `ClassifyRun` uses only local-link, gateway, dns and upstream scopes with evidence-based summaries; a test rejects censorship and blockage claims.                                                                              | pass   |
 | 2026-11-12 | REQ-020 | Diagnostic probes are the only outbound traffic.                             | One catalog in `internal/probe/destinations.go` is built from the probe constants; guard tests assert it covers every probe, stays closed and validates; `docs/outbound-destinations.md` and the `d` page render the same list. | pass   |
 | 2026-11-12 | REQ-020 | No telemetry or enrichment API is added.                                     | The module has no analytics, crash-report, update or enrichment dependency; HTTP exists only in the DoH comparison and the captive canary.                                                                                      | pass   |
+| 2026-11-12 | REQ-022 | No secrets or unrelated host data are exported.                              | The envelope carries results, verdict, classification and the documented destination list only; it has no environment, credential or file-system fields.                                                                        | pass   |
+| 2026-11-12 | REQ-022 | Non-interactive output contains no terminal control sequences.               | JSON mode never builds the dashboard; the CLI test asserts stdout has no ESC byte and the output is valid JSON.                                                                                                                 | pass   |
 
 # Evidence Matrix
 
@@ -554,3 +556,6 @@ recorded as part of REQ-002, not as a new requirement.
 - 2026-11-12 — REQ-020 centralizes outbound access in one documented catalog,
   renders it on the `d` page, carries it in the JSON envelope and records the
   call-site inventory and capture procedure as review evidence.
+- 2026-11-12 — REQ-022 adds `--json` and non-interactive stdout, `--schema`, the
+  documented exit codes and the `e`/`E` export with overwrite confirmation; the
+  envelope now carries mode, verdict, classification and destinations.

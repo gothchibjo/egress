@@ -1,0 +1,28 @@
+=== RUN   TestIsTerminalRejectsPipe
+--- PASS: TestIsTerminalRejectsPipe (0.00s)
+=== RUN   TestRunJSONEmitsEnvelope
+--- PASS: TestRunJSONEmitsEnvelope (0.00s)
+=== RUN   TestRunDefaultsToJSONWithoutTerminal
+--- PASS: TestRunDefaultsToJSONWithoutTerminal (0.00s)
+=== RUN   TestRunJSONExitCodes
+=== RUN   TestRunJSONExitCodes/healthy
+=== RUN   TestRunJSONExitCodes/degraded
+=== RUN   TestRunJSONExitCodes/blocked
+--- PASS: TestRunJSONExitCodes (0.00s)
+    --- PASS: TestRunJSONExitCodes/healthy (0.00s)
+    --- PASS: TestRunJSONExitCodes/degraded (0.00s)
+    --- PASS: TestRunJSONExitCodes/blocked (0.00s)
+=== RUN   TestRunJSONEmitsDestinations
+--- PASS: TestRunJSONEmitsDestinations (0.00s)
+=== RUN   TestRunReportFailureExitsWithError
+--- PASS: TestRunReportFailureExitsWithError (0.00s)
+=== RUN   TestRunSchemaFlagPrintsSchema
+--- PASS: TestRunSchemaFlagPrintsSchema (0.00s)
+=== RUN   TestRunUnknownFlagFailsWithUsage
+--- PASS: TestRunUnknownFlagFailsWithUsage (0.00s)
+=== RUN   TestRunHelpFlagPrintsUsage
+--- PASS: TestRunHelpFlagPrintsUsage (0.00s)
+=== RUN   TestRunRejectsPositionalArguments
+--- PASS: TestRunRejectsPositionalArguments (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/cmd/egress	0.191s

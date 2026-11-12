@@ -19,27 +19,33 @@ implemented. The requirement is defined by [REQ-021].
 
 ## Keys
 
-| Context           | Key        | Action                             |
-| :---------------- | :--------- | :--------------------------------- |
-| Dashboard, detail | `↑`, `k`   | move selection up                  |
-| Dashboard, detail | `↓`, `j`   | move selection down                |
-| Dashboard, detail | `g`        | select the first check             |
-| Dashboard, detail | `G`        | select the last check              |
-| Dashboard         | `enter`    | open the selected check detail     |
-| Dashboard, detail | `d`        | open the outbound destination list |
-| Destinations      | `d`, `esc` | go back to the previous page       |
-| Destinations      | `↑`, `k`   | scroll the destination table up    |
-| Destinations      | `↓`, `j`   | scroll the destination table down  |
-| Destinations      | `g`, `G`   | jump to the first or last row      |
-| Running baseline  | `x`        | cancel the current check           |
-| Running baseline  | `X`        | cancel the baseline, keep results  |
-| Detail, help      | `esc`      | go back one page                   |
-| Dashboard, detail | `?`        | open help                          |
-| Help              | `?`, `esc` | close help and return              |
-| Dashboard, detail | `q`        | quit immediately                   |
-| Dashboard, detail | `ctrl+c`   | ask for confirmation, then quit    |
-| Confirmation      | `y`        | quit                               |
-| Confirmation      | `n`, `esc` | cancel and stay                    |
+| Context           | Key             | Action                             |
+| :---------------- | :-------------- | :--------------------------------- |
+| Dashboard, detail | `↑`, `k`        | move selection up                  |
+| Dashboard, detail | `↓`, `j`        | move selection down                |
+| Dashboard, detail | `g`             | select the first check             |
+| Dashboard, detail | `G`             | select the last check              |
+| Dashboard         | `enter`         | open the selected check detail     |
+| Dashboard         | `e`             | write `egress-<timestamp>.json`    |
+| Dashboard         | `E`             | choose the export path             |
+| Export prompt     | `enter`         | write the file                     |
+| Export prompt     | `esc`, `ctrl+c` | close the prompt without writing   |
+| Overwrite prompt  | `y`             | replace the existing file          |
+| Overwrite prompt  | `n`, `esc`      | keep the existing file             |
+| Dashboard, detail | `d`             | open the outbound destination list |
+| Destinations      | `d`, `esc`      | go back to the previous page       |
+| Destinations      | `↑`, `k`        | scroll the destination table up    |
+| Destinations      | `↓`, `j`        | scroll the destination table down  |
+| Destinations      | `g`, `G`        | jump to the first or last row      |
+| Running baseline  | `x`             | cancel the current check           |
+| Running baseline  | `X`             | cancel the baseline, keep results  |
+| Detail, help      | `esc`           | go back one page                   |
+| Dashboard, detail | `?`             | open help                          |
+| Help              | `?`, `esc`      | close help and return              |
+| Dashboard, detail | `q`             | quit immediately                   |
+| Dashboard, detail | `ctrl+c`        | ask for confirmation, then quit    |
+| Confirmation      | `y`             | quit                               |
+| Confirmation      | `n`, `esc`      | cancel and stay                    |
 
 `esc` never quits, never cancels a check and never changes the selection; on the
 dashboard it does nothing. `ctrl+c` asks before quitting; `q` is the immediate
@@ -52,13 +58,14 @@ it was opened from.
 
 ## Pages
 
-| Page         | Content                                                |
-| :----------- | :----------------------------------------------------- |
-| Dashboard    | path list, evidence pane, contextual footer hints      |
-| Detail       | one check with its full evidence at the terminal width |
-| Help         | key map and verdict semantics                          |
-| Destinations | documented outbound endpoints and their transport      |
-| Quit         | confirmation after `ctrl+c`                            |
+| Page          | Content                                                |
+| :------------ | :----------------------------------------------------- |
+| Dashboard     | path list, evidence pane, contextual footer hints      |
+| Detail        | one check with its full evidence at the terminal width |
+| Help          | key map and verdict semantics                          |
+| Destinations  | documented outbound endpoints and their transport      |
+| Export prompt | default export path with overwrite confirmation        |
+| Quit          | confirmation after `ctrl+c`                            |
 
 ## Verdict semantics
 
