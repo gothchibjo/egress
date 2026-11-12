@@ -401,6 +401,10 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-014 | Completed checks remain visible and exportable after cancellation.           | `CancelAll` stops the current check, fills the remaining entries with skipped results and keeps the run as the session current run, which the dashboard renders.                                                     | pass   |
 | 2026-11-12 | REQ-015 | macOS and Linux are the only v1 platforms.                                   | `cmd/egress` is build-tagged `darwin                                                                                                                                                                                 |        | linux`, so Windows cannot produce the binary; outside those systems `platform.System()`reports no ICMP capability and every route or resolver call returns`ErrUnsupported`. | pass |
 | 2026-11-12 | REQ-015 | Platform-specific behavior never changes a check meaning silently.           | Probes obtain interfaces, routes, resolvers and ICMP through `platform.Capabilities`; unsupported mechanisms become skipped results with a reason, and `local.interfaces` records the platform name in its evidence. | pass   |
+| 2026-11-12 | REQ-016 | Unprivileged execution is the default.                                       | `DetectPrivilege` reports elevated only when `os.Geteuid() == 0`; `BaselineChecks` defaults to `Elevated: false`, and `cmd/egress` passes the detection result without prompting.                                    | pass   |
+| 2026-11-12 | REQ-016 | Elevated access is explicit and user-initiated.                              | Raw sockets are enabled only by the detected euid; there is no sudo, setuid or re-exec path, and raw-only checks skip with an elevation hint.                                                                        | pass   |
+| 2026-11-12 | REQ-017 | Elevation is explicit.                                                       | The session mode comes only from `DetectPrivilege`; no probe or UI action can raise privileges.                                                                                                                      | pass   |
+| 2026-11-12 | REQ-017 | No check silently changes meaning between modes.                             | `BaselineChecks` returns identical ids and order in both modes, covered by a stability test; raw-only checks switch between a run and a skipped result with a stated reason.                                         | pass   |
 
 # Evidence Matrix
 
@@ -533,3 +537,8 @@ recorded as part of REQ-002, not as a new requirement.
   and linux implementations, skips unsupported mechanisms with a stated reason,
   records the platform in local evidence and excludes other OSes from the
   command build.
+- 2026-11-12 — REQ-016 adds `platform.DetectPrivilege`, keeps unprivileged
+  execution as the default and skips raw-only checks with a capability and
+  elevation hint; there is no prompt or re-exec.
+- 2026-11-12 — REQ-017 labels the session mode in the dashboard header and keeps
+  check ids and meanings identical between unprivileged and elevated runs.

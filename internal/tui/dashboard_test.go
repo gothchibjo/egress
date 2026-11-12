@@ -392,3 +392,20 @@ func TestRowsFollowPathOrder(t *testing.T) {
 		}
 	}
 }
+
+func TestHeaderShowsSessionMode(t *testing.T) {
+	unprivileged := fixtureModel(t, 100, 30, WithoutColor(), WithMode("unprivileged"))
+	if view := unprivileged.View(); !strings.Contains(view, "unprivileged") {
+		t.Fatal("header does not label the unprivileged session")
+	}
+
+	elevated := fixtureModel(t, 100, 30, WithoutColor(), WithMode("elevated"))
+	if view := elevated.View(); !strings.Contains(view, "elevated") {
+		t.Fatal("header does not label the elevated session")
+	}
+
+	ascii := fixtureModel(t, 100, 30, WithoutColor(), WithASCII(), WithMode("elevated"))
+	if view := ascii.View(); !strings.Contains(view, "egress - DEGRADED - elevated") {
+		t.Fatal("ASCII header does not use an ASCII separator for the mode")
+	}
+}

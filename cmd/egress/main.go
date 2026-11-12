@@ -12,6 +12,7 @@ import (
 
 	"github.com/gothchibjo/egress/internal/app"
 	"github.com/gothchibjo/egress/internal/domain"
+	"github.com/gothchibjo/egress/internal/platform"
 	"github.com/gothchibjo/egress/internal/probe"
 	"github.com/gothchibjo/egress/internal/tui"
 )
@@ -27,12 +28,20 @@ func run(stdout, stderr *os.File) int {
 		return 3
 	}
 
-	checks := probe.BaselineChecks(probe.BaselineOptions{Elevated: os.Geteuid() == 0})
+	privilege := platform.DetectPrivilege()
+	checks := probe.BaselineChecks(probe.BaselineOptions{Elevated: privilege.RawICMP})
 	session := app.NewSession(app.New(checks))
-	model := tui.New(nil, domain.Verdict{}, tui.WithCancelHooks(
-		func() { session.CancelCurrent() },
-		func() { session.CancelAll() },
-	)).StartRunning()
+	mode := "unprivileged"
+	if privilege.Elevated {
+		mode = "elevated"
+	}
+	model := tui.New(nil, domain.Verdict{},
+		tui.WithMode(mode),
+		tui.WithCancelHooks(
+			func() { session.CancelCurrent() },
+			func() { session.CancelAll() },
+		),
+	).StartRunning()
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithOutput(stdout), tea.WithInput(os.Stdin))
 
 	ctx, cancel := context.WithCancel(context.Background())

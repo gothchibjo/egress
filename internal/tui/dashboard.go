@@ -43,6 +43,7 @@ type options struct {
 	ascii         bool
 	elapsed       time.Duration
 	hasElapsed    bool
+	mode          string
 	cancelCurrent func()
 	cancelAll     func()
 }
@@ -68,6 +69,11 @@ func WithASCII() Option {
 // WithElapsed shows the baseline duration in the header.
 func WithElapsed(d time.Duration) Option {
 	return func(o *options) { o.elapsed = d; o.hasElapsed = true }
+}
+
+// WithMode labels the session as elevated or unprivileged.
+func WithMode(mode string) Option {
+	return func(o *options) { o.mode = mode }
 }
 
 // WithCancelHooks wires the runner cancellation controls into the keyboard.

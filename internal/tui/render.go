@@ -156,6 +156,9 @@ func (m Model) renderTooSmall() string {
 
 func (m Model) renderHeader() []string {
 	left := " egress " + m.dash() + " " + m.verdictLabel()
+	if m.opts.mode != "" {
+		left += m.separator() + m.opts.mode
+	}
 	if m.opts.color {
 		left = m.verdictStyle().Render(left)
 	}
