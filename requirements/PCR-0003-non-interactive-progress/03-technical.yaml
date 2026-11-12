@@ -1,6 +1,6 @@
 pcr: PCR-0003
 title: Non-interactive progress indication
-status: draft
+status: technical
 revised: 2026-11-12
 frozen_by: null
 frozen_at: null
@@ -9,4 +9,122 @@ pipeline_gates:
   plan_approval: { required: true, passed: false }
   verification_evidence: { required: true, passed: false }
   guard_conditions: { required: true, passed: false }
-requirements: []
+requirements:
+  - id: REQ-001
+    traces_to: [BR-01]
+    type: functional
+    title: Progress goes to stderr, JSON stays on stdout
+    description: >-
+      WHEN the utility runs in non-interactive mode, THE SYSTEM SHALL write the
+      running check to stderr and SHALL leave stdout carrying only the JSON
+      document.
+    priority: must
+    acceptance_criteria:
+      - Redirecting stdout to a file leaves a schema-valid JSON document with no progress text.
+      - stderr shows the running check while the baseline executes.
+      - No progress text appears on stdout.
+    dependencies: []
+    verification:
+      method: test
+      evidence:
+        - CLI test report
+        - traceability matrix
+    guard_conditions:
+      - The JSON envelope, its schema and the exit codes do not change.
+      - Progress never contaminates stdout.
+    size_hint: xs
+
+  - id: REQ-002
+    traces_to: [BR-02]
+    type: functional
+    title: The progress line is terminal-only
+    description: >-
+      WHILE a non-interactive run executes, THE SYSTEM SHALL emit the progress
+      line only when stderr is a terminal and SHALL write nothing to a
+      redirected stderr.
+    priority: must
+    acceptance_criteria:
+      - With stderr redirected to a file, the file stays empty.
+      - With stderr on a terminal, the progress line is visible.
+      - Selecting non-interactive mode is independent of whether stderr is a terminal.
+    dependencies: [REQ-001]
+    verification:
+      method: test
+      evidence:
+        - CLI test report
+        - traceability matrix
+    guard_conditions:
+      - CI logs and captured stderr stay free of progress output.
+    size_hint: xs
+
+  - id: REQ-003
+    traces_to: [BR-03]
+    type: functional
+    title: Progress mirrors the dashboard wording
+    description: >-
+      WHILE a non-interactive baseline runs, THE SYSTEM SHALL rewrite one
+      progress line in the dashboard format
+      `running <check-id> (<index>/<total>) <elapsed>`, starting with the first
+      check and refreshing about once per second.
+    priority: must
+    acceptance_criteria:
+      - The line contains the check id, its index, the total and the elapsed time.
+      - The first check is reported without waiting for a slow-check threshold.
+      - Updates rewrite the same terminal row instead of adding rows.
+      - The wording matches the dashboard footer for the same check.
+    dependencies: [REQ-001]
+    verification:
+      method: test
+      evidence:
+        - CLI test report
+        - progress transcript
+    guard_conditions:
+      - One indicator design: no second progress format is introduced.
+    size_hint: s
+
+  - id: REQ-004
+    traces_to: [BR-04]
+    type: functional
+    title: Completion leaves a clean terminal
+    description: >-
+      WHEN the baseline finishes or fails, THE SYSTEM SHALL erase the progress
+      line before writing the JSON document or the error message.
+    priority: should
+    acceptance_criteria:
+      - After a completed run the terminal shows the JSON without residual progress text.
+      - After a runner error the terminal shows the error without residual progress text.
+      - The erase happens before the result output is written.
+    dependencies: [REQ-003]
+    verification:
+      method: test
+      evidence:
+        - CLI test report
+        - progress transcript
+    guard_conditions:
+      - Erasing never writes a control sequence to stdout.
+    size_hint: xs
+
+  - id: REQ-005
+    traces_to: [BR-05]
+    type: functional
+    title: Cancellation is visible and still yields JSON
+    description: >-
+      WHEN the operator interrupts a non-interactive run with Ctrl-C, THE SYSTEM
+      SHALL report the cancelled progress state and SHALL still write the
+      partial JSON with the documented exit code.
+    priority: should
+    acceptance_criteria:
+      - Ctrl-C stops the run promptly.
+      - The cancelled state is visible on stderr before the document is written.
+      - The partial document validates against the schema.
+      - The exit code follows the documented mapping derived from the collected results.
+    dependencies: [REQ-001, REQ-003]
+    verification:
+      method: test
+      evidence:
+        - cancellation test report
+        - CLI test report
+    guard_conditions:
+      - No result is invented for a check that did not run.
+      - The partial document stays schema-valid.
+    size_hint: s
