@@ -223,3 +223,50 @@ func TestHelpDocumentsCancelKeys(t *testing.T) {
 		}
 	}
 }
+
+func TestOfflineScopeIsShownAfterRun(t *testing.T) {
+	model := New(nil, domain.Verdict{}, WithoutColor()).Resize(100, 30).StartRunning()
+	model = applyMessage(t, model, RunCompleteMsg{Run: app.Run{
+		StartedAt:  runStart,
+		FinishedAt: runStart.Add(time.Second),
+		Results: []domain.Result{
+			testResult("local.interfaces", "en0", domain.StatusFail),
+			testResult("gateway.reach", "192.168.1.1", domain.StatusSkipped),
+		},
+	}})
+
+	view := model.View()
+	if !strings.Contains(view, "local-link") {
+		t.Fatal("dashboard does not show the failure scope")
+	}
+	if !strings.Contains(view, "Local link problem") {
+		t.Fatal("dashboard does not state what could be tested locally")
+	}
+	if !strings.Contains(view, "BLOCKED") {
+		t.Fatal("dashboard lost the verdict")
+	}
+}
+
+func TestRecoveryClearsOfflineScope(t *testing.T) {
+	model := New(nil, domain.Verdict{}, WithoutColor()).Resize(100, 30).StartRunning()
+	model = applyMessage(t, model, RunCompleteMsg{Run: app.Run{
+		StartedAt:  runStart,
+		FinishedAt: runStart.Add(time.Second),
+		Results:    []domain.Result{testResult("local.interfaces", "en0", domain.StatusFail)},
+	}})
+	if !strings.Contains(model.View(), "local-link") {
+		t.Fatal("offline scope is missing")
+	}
+
+	model = applyMessage(t, model, RunCompleteMsg{Run: app.Run{
+		StartedAt:  runStart.Add(time.Minute),
+		FinishedAt: runStart.Add(time.Minute + time.Second),
+		Results:    []domain.Result{testResult("local.interfaces", "en0", domain.StatusPass)},
+	}})
+	if strings.Contains(model.View(), "local-link") {
+		t.Fatal("recovery kept the stale offline scope")
+	}
+	if !strings.Contains(model.View(), "healthy") && !strings.Contains(model.View(), "HEALTHY") {
+		t.Fatal("recovery did not produce a fresh verdict")
+	}
+}

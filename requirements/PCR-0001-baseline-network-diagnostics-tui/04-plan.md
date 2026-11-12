@@ -405,6 +405,7 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-016 | Elevated access is explicit and user-initiated.                              | Raw sockets are enabled only by the detected euid; there is no sudo, setuid or re-exec path, and raw-only checks skip with an elevation hint.                                                                        | pass   |
 | 2026-11-12 | REQ-017 | Elevation is explicit.                                                       | The session mode comes only from `DetectPrivilege`; no probe or UI action can raise privileges.                                                                                                                      | pass   |
 | 2026-11-12 | REQ-017 | No check silently changes meaning between modes.                             | `BaselineChecks` returns identical ids and order in both modes, covered by a stability test; raw-only checks switch between a run and a skipped result with a stated reason.                                         | pass   |
+| 2026-11-12 | REQ-019 | Missing connectivity is never presented as censorship.                       | `ClassifyRun` uses only local-link, gateway, dns and upstream scopes with evidence-based summaries; a test rejects censorship and blockage claims.                                                                   | pass   |
 
 # Evidence Matrix
 
@@ -542,3 +543,6 @@ recorded as part of REQ-002, not as a new requirement.
   elevation hint; there is no prompt or re-exec.
 - 2026-11-12 — REQ-017 labels the session mode in the dashboard header and keeps
   check ids and meanings identical between unprivileged and elevated runs.
+- 2026-11-12 — REQ-019 classifies each run as local-link, gateway, dns or
+  upstream from the collected checks, shows the scope and a locally-testable
+  summary in the dashboard, and keeps the wording free of censorship claims.

@@ -100,6 +100,8 @@ type Model struct {
 	cancelled   bool
 	progress    string
 	runErr      string
+	scope       string
+	summary     string
 	opts        options
 }
 
@@ -180,9 +182,15 @@ func (m Model) finishRun(run app.Run) Model {
 	m.selected = 0
 	m.verdict = domain.Verdict{}
 	m.hasVerdict = false
+	m.scope = ""
+	m.summary = ""
 	if verdict, err := domain.AggregateVerdict(run.Results); err == nil {
 		m.verdict = verdict
 		m.hasVerdict = true
+	}
+	if classification, err := domain.ClassifyRun(run.Results); err == nil && classification.Scope != domain.ScopeNone {
+		m.scope = string(classification.Scope)
+		m.summary = classification.Summary
 	}
 	if elapsed := run.FinishedAt.Sub(run.StartedAt); elapsed > 0 {
 		m.opts.elapsed = elapsed
@@ -196,6 +204,8 @@ func (m Model) failRun(err error) Model {
 	m.running = false
 	m.progress = ""
 	m.runErr = err.Error()
+	m.scope = ""
+	m.summary = ""
 	return m
 }
 

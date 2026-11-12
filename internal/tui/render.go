@@ -156,6 +156,9 @@ func (m Model) renderTooSmall() string {
 
 func (m Model) renderHeader() []string {
 	left := " egress " + m.dash() + " " + m.verdictLabel()
+	if m.scope != "" {
+		left += m.separator() + m.scope
+	}
 	if m.opts.mode != "" {
 		left += m.separator() + m.opts.mode
 	}
@@ -170,7 +173,11 @@ func (m Model) renderHeader() []string {
 	if m.opts.hasElapsed {
 		right += fmt.Sprintf(" %s", m.opts.elapsed.Round(10*time.Millisecond))
 	}
-	return []string{padLine(left, right, m.width), m.rule(m.width)}
+	lines := []string{padLine(left, right, m.width), m.rule(m.width)}
+	if m.summary != "" {
+		lines = append(lines, padLine(" "+m.summary, "", m.width))
+	}
+	return lines
 }
 
 func (m Model) renderFooter() []string {
