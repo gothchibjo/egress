@@ -10,7 +10,13 @@ import (
 	"github.com/gothchibjo/egress/internal/domain"
 )
 
-const detailLabelWidth = 10
+const (
+	detailLabelWidth = 10
+
+	destinationKindWidth      = 10
+	destinationTransportWidth = 10
+	destinationEndpointWidth  = 24
+)
 
 type theme struct {
 	pass    lipgloss.Style
@@ -536,6 +542,119 @@ func (m Model) renderDetailPage() string {
 	lines := append(header, strings.Split(body, "\n")...)
 	lines = append(lines, footer...)
 	return strings.Join(lines, "\n")
+}
+
+func (m Model) renderDestinations() string {
+	switch m.Layout() {
+	case LayoutStopped:
+		return ""
+	case LayoutTooSmall:
+		return m.renderTooSmall()
+	}
+	position := ""
+	if count := len(m.opts.destinations); count > 0 {
+		position = fmt.Sprintf("%d endpoints ", count)
+	}
+	header := m.renderPageHeader("DESTINATIONS", position)
+	footer := m.renderHintFooter(m.footerHints())
+	bodyHeight := m.destinationBodyHeight()
+
+	lines := m.destinationLines()
+	offset := m.destinationOffset
+	if maxOffset := len(lines) - bodyHeight; offset > maxOffset {
+		offset = maxOffset
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	body := block(lines[offset:], m.width, bodyHeight)
+	out := append(header, strings.Split(body, "\n")...)
+	out = append(out, footer...)
+	return strings.Join(out, "\n")
+}
+
+func (m Model) destinationBodyHeight() int {
+	header := m.renderPageHeader("DESTINATIONS", "")
+	footer := m.renderHintFooter("")
+	height := m.height - len(header) - len(footer)
+	if height < 1 {
+		height = 1
+	}
+	return height
+}
+
+func (m Model) destinationMaxOffset() int {
+	lines := len(m.destinationLines())
+	height := m.destinationBodyHeight()
+	if lines <= height {
+		return 0
+	}
+	return lines - height
+}
+
+// destinationLines builds the documented outbound table. The purpose column is
+// dropped on narrow terminals so the endpoint always stays readable.
+func (m Model) destinationLines() []string {
+	intro := wrapText("Only the endpoints listed here are contacted. No telemetry, analytics, crash reports, uploads or enrichment.", m.width-2)
+	lines := []string{""}
+	for _, part := range intro {
+		lines = append(lines, " "+part)
+	}
+	lines = append(lines, "")
+
+	if m.opts.destinationErr != "" {
+		lines = append(lines, " Resolver list unavailable: "+m.opts.destinationErr, "")
+	}
+	if len(m.opts.destinations) == 0 {
+		return append(lines, " No documented destinations.")
+	}
+
+	// The purpose column appears only when a full sentence fits; otherwise the
+	// endpoint stays readable and the purpose lives in the documentation.
+	withPurpose := m.width >= 96
+	if withPurpose {
+		lines = append(lines, fmt.Sprintf(" %-*s %-*s %-*s %s",
+			destinationKindWidth, "KIND",
+			destinationTransportWidth, "TRANSPORT",
+			destinationEndpointWidth, "ENDPOINT",
+			"PURPOSE",
+		))
+	} else {
+		lines = append(lines, fmt.Sprintf(" %-*s %-*s %s",
+			destinationKindWidth, "KIND",
+			destinationTransportWidth, "TRANSPORT",
+			"ENDPOINT",
+		))
+	}
+	for _, destination := range m.opts.destinations {
+		row := fmt.Sprintf(" %-*s %-*s %-*s",
+			destinationKindWidth, destinationKindLabel(destination.Kind),
+			destinationTransportWidth, destination.Transport,
+			destinationEndpointWidth, destination.Endpoint(),
+		)
+		if withPurpose {
+			row += " " + destination.Purpose
+		}
+		lines = append(lines, row)
+	}
+	return lines
+}
+
+func destinationKindLabel(kind domain.DestinationKind) string {
+	switch kind {
+	case domain.DestinationResolver:
+		return "resolver"
+	case domain.DestinationDoH:
+		return "doh"
+	case domain.DestinationAnchor:
+		return "anchor"
+	case domain.DestinationPathMTU:
+		return "path-mtu"
+	case domain.DestinationCaptive:
+		return "captive"
+	default:
+		return string(kind)
+	}
 }
 
 func (m Model) renderConfirm() string {

@@ -17,9 +17,12 @@ const SchemaVersion = "v1"
 var resultSchema []byte
 
 // Envelope is the stable JSON document shared by the TUI export and CLI output.
+// Destinations carries the documented outbound endpoints; it is omitted when
+// the caller has no list to report.
 type Envelope struct {
-	SchemaVersion string          `json:"schema_version"`
-	Results       []domain.Result `json:"results"`
+	SchemaVersion string               `json:"schema_version"`
+	Results       []domain.Result      `json:"results"`
+	Destinations  []domain.Destination `json:"destinations,omitempty"`
 }
 
 // Schema returns the JSON Schema that describes Envelope.
@@ -27,10 +30,12 @@ func Schema() []byte {
 	return append([]byte(nil), resultSchema...)
 }
 
-// EncodeResults validates results and writes one Envelope to w.
-func EncodeResults(w io.Writer, results []domain.Result) error {
-	normalized := make([]domain.Result, len(results))
-	for i, r := range results {
+// Encode validates one envelope and writes it to w.
+func Encode(w io.Writer, envelope Envelope) error {
+	envelope.SchemaVersion = SchemaVersion
+
+	normalized := make([]domain.Result, len(envelope.Results))
+	for i, r := range envelope.Results {
 		if err := r.Validate(); err != nil {
 			return fmt.Errorf("result %q: %w", r.CheckID, err)
 		}
@@ -39,11 +44,23 @@ func EncodeResults(w io.Writer, results []domain.Result) error {
 		}
 		normalized[i] = r
 	}
+	envelope.Results = normalized
+
+	for _, destination := range envelope.Destinations {
+		if err := destination.Validate(); err != nil {
+			return fmt.Errorf("destination %q: %w", destination.Host, err)
+		}
+	}
 
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
-	if err := enc.Encode(Envelope{SchemaVersion: SchemaVersion, Results: normalized}); err != nil {
-		return fmt.Errorf("encode results: %w", err)
+	if err := enc.Encode(envelope); err != nil {
+		return fmt.Errorf("encode envelope: %w", err)
 	}
 	return nil
+}
+
+// EncodeResults writes an envelope that carries results and no destinations.
+func EncodeResults(w io.Writer, results []domain.Result) error {
+	return Encode(w, Envelope{Results: results})
 }

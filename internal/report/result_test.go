@@ -142,3 +142,95 @@ func TestEncodeResultsMatchesSchema(t *testing.T) {
 		t.Fatalf("output does not match schema: %v", err)
 	}
 }
+
+func sampleDestinations() []domain.Destination {
+	return []domain.Destination{
+		{
+			Kind:      domain.DestinationResolver,
+			Host:      "192.0.2.53",
+			Port:      53,
+			Transport: domain.TransportUDPAndTCP,
+			Purpose:   "configured resolver for the canary query",
+		},
+		{
+			Kind:      domain.DestinationDoH,
+			Host:      "cloudflare-dns.com",
+			Port:      443,
+			Transport: domain.TransportHTTPS,
+			Purpose:   "public DoH comparison for the canary",
+		},
+		{
+			Kind:      domain.DestinationAnchor,
+			Host:      "1.1.1.1",
+			Transport: domain.TransportICMP,
+			Purpose:   "ICMP reachability and latency sample",
+		},
+	}
+}
+
+func TestEncodeDestinationsMatchSchema(t *testing.T) {
+	var buf bytes.Buffer
+	err := Encode(&buf, Envelope{Results: []domain.Result{sampleResult()}, Destinations: sampleDestinations()})
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	var doc map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &doc); err != nil {
+		t.Fatalf("output is not JSON: %v", err)
+	}
+	destinations, ok := doc["destinations"].([]any)
+	if !ok || len(destinations) != 3 {
+		t.Fatalf("destinations = %#v, want three items", doc["destinations"])
+	}
+	first, ok := destinations[0].(map[string]any)
+	if !ok {
+		t.Fatalf("destination is not an object: %#v", destinations[0])
+	}
+	for _, key := range []string{"kind", "host", "port", "transport", "purpose"} {
+		if _, exists := first[key]; !exists {
+			t.Errorf("missing destination field %q", key)
+		}
+	}
+
+	compiler := jsonschema.NewCompiler()
+	compiler.AssertFormat = true
+	if err := compiler.AddResource(schemaID, bytes.NewReader(Schema())); err != nil {
+		t.Fatalf("compile schema resource: %v", err)
+	}
+	schema, err := compiler.Compile(schemaID)
+	if err != nil {
+		t.Fatalf("compile schema: %v", err)
+	}
+	var instance any
+	if err := json.Unmarshal(buf.Bytes(), &instance); err != nil {
+		t.Fatalf("output is not JSON: %v", err)
+	}
+	if err := schema.Validate(instance); err != nil {
+		t.Fatalf("output does not match schema: %v", err)
+	}
+}
+
+func TestEncodeOmitsEmptyDestinations(t *testing.T) {
+	var buf bytes.Buffer
+	if err := EncodeResults(&buf, []domain.Result{sampleResult()}); err != nil {
+		t.Fatalf("EncodeResults() error = %v", err)
+	}
+	if strings.Contains(buf.String(), `"destinations"`) {
+		t.Fatalf("empty destination list was written: %s", buf.String())
+	}
+}
+
+func TestEncodeRejectsInvalidDestination(t *testing.T) {
+	destinations := sampleDestinations()
+	destinations[0].Host = ""
+
+	var buf bytes.Buffer
+	err := Encode(&buf, Envelope{Results: []domain.Result{sampleResult()}, Destinations: destinations})
+	if !errors.Is(err, domain.ErrInvalidDestination) {
+		t.Fatalf("Encode() error = %v, want %v", err, domain.ErrInvalidDestination)
+	}
+	if buf.Len() != 0 {
+		t.Fatalf("invalid destination was written: %s", buf.String())
+	}
+}

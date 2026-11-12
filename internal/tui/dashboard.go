@@ -39,13 +39,15 @@ const (
 )
 
 type options struct {
-	color         bool
-	ascii         bool
-	elapsed       time.Duration
-	hasElapsed    bool
-	mode          string
-	cancelCurrent func()
-	cancelAll     func()
+	color          bool
+	ascii          bool
+	elapsed        time.Duration
+	hasElapsed     bool
+	mode           string
+	destinations   []domain.Destination
+	destinationErr string
+	cancelCurrent  func()
+	cancelAll      func()
 }
 
 // Option configures the dashboard rendering.
@@ -76,6 +78,18 @@ func WithMode(mode string) Option {
 	return func(o *options) { o.mode = mode }
 }
 
+// WithDestinations supplies the documented outbound destinations rendered by
+// the destination page. A resolver read error is shown on that page instead of
+// hiding the static list.
+func WithDestinations(destinations []domain.Destination, err error) Option {
+	return func(o *options) {
+		o.destinations = append([]domain.Destination(nil), destinations...)
+		if err != nil {
+			o.destinationErr = err.Error()
+		}
+	}
+}
+
 // WithCancelHooks wires the runner cancellation controls into the keyboard.
 func WithCancelHooks(cancelCurrent, cancelAll func()) Option {
 	return func(o *options) {
@@ -87,22 +101,24 @@ func WithCancelHooks(cancelCurrent, cancelAll func()) Option {
 // Model is the dashboard. It renders a completed run, keeps the selected check
 // across resizes and handles keyboard navigation.
 type Model struct {
-	results     []domain.Result
-	verdict     domain.Verdict
-	hasVerdict  bool
-	selected    int
-	width       int
-	height      int
-	view        viewState
-	helpReturn  viewState
-	confirmQuit bool
-	running     bool
-	cancelled   bool
-	progress    string
-	runErr      string
-	scope       string
-	summary     string
-	opts        options
+	results            []domain.Result
+	verdict            domain.Verdict
+	hasVerdict         bool
+	selected           int
+	width              int
+	height             int
+	view               viewState
+	helpReturn         viewState
+	destinationsReturn viewState
+	destinationOffset  int
+	confirmQuit        bool
+	running            bool
+	cancelled          bool
+	progress           string
+	runErr             string
+	scope              string
+	summary            string
+	opts               options
 }
 
 // New builds a dashboard for one run. The verdict is produced by
@@ -280,6 +296,8 @@ func (m Model) View() string {
 		return m.renderHelp()
 	case viewDetail:
 		return m.renderDetailPage()
+	case viewDestinations:
+		return m.renderDestinations()
 	}
 	switch m.Layout() {
 	case LayoutStopped:

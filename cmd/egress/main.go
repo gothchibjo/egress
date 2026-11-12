@@ -35,8 +35,10 @@ func run(stdout, stderr *os.File) int {
 	if privilege.Elevated {
 		mode = "elevated"
 	}
+	destinations, destinationErr := probe.OutboundDestinations()
 	model := tui.New(nil, domain.Verdict{},
 		tui.WithMode(mode),
+		tui.WithDestinations(destinations, destinationErr),
 		tui.WithCancelHooks(
 			func() { session.CancelCurrent() },
 			func() { session.CancelAll() },
