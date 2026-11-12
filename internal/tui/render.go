@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	detailLabelWidth = 10
+	detailLabelWidth = 12
 
 	destinationKindWidth      = 10
 	destinationTransportWidth = 10
@@ -201,7 +201,7 @@ func (m Model) renderScopeBand(width int) []string {
 	parts := wrapText(m.summary, width-2)
 	if len(parts) > limit {
 		parts = parts[:limit]
-		parts[limit-1] = clip(parts[limit-1], width-3) + "…"
+		parts[limit-1] = clip(parts[limit-1], width-4) + "..."
 	}
 
 	lines := make([]string, 0, len(parts)+1)
@@ -221,17 +221,14 @@ func (m Model) renderFooter() []string {
 	}
 	position := " no results"
 	switch {
+	case m.notice != "":
+		position = " " + m.notice
 	case m.running && m.progress != "":
 		position = " running " + m.progress
 	case len(m.results) > 0:
 		position = fmt.Sprintf(" %d/%d selected", m.selected+1, len(m.results))
 	}
-	lines := make([]string, 0, 3)
-	if m.notice != "" {
-		lines = append(lines, padLine(" "+m.notice, "", m.width))
-	}
-	lines = append(lines, m.rule(m.width), padLine(position, " "+m.footerHints(), m.width))
-	return lines
+	return []string{m.rule(m.width), padLine(position, " "+m.footerHints(), m.width)}
 }
 
 func (m Model) listLines(width, height int) []string {
@@ -329,10 +326,10 @@ func (m Model) detailLines(width int) []string {
 		}
 	}
 	if result.Diagnostic != "" {
-		lines = append(lines, m.field("diagnostic", result.Diagnostic, width)...)
+		lines = append(lines, m.evidenceField("diagnostic", result.Diagnostic, width, result)...)
 	}
 	if result.Error != "" {
-		lines = append(lines, m.field("error", result.Error, width)...)
+		lines = append(lines, m.evidenceField("error", result.Error, width, result)...)
 	}
 
 	return lines
@@ -351,11 +348,26 @@ func (m Model) detailPreview(width, height int) []string {
 	}
 	preview := make([]string, 0, height)
 	preview = append(preview, lines[:visible]...)
-	preview = append(preview, m.theme().muted.Render(" … enter for the full evidence"))
+	preview = append(preview, m.theme().muted.Render(" ... enter for the full evidence"))
 	return preview
 }
 
 func (m Model) field(label, value string, width int) []string {
+	return m.fieldWithMarker(label, value, width, "")
+}
+
+// evidenceField marks the lines that explain a failure. The marker prefixes the
+// label, matching the `✗ fail` and `! warn` markers used elsewhere.
+func (m Model) evidenceField(label, value string, width int, result domain.Result) []string {
+	status := domain.Status("")
+	if result.Status == domain.StatusFail || result.Status == domain.StatusWarn {
+		status = result.Status
+		label = "! " + label
+	}
+	return m.fieldWithMarker(label, value, width, status)
+}
+
+func (m Model) fieldWithMarker(label, value string, width int, status domain.Status) []string {
 	if value == "" {
 		value = m.none()
 	}
@@ -364,13 +376,19 @@ func (m Model) field(label, value string, width int) []string {
 		wrapWidth = 8
 	}
 	parts := wrapText(value, wrapWidth)
+	style := m.theme().status(status)
 	lines := make([]string, 0, len(parts))
 	for i, part := range parts {
+		var line string
 		if i == 0 {
-			lines = append(lines, " "+padLabel(label)+" "+part)
+			line = " " + padLabel(label) + " " + part
 		} else {
-			lines = append(lines, " "+strings.Repeat(" ", detailLabelWidth)+" "+part)
+			line = " " + strings.Repeat(" ", detailLabelWidth) + " " + part
 		}
+		if m.opts.color && status != "" {
+			line = style.Render(line)
+		}
+		lines = append(lines, line)
 	}
 	return lines
 }
@@ -534,15 +552,36 @@ func (m Model) renderHelp() string {
 		return m.renderTooSmall()
 	}
 	header := m.renderPageHeader("HELP", "")
-	footer := m.renderHintFooter("? close" + m.separator() + "esc back")
-	bodyHeight := m.height - len(header) - len(footer)
-	if bodyHeight < 1 {
-		bodyHeight = 1
-	}
-	body := block(helpLines(), m.width, bodyHeight)
+	footer := m.renderHintFooter(m.footerHints())
+	bodyHeight := m.helpBodyHeight()
+
+	content := helpLines()
+	offset := clampOffset(m.helpOffset, m.helpMaxOffset())
+	body := block(content[offset:], m.width, bodyHeight)
 	lines := append(header, strings.Split(body, "\n")...)
 	lines = append(lines, footer...)
 	return strings.Join(lines, "\n")
+}
+
+// helpBodyHeight is the number of help lines the overlay can show.
+func (m Model) helpBodyHeight() int {
+	header := m.renderPageHeader("HELP", "")
+	footer := m.renderHintFooter("")
+	height := m.height - len(header) - len(footer)
+	if height < 1 {
+		height = 1
+	}
+	return height
+}
+
+// helpMaxOffset is the furthest the help overlay can scroll.
+func (m Model) helpMaxOffset() int {
+	total := len(helpLines())
+	height := m.helpBodyHeight()
+	if total <= height {
+		return 0
+	}
+	return total - height
 }
 
 func (m Model) renderDetailPage() string {
@@ -826,7 +865,7 @@ func (m Model) emptyMessage() string {
 	case m.runErr != "":
 		return "Baseline failed."
 	case m.running:
-		return "Baseline running…"
+		return "Baseline running..."
 	default:
 		return "No baseline results yet."
 	}

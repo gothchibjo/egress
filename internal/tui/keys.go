@@ -37,6 +37,7 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) updateDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m = m.clearNotice()
 	switch msg.String() {
 	case "up", "k":
 		return m.move(-1), nil
@@ -46,6 +47,10 @@ func (m Model) updateDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.Select(0), nil
 	case "G":
 		return m.Select(len(rows(m.results)) - 1), nil
+	case "n":
+		return m.jumpProblem(1)
+	case "p":
+		return m.jumpProblem(-1)
 	case "enter":
 		if _, ok := m.SelectedResult(); ok {
 			m.view = viewDetail
@@ -53,6 +58,7 @@ func (m Model) updateDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "?":
 		m.helpReturn = viewDashboard
+		m.helpOffset = 0
 		m.view = viewHelp
 	case "d":
 		m.destinationsReturn = viewDashboard
@@ -61,16 +67,18 @@ func (m Model) updateDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "c":
 		return m.openContext(viewDashboard), nil
 	case "e":
-		return m.exportCurrent(), nil
+		return m.exportCurrent()
 	case "E":
-		return m.promptExport(), nil
+		return m.promptExport()
+	case "r":
+		return m.rerun()
 	case "x":
 		if m.cancelCurrent() {
-			m.progress = "cancelling current check…"
+			m.progress = "cancelling current check..."
 		}
 	case "X":
 		if m.cancelAll() {
-			m.progress = "cancelling baseline…"
+			m.progress = "cancelling baseline..."
 		}
 	case "q":
 		return m, tea.Quit
@@ -81,6 +89,7 @@ func (m Model) updateDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) updateDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m = m.clearNotice()
 	switch msg.String() {
 	case "up", "k":
 		m.detailOffset = clampOffset(m.detailOffset-1, m.detailMaxOffset())
@@ -98,18 +107,25 @@ func (m Model) updateDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.move(-1), nil
 	case "l", "]":
 		return m.move(1), nil
+	case "n":
+		return m.jumpProblem(1)
+	case "p":
+		return m.jumpProblem(-1)
+	case "r":
+		return m.rerun()
 	case "esc":
 		m.view = viewDashboard
 	case "x":
 		if m.cancelCurrent() {
-			m.progress = "cancelling current check…"
+			m.progress = "cancelling current check..."
 		}
 	case "X":
 		if m.cancelAll() {
-			m.progress = "cancelling baseline…"
+			m.progress = "cancelling baseline..."
 		}
 	case "?":
 		m.helpReturn = viewDetail
+		m.helpOffset = 0
 		m.view = viewHelp
 	case "d":
 		m.destinationsReturn = viewDetail
@@ -148,6 +164,7 @@ func (m Model) updateContextKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.contextOffset = 0
 	case "?":
 		m.helpReturn = viewContext
+		m.helpOffset = 0
 		m.view = viewHelp
 	case "q":
 		return m, tea.Quit
@@ -172,6 +189,7 @@ func (m Model) updateDestinationsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.destinationOffset = 0
 	case "?":
 		m.helpReturn = viewDestinations
+		m.helpOffset = 0
 		m.view = viewHelp
 	case "q":
 		return m, tea.Quit
@@ -192,7 +210,20 @@ func clampOffset(offset, max int) int {
 }
 
 func (m Model) updateHelpKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m = m.clearNotice()
 	switch msg.String() {
+	case "up", "k":
+		m.helpOffset = clampOffset(m.helpOffset-1, m.helpMaxOffset())
+	case "down", "j":
+		m.helpOffset = clampOffset(m.helpOffset+1, m.helpMaxOffset())
+	case "pgup":
+		m.helpOffset = clampOffset(m.helpOffset-m.helpBodyHeight(), m.helpMaxOffset())
+	case "pgdown":
+		m.helpOffset = clampOffset(m.helpOffset+m.helpBodyHeight(), m.helpMaxOffset())
+	case "g":
+		m.helpOffset = 0
+	case "G":
+		m.helpOffset = m.helpMaxOffset()
 	case "?", "esc":
 		m.view = m.helpReturn
 	case "q":
@@ -253,7 +284,7 @@ func (m Model) footerHints() string {
 	case viewDestinations, viewContext:
 		return "j/k scroll" + sep + "esc back" + sep + "? help" + sep + "q quit"
 	case viewHelp:
-		return "? close" + sep + "esc back"
+		return "j/k scroll" + sep + "? close" + sep + "esc back"
 	default:
 		return "↑/k ↓/j move" + sep + "enter open" + sep + "? help" + sep + "q quit"
 	}
@@ -268,10 +299,12 @@ func helpLines() []string {
 		"   ↑/k ↓/j    move or scroll",
 		"   g / G      first / last",
 		"   h/l [ ]    previous / next check",
+		"   n / p      next / previous problem",
 		"   PgUp/PgDn  scroll one page",
 		"   enter      open · esc back",
 		"   c / d      context / destinations",
 		" ACTIONS",
+		"   r          run the baseline again",
 		"   e / E      export default / path",
 		"   x / X      cancel check / baseline",
 		"   q/ctrl+c   quit, ctrl+c confirms",

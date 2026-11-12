@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -141,10 +142,22 @@ func runJSON(stdout, stderr io.Writer, session baselineRunner, mode string, dest
 
 // runTUI wires the baseline session to the dashboard and returns its outcome.
 func runTUI(stdout *os.File, stderr io.Writer, session baselineRunner, mode string, destinations []domain.Destination, destinationErr error, networkContext platform.NetworkContext, contextErr error) int {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var (
+		mu      sync.Mutex
+		lastRun app.Run
+		lastErr error
+		wg      sync.WaitGroup
+	)
+	var startRun func()
+
 	model := tui.New(nil, domain.Verdict{},
 		tui.WithMode(mode),
 		tui.WithDestinations(destinations, destinationErr),
 		tui.WithContext(networkContext, contextErr),
+		tui.WithRerun(func() { startRun() }),
 		tui.WithCancelHooks(
 			func() { session.CancelCurrent() },
 			func() { session.CancelAll() },
@@ -152,26 +165,39 @@ func runTUI(stdout *os.File, stderr io.Writer, session baselineRunner, mode stri
 	).StartRunning()
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithOutput(stdout), tea.WithInput(os.Stdin))
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	done := make(chan app.Run, 1)
-	go func() {
-		baseline, runErr := session.Run(ctx, func(progress app.Progress) {
-			program.Send(tui.RunProgressMsg{Progress: progress})
-		})
-		done <- baseline
-		program.Send(tui.RunCompleteMsg{Run: baseline, Err: runErr})
-	}()
+	startRun = func() {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			baseline, runErr := session.Run(ctx, func(progress app.Progress) {
+				program.Send(tui.RunProgressMsg{Progress: progress})
+			})
+			mu.Lock()
+			lastRun, lastErr = baseline, runErr
+			mu.Unlock()
+			program.Send(tui.RunCompleteMsg{Run: baseline, Err: runErr})
+		}()
+	}
+	startRun()
 
 	if _, err := program.Run(); err != nil {
 		cancel()
+		wg.Wait()
 		fmt.Fprintln(stderr, "egress:", err)
 		return exitError
 	}
 
 	cancel()
-	baseline := <-done
+	wg.Wait()
+
+	mu.Lock()
+	baseline, runErr := lastRun, lastErr
+	mu.Unlock()
+
+	if runErr != nil {
+		fmt.Fprintln(stderr, "egress:", runErr)
+		return exitError
+	}
 	if len(baseline.Results) == 0 {
 		// Quitting before the first check finished is a normal user action, not
 		// a failed run.

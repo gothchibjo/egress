@@ -151,13 +151,23 @@ func TestHelpOverlayDocumentsEveryKey(t *testing.T) {
 func TestHelpFitsMinimumTerminal(t *testing.T) {
 	model := fixtureModel(t, 60, 20, WithoutColor())
 	model, _ = pressKey(t, model, "?")
+
 	view := model.View()
 	assertBlockShape(t, view, 60, 20)
-	for _, key := range []string{"enter", "ctrl+c", "blocked"} {
+	for _, key := range []string{"enter", "ctrl+c", "r          run the baseline again"} {
 		if !strings.Contains(view, key) {
 			t.Fatalf("compact help lost %q", key)
 		}
 	}
+	if !strings.Contains(view, "j/k scroll") {
+		t.Fatal("compact help does not advertise scrolling")
+	}
+
+	model, _ = pressKey(t, model, "G")
+	if !strings.Contains(model.View(), "blocked") {
+		t.Fatal("scrolling does not reach the verdict semantics")
+	}
+	assertBlockShape(t, model.View(), 60, 20)
 }
 
 func TestHelpReturnsToPreviousPage(t *testing.T) {

@@ -81,7 +81,7 @@ func TestScopeBandWrapsLongSummary(t *testing.T) {
 	var joined []string
 	for _, line := range text {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasSuffix(trimmed, "…") {
+		if strings.HasSuffix(trimmed, "...") {
 			t.Fatalf("summary was truncated at 80 columns: %q", line)
 		}
 		joined = append(joined, trimmed)
@@ -99,7 +99,7 @@ func TestScopeBandTruncatesWithEllipsis(t *testing.T) {
 	if len(text) != 2 {
 		t.Fatalf("band has %d text lines, want 2", len(text))
 	}
-	if !strings.HasSuffix(strings.TrimRight(text[len(text)-1], " "), "…") {
+	if !strings.HasSuffix(strings.TrimRight(text[len(text)-1], " "), "...") {
 		t.Fatalf("last band line is not truncated: %q", text[len(text)-1])
 	}
 }
@@ -114,7 +114,7 @@ func TestScopeBandCompactSingleLine(t *testing.T) {
 	if len(text) != 1 {
 		t.Fatalf("compact band has %d text lines, want 1", len(text))
 	}
-	if !strings.HasSuffix(strings.TrimRight(text[0], " "), "…") {
+	if !strings.HasSuffix(strings.TrimRight(text[0], " "), "...") {
 		t.Fatalf("compact band is not truncated: %q", text[0])
 	}
 }

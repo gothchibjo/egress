@@ -52,6 +52,7 @@ type options struct {
 	now            func() time.Time
 	networkContext *platform.NetworkContext
 	contextErr     string
+	rerun          func()
 	cancelCurrent  func()
 	cancelAll      func()
 }
@@ -120,6 +121,11 @@ func WithContext(context platform.NetworkContext, err error) Option {
 	}
 }
 
+// WithRerun wires the dashboard re-run action to the session owner.
+func WithRerun(rerun func()) Option {
+	return func(o *options) { o.rerun = rerun }
+}
+
 // WithExporter overrides how the dashboard writes JSON exports.
 func WithExporter(write ExportFunc) Option {
 	return func(o *options) { o.writeExport = write }
@@ -149,6 +155,8 @@ type Model struct {
 	scope              string
 	summary            string
 	notice             string
+	noticeID           int
+	helpOffset         int
 	exportPrompt       bool
 	exportInput        string
 	exportOverwrite    string
@@ -219,6 +227,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.failRun(msg.Err), nil
 		}
 		return m.finishRun(msg.Run), nil
+	case noticeExpiredMsg:
+		if msg.ID == m.noticeID {
+			m.notice = ""
+		}
+		return m, nil
 	default:
 		return m, nil
 	}
@@ -231,6 +244,24 @@ func (m Model) StartRunning() Model {
 	m.progress = ""
 	m.runErr = ""
 	m.notice = ""
+	m.noticeID++
+	return m
+}
+
+// restart clears the previous run before the baseline is executed again. A
+// re-run replaces the results instead of merging with them.
+func (m Model) restart() Model {
+	m = m.StartRunning()
+	m.results = nil
+	m.verdict = domain.Verdict{}
+	m.hasVerdict = false
+	m.scope = ""
+	m.summary = ""
+	m.selected = 0
+	m.detailOffset = 0
+	m.destinationOffset = 0
+	m.contextOffset = 0
+	m.helpOffset = 0
 	return m
 }
 

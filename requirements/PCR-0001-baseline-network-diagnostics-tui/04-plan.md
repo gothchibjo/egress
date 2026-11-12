@@ -575,3 +575,8 @@ recorded as part of REQ-002, not as a new requirement.
   modes, the local-only rule, JSON usage, exit codes and links to the anchor
   list, verdict rule, schema and key map; the review checklist is recorded as
   evidence.
+- 2026-11-12 — REQ-021/REQ-025 tuning pass before verification: failure evidence
+  is marked on the `error`/`diagnostic` line, `n`/`p` cycle through warn and
+  fail checks, `r` re-runs the baseline and replaces the previous results, the
+  status message shares the footer line and expires, the help overlay scrolls,
+  and ellipses are written as three dots.

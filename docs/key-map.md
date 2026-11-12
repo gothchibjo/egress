@@ -58,8 +58,11 @@ dashboard it does nothing. `ctrl+c` asks before quitting; `q` is the immediate
 exit. `x` stops only the running check and lets the baseline continue; `X` stops
 the baseline but keeps completed results and labels the run `cancelled`.
 
+A `warn` or `fail` result marks its `diagnostic` and `error` lines with `!` in
+the left gutter, so the line explaining the status is visible without colour.
+
 The evidence pane on the dashboard truncates long evidence and ends with
-`… enter for the full evidence`. The detail page keeps the whole record, shows
+`... enter for the full evidence`. The detail page keeps the whole record, shows
 the visible line range in the header and scrolls instead of truncating; `h`/`l`
 change the selected check and reset the scroll to the top.
 
@@ -68,13 +71,22 @@ destination list]. The `c` page shows the proxy and tunnel context described in
 [the network context]. Both scroll with `j`/`k` and `g`/`G` and return to the
 page they were opened from.
 
+`n` and `p` walk only through checks with status `warn` or `fail`, in the order
+they appear in the list, and wrap at both ends. `r` runs the baseline again; the
+new run replaces the previous results instead of merging with them, and the
+footer reports `baseline is already running` while a run is active.
+
+The footer status slot shows progress, the selection or a transient message such
+as `wrote egress-<timestamp>.json`. A message disappears after four seconds or
+on the next action, and it never adds a row to the footer.
+
 ## Pages
 
 | Page          | Content                                           |
 | :------------ | :------------------------------------------------ |
 | Dashboard     | path list, evidence pane, contextual footer hints |
 | Detail        | one scrollable check with its full evidence       |
-| Help          | key map and verdict semantics                     |
+| Help          | scrollable key map and verdict semantics          |
 | Destinations  | documented outbound endpoints and their transport |
 | Context       | proxy and tunnel context with its source          |
 | Export prompt | default export path with overwrite confirmation   |
