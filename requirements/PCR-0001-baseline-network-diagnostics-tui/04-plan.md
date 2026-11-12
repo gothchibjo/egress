@@ -411,6 +411,7 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 | 2026-11-12 | REQ-022 | No secrets or unrelated host data are exported.                              | The envelope carries results, verdict, classification and the documented destination list only; it has no environment, credential or file-system fields.                                                                        | pass   |
 | 2026-11-12 | REQ-022 | Non-interactive output contains no terminal control sequences.               | JSON mode never builds the dashboard; the CLI test asserts stdout has no ESC byte and the output is valid JSON.                                                                                                                 | pass   |
 | 2026-11-12 | REQ-023 | Context is informational only.                                               | `platform.DetectNetworkContext` reads interfaces, default routes and proxy variables; no probe, verdict or destination consumes it, and no bypass or A/B path exists.                                                           | pass   |
+| 2026-11-12 | REQ-024 | Documentation is written in English.                                         | `README.md` and every linked document are English; `01-vision.md` PART A remains the only verbatim exception.                                                                                                                   | pass   |
 
 # Evidence Matrix
 
@@ -570,3 +571,7 @@ recorded as part of REQ-002, not as a new requirement.
   instead of repeating it per interface; the `[default route]` marker carries
   the only difference the TUI needs, and the JSON keeps the full source per
   entry.
+- 2026-11-12 — REQ-024 adds the root README with installation, both privilege
+  modes, the local-only rule, JSON usage, exit codes and links to the anchor
+  list, verdict rule, schema and key map; the review checklist is recorded as
+  evidence.
