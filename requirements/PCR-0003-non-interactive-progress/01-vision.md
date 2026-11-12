@@ -2,7 +2,7 @@
 pcr: PCR-0003
 title: Non-interactive progress indication
 slug: non-interactive-progress
-status: technical
+status: frozen
 requester: gothchibjo (repo owner)
 channel: chat paste
 received: 2026-11-12
