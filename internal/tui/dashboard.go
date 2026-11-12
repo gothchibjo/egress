@@ -1,12 +1,14 @@
 package tui
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/gothchibjo/egress/internal/app"
 	"github.com/gothchibjo/egress/internal/domain"
 )
 
@@ -78,6 +80,9 @@ type Model struct {
 	view        viewState
 	helpReturn  viewState
 	confirmQuit bool
+	running     bool
+	progress    string
+	runErr      string
 	opts        options
 }
 
@@ -119,9 +124,60 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.Resize(msg.Width, msg.Height), nil
 	case tea.KeyMsg:
 		return m.updateKey(msg)
+	case RunProgressMsg:
+		m.running = true
+		m.progress = fmt.Sprintf(
+			"%s (%d/%d) %s",
+			msg.Progress.CheckID,
+			msg.Progress.Index+1,
+			msg.Progress.Total,
+			msg.Progress.Elapsed.Round(100*time.Millisecond),
+		)
+		return m, nil
+	case RunCompleteMsg:
+		if msg.Err != nil {
+			return m.failRun(msg.Err), nil
+		}
+		return m.finishRun(msg.Run), nil
 	default:
 		return m, nil
 	}
+}
+
+// StartRunning marks the dashboard as waiting for the baseline.
+func (m Model) StartRunning() Model {
+	m.running = true
+	m.progress = ""
+	m.runErr = ""
+	return m
+}
+
+// finishRun replaces the dashboard content with a completed run.
+func (m Model) finishRun(run app.Run) Model {
+	m.running = false
+	m.progress = ""
+	m.runErr = ""
+	m.results = append([]domain.Result(nil), run.Results...)
+	m.selected = 0
+	m.verdict = domain.Verdict{}
+	m.hasVerdict = false
+	if verdict, err := domain.AggregateVerdict(run.Results); err == nil {
+		m.verdict = verdict
+		m.hasVerdict = true
+	}
+	if elapsed := run.FinishedAt.Sub(run.StartedAt); elapsed > 0 {
+		m.opts.elapsed = elapsed
+		m.opts.hasElapsed = true
+	}
+	return m
+}
+
+// failRun keeps the dashboard visible and records the baseline failure.
+func (m Model) failRun(err error) Model {
+	m.running = false
+	m.progress = ""
+	m.runErr = err.Error()
+	return m
 }
 
 // Resize sets the terminal size and keeps the selected check.

@@ -518,3 +518,6 @@ recorded as part of REQ-002, not as a new requirement.
 - 2026-11-12 — REQ-013 adds sample size, median and jitter to every ICMP result,
   derived from the existing bounded sample; odd, even, single-response and
   all-loss cases are covered by tests.
+- 2026-11-12 — REQ-002 wiring adds `cmd/egress` with terminal detection, the
+  full baseline check list, one session and the dashboard hand-off; progress
+  from slow checks appears in the footer. Non-interactive output stays REQ-022.

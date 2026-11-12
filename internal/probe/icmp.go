@@ -61,15 +61,26 @@ type ICMPCheck struct {
 	now       func() time.Time
 }
 
-// NewICMPChecks builds one check for the gateway and one per curated anchor.
-func NewICMPChecks(opts ICMPOptions) []app.Check {
+// NewGatewayCheck builds the gateway reachability check.
+func NewGatewayCheck(opts ICMPOptions) app.Check {
+	return newGatewayCheck(opts.normalized())
+}
+
+// NewAnchorChecks builds one ICMP check per curated anchor.
+func NewAnchorChecks(opts ICMPOptions) []app.Check {
 	opts = opts.normalized()
-	checks := make([]app.Check, 0, len(domain.BaselineAnchors())+1)
-	checks = append(checks, newGatewayCheck(opts))
-	for _, anchor := range domain.BaselineAnchors() {
+	anchors := domain.BaselineAnchors()
+	checks := make([]app.Check, 0, len(anchors))
+	for _, anchor := range anchors {
 		checks = append(checks, newAnchorCheck(anchor, opts))
 	}
 	return checks
+}
+
+// NewICMPChecks builds one check for the gateway and one per curated anchor.
+func NewICMPChecks(opts ICMPOptions) []app.Check {
+	checks := []app.Check{NewGatewayCheck(opts)}
+	return append(checks, NewAnchorChecks(opts)...)
 }
 
 func newGatewayCheck(opts ICMPOptions) ICMPCheck {

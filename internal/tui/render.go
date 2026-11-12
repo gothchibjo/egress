@@ -66,10 +66,16 @@ func (m Model) verdictStyle() lipgloss.Style {
 }
 
 func (m Model) verdictLabel() string {
-	if !m.hasVerdict {
+	switch {
+	case m.runErr != "":
+		return "ERROR"
+	case m.running:
+		return "RUNNING"
+	case !m.hasVerdict:
 		return "NO VERDICT"
+	default:
+		return strings.ToUpper(string(m.verdict.Level))
 	}
-	return strings.ToUpper(string(m.verdict.Level))
 }
 
 func (m Model) renderNormal() string {
@@ -152,7 +158,7 @@ func (m Model) renderHeader() []string {
 		left = m.verdictStyle().Render(left)
 	}
 	right := ""
-	if m.hasVerdict {
+	if m.hasVerdict && !m.running && m.runErr == "" {
 		counts := m.verdict.Counts
 		right = fmt.Sprintf("pass %d  warn %d  fail %d  skip %d ", counts.Pass, counts.Warn, counts.Fail, counts.Skipped)
 	}
@@ -164,7 +170,10 @@ func (m Model) renderHeader() []string {
 
 func (m Model) renderFooter() []string {
 	position := " no results"
-	if len(m.results) > 0 {
+	switch {
+	case m.running && m.progress != "":
+		position = " running " + m.progress
+	case len(m.results) > 0:
 		position = fmt.Sprintf(" %d/%d selected", m.selected+1, len(m.results))
 	}
 	return []string{m.rule(m.width), padLine(position, " "+m.footerHints(), m.width)}
@@ -173,7 +182,7 @@ func (m Model) renderFooter() []string {
 func (m Model) listLines(width, height int) []string {
 	grouped := rows(m.results)
 	if len(grouped) == 0 {
-		return []string{"", " No baseline results yet."}
+		return []string{"", " " + m.emptyMessage()}
 	}
 
 	lines := make([]string, 0, len(grouped)+len(layerOrder))
@@ -212,12 +221,19 @@ func (m Model) listLines(width, height int) []string {
 func (m Model) detailLines(width, height int) []string {
 	grouped := rows(m.results)
 	if len(grouped) == 0 {
+		note := " The dashboard appears when the baseline reports results."
+		if m.running {
+			note = " Slow checks report progress in the footer."
+		}
+		if m.runErr != "" {
+			note = " " + m.runErr
+		}
 		return []string{
 			" " + m.theme().heading.Render("EVIDENCE"),
 			"",
-			" No baseline results yet.",
+			" " + m.emptyMessage(),
 			"",
-			" The dashboard appears when the baseline reports results.",
+			note,
 		}
 	}
 
@@ -506,4 +522,15 @@ func (m Model) renderConfirm() string {
 	lines := append(header, strings.Split(body, "\n")...)
 	lines = append(lines, footer...)
 	return strings.Join(lines, "\n")
+}
+
+func (m Model) emptyMessage() string {
+	switch {
+	case m.runErr != "":
+		return "Baseline failed."
+	case m.running:
+		return "Baseline running…"
+	default:
+		return "No baseline results yet."
+	}
 }
