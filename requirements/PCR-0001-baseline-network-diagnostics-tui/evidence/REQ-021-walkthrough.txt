@@ -1,0 +1,401 @@
+Scripted TUI walkthrough transcript
+Generated: 2026-11-12
+Command: EGRESS_TRANSCRIPT=1 go test ./internal/tui -run TestWalkthroughTranscript -v
+Source: internal/tui/walkthrough_test.go
+Reviewer sign-off: gothchibjo, 2026-11-12 — walkthrough confirmed
+
+=== RUN   TestWalkthroughTranscript
+
+=== startup, running the baseline (100x30) ===
+ egress — RUNNING                                                                                   
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                  │  EVIDENCE                                                       
+ Baseline running...              │                                                                 
+                                  │  Baseline running...                                            
+                                  │                                                                 
+                                  │  Slow checks report progress in the footer.                     
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ running tcp.anchor.example-com.53 (15/17) 1.1s               x cancel check · X cancel run · q quit
+
+=== completed baseline (100x30) ===
+ egress — BLOCKED · upstream                                    pass 3  warn 0  fail 1  skip 1  2.5s
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Local link, gateway and name resolution were usable; remote probes failed.                         
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ LOCAL LINK                       │  EVIDENCE                                                       
+> ✓ local.interfaces              │  local.interfaces                                               
+ GATEWAY                          │  status       ✓ pass                                            
+  ✓ gateway.reach                 │  layer        local link                                        
+ TRANSPORT                        │  target       local host                                        
+  ✗ tcp.anchor.custom.443         │  method       test                                              
+  ✓ tcp.anchor.cloudflare-dns.443 │  time         2026-11-11 12:00:00 UTC                           
+  · mtu.pmtu                      │  measured     reachable = true                                  
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ 1/5 selected                                            ↑/k ↓/j move · enter open · ? help · q quit
+
+=== detail of the failing check (100x30) ===
+ egress — DETAIL                                                                                3/5 
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ EVIDENCE                                                                                           
+ tcp.anchor.custom.443                                                                              
+ status       ✗ fail                                                                                
+ layer        transport                                                                             
+ target       198.51.100.10:443                                                                     
+ method       test                                                                                  
+ time         2026-11-11 12:00:00 UTC                                                               
+ measured     outcome = timeout                                                                     
+ ! diagnostic no resolver answered: resolver.192.0.2.53: timeout                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                      ↑/k ↓/j scroll · h/l check · esc back · ? help
+
+=== detail scrolled to the end (100x30) ===
+ egress — DETAIL                                                                                3/5 
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ EVIDENCE                                                                                           
+ tcp.anchor.custom.443                                                                              
+ status       ✗ fail                                                                                
+ layer        transport                                                                             
+ target       198.51.100.10:443                                                                     
+ method       test                                                                                  
+ time         2026-11-11 12:00:00 UTC                                                               
+ measured     outcome = timeout                                                                     
+ ! diagnostic no resolver answered: resolver.192.0.2.53: timeout                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                      ↑/k ↓/j scroll · h/l check · esc back · ? help
+
+=== help overlay (100x30) ===
+ egress — HELP                                                                                      
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ HELP                                                                                               
+ NAVIGATION                                                                                         
+   ↑/k ↓/j    move or scroll                                                                        
+   g / G      first / last                                                                          
+   h/l [ ]    previous / next check                                                                 
+   n / p      next / previous problem                                                               
+   PgUp/PgDn  scroll one page                                                                       
+   enter      open · esc back                                                                       
+   c / d      context / destinations                                                                
+ ACTIONS                                                                                            
+   r          run the baseline again                                                                
+   e / E      export default / path                                                                 
+   x / X      cancel check / baseline                                                               
+   q/ctrl+c   quit, ctrl+c confirms                                                                 
+ VERDICT                                                                                            
+   healthy    all passed or skipped                                                                 
+   degraded   warn, isolated anchor, no pass                                                        
+   blocked    core fail, all anchors fail                                                           
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                     j/k scroll · ? close · esc back
+
+=== help scrolled to the end (100x30) ===
+ egress — HELP                                                                                      
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ HELP                                                                                               
+ NAVIGATION                                                                                         
+   ↑/k ↓/j    move or scroll                                                                        
+   g / G      first / last                                                                          
+   h/l [ ]    previous / next check                                                                 
+   n / p      next / previous problem                                                               
+   PgUp/PgDn  scroll one page                                                                       
+   enter      open · esc back                                                                       
+   c / d      context / destinations                                                                
+ ACTIONS                                                                                            
+   r          run the baseline again                                                                
+   e / E      export default / path                                                                 
+   x / X      cancel check / baseline                                                               
+   q/ctrl+c   quit, ctrl+c confirms                                                                 
+ VERDICT                                                                                            
+   healthy    all passed or skipped                                                                 
+   degraded   warn, isolated anchor, no pass                                                        
+   blocked    core fail, all anchors fail                                                           
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                     j/k scroll · ? close · esc back
+
+=== outbound destinations (100x30) ===
+ egress — DESTINATIONS                                                                              
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+ Only the endpoints listed here are contacted. No telemetry, analytics, crash reports, uploads or   
+ enrichment.                                                                                        
+                                                                                                    
+ No documented destinations.                                                                        
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                             j/k scroll · esc back · ? help · q quit
+
+=== proxy and tunnel context (100x30) ===
+ egress — CONTEXT                                                                                   
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+ Read-only context. It never changes which probes run.                                              
+ Sources: proxy variables from the environment; tunnel interface names, with the default route      
+ marked when it applies.                                                                            
+                                                                                                    
+ PROXY                                                                                              
+   HTTPS_PROXY  http://***@proxy.example:8080                                                       
+     source  environment (https_proxy)                                                              
+                                                                                                    
+ VPN                                                                                                
+   utun3  tun  up  [default route]                                                                  
+     addresses  10.8.0.2/32                                                                         
+   wg0  wireguard  down                                                                             
+     addresses  10.10.0.2/32                                                                        
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                             j/k scroll · esc back · ? help · q quit
+
+=== export path prompt (100x30) ===
+ egress — DEGRADED                                                   pass 3  warn 1  fail 1  skip 1 
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ LOCAL LINK                       │  EVIDENCE                                                       
+> ✓ local.interfaces              │  local.interfaces                                               
+ GATEWAY                          │  status       ✓ pass                                            
+  ! gateway.reach                 │  layer        local link                                        
+ DNS                              │  target       en0                                               
+  ✓ dns.canary                    │  method       test                                              
+ TRANSPORT                        │  time         2026-11-11 12:00:00 UTC                           
+  ✗ icmp.anchor                   │  measured     reachable = true                                  
+ HTTP                             │                                                                 
+  · http.canary                   │                                                                 
+ OTHER                            │                                                                 
+  ✓ custom.check                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ export to: egress-20261112-181149.json_                                    enter write · esc cancel
+
+=== export status message (100x30) ===
+ egress — DEGRADED                                                   pass 3  warn 1  fail 1  skip 1 
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ LOCAL LINK                       │  EVIDENCE                                                       
+> ✓ local.interfaces              │  local.interfaces                                               
+ GATEWAY                          │  status       ✓ pass                                            
+  ! gateway.reach                 │  layer        local link                                        
+ DNS                              │  target       en0                                               
+  ✓ dns.canary                    │  method       test                                              
+ TRANSPORT                        │  time         2026-11-11 12:00:00 UTC                           
+  ✗ icmp.anchor                   │  measured     reachable = true                                  
+ HTTP                             │                                                                 
+  · http.canary                   │                                                                 
+ OTHER                            │                                                                 
+  ✓ custom.check                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ wrote egress-20261112-181149.json                       ↑/k ↓/j move · enter open · ? help · q quit
+
+=== offline: no route (100x30) ===
+ egress — BLOCKED · local-link                                    pass 0  warn 0  fail 1  skip 1  1s
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Local link problem: interfaces or the default route failed. Local inspection ran; gateway, DNS and 
+ upstream were not reached reliably.                                                                
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ LOCAL LINK                       │  EVIDENCE                                                       
+> ✗ local.interfaces              │  local.interfaces                                               
+ GATEWAY                          │  status       ✗ fail                                            
+  · gateway.reach                 │  layer        local link                                        
+                                  │  target       local host                                        
+                                  │  method       test                                              
+                                  │  time         2026-11-11 12:00:00 UTC                           
+                                  │  measured     reachable = false                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+                                  │                                                                 
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ 1/2 selected                                            ↑/k ↓/j move · enter open · ? help · q quit
+
+=== compact layout (60x20) ===
+ egress — DEGRADED · unprivileged                           
+────────────────────────────────────────────────────────────
+ LOCAL LINK                                                 
+> ✓ local.interfaces                                        
+ GATEWAY                                                    
+  ! gateway.reach                                           
+ DNS                                                        
+  ✓ dns.canary                                              
+────────────────────────────────────────────────────────────
+ EVIDENCE                                                   
+ local.interfaces                                           
+ status       ✓ pass                                        
+ layer        local link                                    
+ target       en0                                           
+ method       test                                          
+ time         2026-11-11 12:00:00 UTC                       
+ measured     reachable = true                              
+                                                            
+────────────────────────────────────────────────────────────
+ 1/6 selected    ↑/k ↓/j move · enter open · ? help · q quit
+
+=== below the minimum size (50x15) ===
+ Terminal too small: 50x15                        
+                                                  
+ Need at least 60x20.                             
+ Resize the terminal to continue.                 
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+--- PASS: TestWalkthroughTranscript (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.416s

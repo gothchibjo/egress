@@ -1,0 +1,38 @@
+=== RUN   TestExportPromptCancelDoesNotWrite
+--- PASS: TestExportPromptCancelDoesNotWrite (0.00s)
+=== RUN   TestExportWorksForCancelledRuns
+--- PASS: TestExportWorksForCancelledRuns (0.00s)
+=== RUN   TestRerunClearsThePreviousRun
+--- PASS: TestRerunClearsThePreviousRun (0.00s)
+=== RUN   TestRerunReplacesResults
+--- PASS: TestRerunReplacesResults (0.00s)
+=== RUN   TestRerunIsIgnoredWhileRunning
+--- PASS: TestRerunIsIgnoredWhileRunning (0.00s)
+=== RUN   TestRerunWithoutHook
+--- PASS: TestRerunWithoutHook (0.00s)
+=== RUN   TestRunProgressMessage
+--- PASS: TestRunProgressMessage (0.00s)
+=== RUN   TestRunCompleteMessage
+--- PASS: TestRunCompleteMessage (0.00s)
+=== RUN   TestRunReplacesPreviousRun
+--- PASS: TestRunReplacesPreviousRun (0.00s)
+=== RUN   TestStartRunningKeepsPreviousRunVisible
+--- PASS: TestStartRunningKeepsPreviousRunVisible (0.00s)
+=== RUN   TestRunCompleteError
+--- PASS: TestRunCompleteError (0.00s)
+=== RUN   TestRunCompleteWithoutResults
+--- PASS: TestRunCompleteWithoutResults (0.00s)
+=== RUN   TestCancelKeysRequestRunnerCancellation
+--- PASS: TestCancelKeysRequestRunnerCancellation (0.00s)
+=== RUN   TestFooterShowsCancelHintsWhileRunning
+--- PASS: TestFooterShowsCancelHintsWhileRunning (0.00s)
+=== RUN   TestConfirmQuitCancelsRunningBaseline
+--- PASS: TestConfirmQuitCancelsRunningBaseline (0.00s)
+=== RUN   TestCancelledRunIsLabelled
+--- PASS: TestCancelledRunIsLabelled (0.00s)
+=== RUN   TestHelpDocumentsCancelKeys
+--- PASS: TestHelpDocumentsCancelKeys (0.00s)
+=== RUN   TestOfflineScopeIsShownAfterRun
+--- PASS: TestOfflineScopeIsShownAfterRun (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.360s

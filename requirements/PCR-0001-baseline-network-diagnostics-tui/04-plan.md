@@ -1,7 +1,7 @@
 ---
 pcr: PCR-0001
 title: Baseline network diagnostics and TUI shell
-status: implementing
+status: done
 basis: 03-technical.yaml (frozen)
 revised: 2026-11-12
 approved_by: gothchibjo
@@ -415,24 +415,43 @@ ICMP. Any additional dependency needs a stated reason in the REQ section.
 
 # Evidence Matrix
 
-| REQ     | verification.method | evidence artifact                                                           | status (open/done/waived) |
-| :------ | :------------------ | :-------------------------------------------------------------------------- | :------------------------ |
-| REQ-001 | test                | `evidence/REQ-001-unit-tests.txt`; `evidence/REQ-001-schema-validation.txt` | open                      |
-| REQ-003 | inspection          | `evidence/REQ-003-anchor-review.md`; `evidence/REQ-003-traceability.md`     | open                      |
-| REQ-008 | test                | `evidence/REQ-008-unit-tests.txt`; `evidence/REQ-008-traceability.md`       | open                      |
+| REQ     | verification.method | evidence artifact                                                                        | status |
+| :------ | :------------------ | :--------------------------------------------------------------------------------------- | :----- |
+| REQ-001 | test                | `REQ-001-unit-tests.txt`; `REQ-001-schema-validation.txt`                                | done   |
+| REQ-002 | test                | `REQ-002-runner-tests.txt`; `REQ-002-tui-lifecycle-tests.txt`; `REQ-021-walkthrough.txt` | done   |
+| REQ-003 | inspection          | `REQ-003-anchor-review.md`; `PCR-0001-traceability.md`                                   | done   |
+| REQ-004 | test                | `REQ-004-local-tests.txt`; `REQ-015-platform-matrix.md`                                  | done   |
+| REQ-005 | test                | `REQ-005-icmp-tests.txt`; `REQ-015-platform-matrix.md`                                   | done   |
+| REQ-006 | test                | `REQ-006-dns-tests.txt`; `probe-integration-live.txt`                                    | done   |
+| REQ-007 | test                | `REQ-007-doh-tests.txt`; `probe-integration-live.txt`                                    | done   |
+| REQ-008 | test                | `REQ-008-unit-tests.txt`; `REQ-008-traceability.md`                                      | done   |
+| REQ-009 | test                | `REQ-009-anchor-icmp-tests.txt`; `probe-integration-live.txt`; platform matrix           | done   |
+| REQ-010 | test                | `REQ-010-tcp-tests.txt`; `probe-integration-live.txt`; traceability                      | done   |
+| REQ-011 | simulation          | `REQ-011-portal-tests.txt`; `probe-integration-live.txt`; `REQ-021-walkthrough.txt`      | done   |
+| REQ-012 | simulation          | `REQ-012-mtu-tests.txt`; `PCR-0001-traceability.md`                                      | done   |
+| REQ-013 | test                | `REQ-013-latency-tests.txt`; `probe-integration-live.txt`                                | done   |
+| REQ-014 | test                | `REQ-014-budget-tests.txt`; `REQ-014-cancellation-tests.txt`                             | done   |
+| REQ-015 | inspection          | `REQ-015-platform-tests.txt`; `REQ-015-build-matrix.txt`; `REQ-015-platform-matrix.md`   | done   |
+| REQ-016 | test                | `REQ-016-privilege-tests.txt`; `REQ-016-unprivileged-run.txt`; `REQ-021-walkthrough.txt` | done   |
+| REQ-017 | test                | `REQ-017-elevated-tests.txt`; `REQ-017-elevated-run.md`                                  | done   |
+| REQ-018 | test                | `REQ-018-verdict-tests.txt`; `REQ-018-verdict-review.md`                                 | done   |
+| REQ-019 | simulation          | `REQ-019-classification-tests.txt`; `REQ-019-tui-tests.txt`; `REQ-021-walkthrough.txt`   | done   |
+| REQ-020 | inspection          | `REQ-020-outbound-review.md`; attributed network capture                                 | done   |
+| REQ-021 | manual-review       | `REQ-021-keys-tests.txt`; `REQ-021-walkthrough.txt`; `REQ-021-keymap-review.md`          | done   |
+| REQ-022 | test                | `REQ-022-json-schema.txt`; `REQ-022-cli-tests.txt`                                       | done   |
+| REQ-023 | test                | `REQ-023-unit-tests.txt`; `REQ-023-tui-tests.txt`; `REQ-021-walkthrough.txt`             | done   |
+| REQ-024 | inspection          | `REQ-024-readme-review.md`                                                               | done   |
+| REQ-025 | manual-review       | `REQ-025-layout-tests.txt`; `REQ-025-terminal-matrix.md`; `REQ-021-walkthrough.txt`      | done   |
 
-REQ-001 stays open: the result model, validation and JSON envelope are proven,
-but the acceptance criterion "The TUI and JSON output expose the same evidence
-fields" needs the TUI adapter from REQ-021 and REQ-025.
+## Matrix notes
 
-REQ-003 stays open: the catalog, its documentation and the traceability matrix
-exist, and `gothchibjo` signed off the destination list on 2026-11-12, but
-anchor visibility needs the TUI and JSON adapters (REQ-025, REQ-022) and the
-single-failing-anchor warning needs the REQ-018 integration.
+All 25 REQs are closed. The walkthrough transcript `REQ-021-walkthrough.txt` was
+confirmed by the reviewer on 2026-11-12 and serves as the TUI walkthrough
+evidence for every REQ that names it.
 
-REQ-008 stays open: detection, source reporting, explicit absence and credential
-redaction are covered by unit tests, but acceptance criterion "Detection is
-present in the TUI and JSON output" needs REQ-023 and REQ-022.
+`REQ-020` is closed by the attributed capture: the PKTAP metadata for the
+`egress` pid lists only catalog endpoints, and the host-wide capture attributes
+the remaining flows to other processes.
 
 # Plan Revision 2 — TUI-First Execution Order
 
@@ -580,3 +599,38 @@ recorded as part of REQ-002, not as a new requirement.
   fail checks, `r` re-runs the baseline and replaces the previous results, the
   status message shares the footer line and expires, the help overlay scrolls,
   and ellipses are written as three dots.
+
+# Traceability Chain — completion
+
+Every requirement traces from a business requirement to its verification
+evidence. No gap remains.
+
+| BR           | REQ     | Evidence                                                                           |
+| :----------- | :------ | :--------------------------------------------------------------------------------- |
+| BR-03        | REQ-001 | REQ-001-unit-tests.txt, REQ-001-schema-validation.txt                              |
+| BR-01        | REQ-002 | REQ-002-runner-tests.txt, REQ-002-tui-lifecycle-tests.txt, REQ-021-walkthrough.txt |
+| BR-10        | REQ-003 | REQ-003-anchor-review.md, PCR-0001-traceability.md                                 |
+| BR-02        | REQ-004 | REQ-004-local-tests.txt, REQ-015-platform-matrix.md                                |
+| BR-02        | REQ-005 | REQ-005-icmp-tests.txt, REQ-015-platform-matrix.md                                 |
+| BR-02        | REQ-006 | REQ-006-dns-tests.txt, probe-integration-live.txt                                  |
+| BR-02        | REQ-007 | REQ-007-doh-tests.txt, probe-integration-live.txt                                  |
+| BR-02, BR-15 | REQ-008 | REQ-008-unit-tests.txt, REQ-008-traceability.md                                    |
+| BR-02        | REQ-009 | REQ-009-anchor-icmp-tests.txt, probe-integration-live.txt                          |
+| BR-02        | REQ-010 | REQ-010-tcp-tests.txt, probe-integration-live.txt                                  |
+| BR-02, BR-12 | REQ-011 | REQ-011-portal-tests.txt, probe-integration-live.txt                               |
+| BR-02, BR-12 | REQ-012 | REQ-012-mtu-tests.txt, PCR-0001-traceability.md                                    |
+| BR-02        | REQ-013 | REQ-013-latency-tests.txt, probe-integration-live.txt                              |
+| BR-07        | REQ-014 | REQ-014-budget-tests.txt, REQ-014-cancellation-tests.txt                           |
+| BR-08        | REQ-015 | REQ-015-platform-tests.txt, REQ-015-platform-matrix.md                             |
+| BR-06        | REQ-016 | REQ-016-privilege-tests.txt, REQ-016-unprivileged-run.txt                          |
+| BR-13        | REQ-017 | REQ-017-elevated-tests.txt, REQ-017-elevated-run.md                                |
+| BR-04        | REQ-018 | REQ-018-verdict-tests.txt, REQ-018-verdict-review.md                               |
+| BR-11        | REQ-019 | REQ-019-classification-tests.txt, REQ-019-tui-tests.txt                            |
+| BR-09        | REQ-020 | REQ-020-outbound-review.md                                                         |
+| BR-05, BR-16 | REQ-021 | REQ-021-keys-tests.txt, REQ-021-walkthrough.txt, REQ-021-keymap-review.md          |
+| BR-14        | REQ-022 | REQ-022-json-schema.txt, REQ-022-cli-tests.txt                                     |
+| BR-15        | REQ-023 | REQ-023-unit-tests.txt, REQ-023-tui-tests.txt                                      |
+| BR-16        | REQ-024 | REQ-024-readme-review.md                                                           |
+| BR-04        | REQ-025 | REQ-025-layout-tests.txt, REQ-025-terminal-matrix.md                               |
+
+Gaps: none.

@@ -1,0 +1,28 @@
+=== RUN   TestClassifyRun
+=== RUN   TestClassifyRun/local_link_failure
+=== RUN   TestClassifyRun/gateway_failure
+=== RUN   TestClassifyRun/dns_failure
+=== RUN   TestClassifyRun/dns_warning
+=== RUN   TestClassifyRun/upstream_transport_failure
+=== RUN   TestClassifyRun/upstream_http_failure
+=== RUN   TestClassifyRun/no_failures
+=== RUN   TestClassifyRun/skipped_checks_do_not_fail_a_layer
+=== RUN   TestClassifyRun/local_failure_outranks_gateway
+--- PASS: TestClassifyRun (0.00s)
+    --- PASS: TestClassifyRun/local_link_failure (0.00s)
+    --- PASS: TestClassifyRun/gateway_failure (0.00s)
+    --- PASS: TestClassifyRun/dns_failure (0.00s)
+    --- PASS: TestClassifyRun/dns_warning (0.00s)
+    --- PASS: TestClassifyRun/upstream_transport_failure (0.00s)
+    --- PASS: TestClassifyRun/upstream_http_failure (0.00s)
+    --- PASS: TestClassifyRun/no_failures (0.00s)
+    --- PASS: TestClassifyRun/skipped_checks_do_not_fail_a_layer (0.00s)
+    --- PASS: TestClassifyRun/local_failure_outranks_gateway (0.00s)
+=== RUN   TestClassifyRunRequiresResults
+--- PASS: TestClassifyRunRequiresResults (0.00s)
+=== RUN   TestClassificationIgnoresUnknownChecks
+--- PASS: TestClassificationIgnoresUnknownChecks (0.00s)
+=== RUN   TestClassificationAvoidsCensorshipClaims
+--- PASS: TestClassificationAvoidsCensorshipClaims (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/domain	0.289s

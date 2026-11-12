@@ -1,0 +1,21 @@
+=== RUN   TestTCPCheckConnected
+--- PASS: TestTCPCheckConnected (0.00s)
+=== RUN   TestTCPCheckRefused
+--- PASS: TestTCPCheckRefused (0.00s)
+=== RUN   TestTCPCheckTimeout
+--- PASS: TestTCPCheckTimeout (0.00s)
+=== RUN   TestTCPCheckReset
+--- PASS: TestTCPCheckReset (0.00s)
+=== RUN   TestTCPCheckOtherError
+--- PASS: TestTCPCheckOtherError (0.00s)
+=== RUN   TestTCPCheckCancelled
+--- PASS: TestTCPCheckCancelled (0.00s)
+=== RUN   TestTCPCheckDefaultTimeout
+--- PASS: TestTCPCheckDefaultTimeout (0.00s)
+=== RUN   TestNewTCPChecks
+--- PASS: TestNewTCPChecks (0.00s)
+=== RUN   TestTCPChecksIntegration
+    tcp_test.go:211: set EGRESS_INTEGRATION=1 to run the live TCP checks
+--- SKIP: TestTCPChecksIntegration (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	0.287s

@@ -1,0 +1,4 @@
+=== RUN   TestDetectPrivilege
+--- PASS: TestDetectPrivilege (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/platform	0.261s

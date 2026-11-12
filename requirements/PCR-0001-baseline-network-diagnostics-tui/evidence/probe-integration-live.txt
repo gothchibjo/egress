@@ -1,0 +1,30 @@
+Integration test report
+Command: EGRESS_INTEGRATION=1 go test ./internal/probe -run Integration -v
+Date: 2026-11-12
+Local resolver addresses are replaced with resolver.local.1, resolver.local.2 and resolver.tunnel.
+
+=== RUN   TestDNSCheckIntegration
+    dns_test.go:448: status=pass diagnostic="" measurements=[{Name:resolver.local.1.rcode Value:NOERROR Unit:} {Name:resolver.local.1.answers Value:104.20.23.154, 172.66.147.243 Unit:} {Name:resolver.local.1.latency Value:60ms Unit:} {Name:resolver.1.1.1.1.rcode Value:NOERROR Unit:} {Name:resolver.1.1.1.1.answers Value:104.20.23.154, 172.66.147.243 Unit:} {Name:resolver.1.1.1.1.latency Value:244ms Unit:} {Name:resolver.local.2.rcode Value:NOERROR Unit:} {Name:resolver.local.2.answers Value:8.47.69.5, 8.6.112.5 Unit:} {Name:resolver.local.2.latency Value:4ms Unit:} {Name:resolver.tunnel.rcode Value:NOERROR Unit:} {Name:resolver.tunnel.answers Value:104.20.23.154, 172.66.147.243 Unit:} {Name:resolver.tunnel.latency Value:6ms Unit:} {Name:doh.rcode Value:NOERROR Unit:} {Name:doh.answers Value:104.20.23.154, 172.66.147.243 Unit:} {Name:doh.latency Value:541ms Unit:} {Name:comparison Value:match Unit:}]
+--- PASS: TestDNSCheckIntegration (0.87s)
+=== RUN   TestICMPChecksIntegration
+gateway.reach: pass ""
+icmp.anchor.cloudflare-dns: pass ""
+icmp.anchor.google-dns: pass ""
+icmp.anchor.apple-captive: pass ""
+icmp.anchor.example-com: pass ""
+--- PASS: TestICMPChecksIntegration (0.94s)
+=== RUN   TestPortalCheckIntegration
+    portal_test.go:232: status=pass diagnostic="" measurements=[{Name:status Value:200 OK Unit:} {Name:fingerprint Value:match Unit:} {Name:body Value:<html><head><title>success</title></head><body>success</body></html> Unit:}]
+--- PASS: TestPortalCheckIntegration (0.16s)
+=== RUN   TestTCPChecksIntegration
+    tcp_test.go:219: tcp.anchor.cloudflare-dns.443: pass ""
+    tcp_test.go:219: tcp.anchor.cloudflare-dns.53: pass ""
+    tcp_test.go:219: tcp.anchor.google-dns.443: pass ""
+    tcp_test.go:219: tcp.anchor.google-dns.53: pass ""
+    tcp_test.go:219: tcp.anchor.apple-captive.443: pass ""
+    tcp_test.go:219: tcp.anchor.apple-captive.53: fail "connection timed out (passive)"
+    tcp_test.go:219: tcp.anchor.example-com.443: pass ""
+    tcp_test.go:219: tcp.anchor.example-com.53: fail "connection timed out (passive)"
+--- PASS: TestTCPChecksIntegration (2.42s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	4.902s

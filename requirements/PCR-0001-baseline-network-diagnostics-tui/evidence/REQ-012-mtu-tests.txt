@@ -1,0 +1,22 @@
+=== RUN   TestMTUCheckCleanPath
+--- PASS: TestMTUCheckCleanPath (0.00s)
+=== RUN   TestMTUCheckBlackhole
+--- PASS: TestMTUCheckBlackhole (0.00s)
+=== RUN   TestMTUCheckUnreachablePathSkips
+--- PASS: TestMTUCheckUnreachablePathSkips (0.00s)
+=== RUN   TestMTUCheckUnprivilegedSkips
+--- PASS: TestMTUCheckUnprivilegedSkips (0.00s)
+=== RUN   TestMTUCheckProberUnavailableSkips
+--- PASS: TestMTUCheckProberUnavailableSkips (0.00s)
+=== RUN   TestMTUCheckResolveFailure
+--- PASS: TestMTUCheckResolveFailure (0.00s)
+=== RUN   TestMTUCheckCancelled
+--- PASS: TestMTUCheckCancelled (0.00s)
+=== RUN   TestMTUCheckCancelledMidProbe
+--- PASS: TestMTUCheckCancelledMidProbe (0.00s)
+=== RUN   TestMTUOptionsClampSizes
+--- PASS: TestMTUOptionsClampSizes (0.00s)
+=== RUN   TestDefaultMTUProberFactoryRequiresElevation
+--- PASS: TestDefaultMTUProberFactoryRequiresElevation (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	0.313s

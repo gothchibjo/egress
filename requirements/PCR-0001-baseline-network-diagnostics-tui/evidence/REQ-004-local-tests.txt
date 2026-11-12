@@ -1,0 +1,26 @@
+=== RUN   TestICMPCheckGatewayOnLinkSkips
+--- PASS: TestICMPCheckGatewayOnLinkSkips (0.00s)
+=== RUN   TestLocalCheckPass
+--- PASS: TestLocalCheckPass (0.00s)
+=== RUN   TestLocalCheckMissingDefaultRoute
+--- PASS: TestLocalCheckMissingDefaultRoute (0.00s)
+=== RUN   TestLocalCheckNoActiveInterface
+--- PASS: TestLocalCheckNoActiveInterface (0.00s)
+=== RUN   TestLocalCheckInterfaceError
+--- PASS: TestLocalCheckInterfaceError (0.00s)
+=== RUN   TestLocalCheckRouteError
+--- PASS: TestLocalCheckRouteError (0.00s)
+=== RUN   TestLocalCheckOnLinkRoute
+--- PASS: TestLocalCheckOnLinkRoute (0.00s)
+=== RUN   TestLocalCheckIPv6DefaultRoute
+--- PASS: TestLocalCheckIPv6DefaultRoute (0.00s)
+=== RUN   TestLocalCheckCancelled
+--- PASS: TestLocalCheckCancelled (0.00s)
+=== RUN   TestLocalCheckPlatform
+--- PASS: TestLocalCheckPlatform (0.01s)
+=== RUN   TestLocalCheckUnsupportedInterfaces
+--- PASS: TestLocalCheckUnsupportedInterfaces (0.00s)
+=== RUN   TestLocalCheckUnsupportedRoutes
+--- PASS: TestLocalCheckUnsupportedRoutes (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	0.402s

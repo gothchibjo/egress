@@ -1,0 +1,32 @@
+=== RUN   TestLayoutThresholds
+--- PASS: TestLayoutThresholds (0.00s)
+=== RUN   TestNormalLayoutShowsBothPanes
+--- PASS: TestNormalLayoutShowsBothPanes (0.00s)
+=== RUN   TestCompactLayoutStacksPanes
+--- PASS: TestCompactLayoutStacksPanes (0.00s)
+=== RUN   TestCompactShowsSkippedReason
+--- PASS: TestCompactShowsSkippedReason (0.00s)
+=== RUN   TestTooSmallMessage
+--- PASS: TestTooSmallMessage (0.00s)
+=== RUN   TestResizePreservesSelection
+--- PASS: TestResizePreservesSelection (0.00s)
+=== RUN   TestStatusIsReadableWithoutColor
+--- PASS: TestStatusIsReadableWithoutColor (0.00s)
+=== RUN   TestNOColorIsHonored
+--- PASS: TestNOColorIsHonored (0.00s)
+=== RUN   TestColorProfiles
+--- PASS: TestColorProfiles (0.00s)
+=== RUN   TestASCIIFallback
+--- PASS: TestASCIIFallback (0.00s)
+=== RUN   TestDestinationsPageASCIIAndCompact
+--- PASS: TestDestinationsPageASCIIAndCompact (0.00s)
+=== RUN   TestScopeBandCompactSingleLine
+--- PASS: TestScopeBandCompactSingleLine (0.00s)
+=== RUN   TestScopeBandASCII
+--- PASS: TestScopeBandASCII (0.00s)
+=== RUN   TestScopeBandColor
+--- PASS: TestScopeBandColor (0.00s)
+=== RUN   TestViewKeepsTerminalHeightWithBand
+--- PASS: TestViewKeepsTerminalHeightWithBand (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.807s

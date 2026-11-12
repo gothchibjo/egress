@@ -1,0 +1,20 @@
+=== RUN   TestRunnerRunsChecksInOrder
+--- PASS: TestRunnerRunsChecksInOrder (0.00s)
+=== RUN   TestRunnerRejectsConcurrentRun
+--- PASS: TestRunnerRejectsConcurrentRun (0.00s)
+=== RUN   TestRunnerReportsSlowProgress
+--- PASS: TestRunnerReportsSlowProgress (0.00s)
+=== RUN   TestSessionReplacesPreviousRun
+--- PASS: TestSessionReplacesPreviousRun (0.00s)
+=== RUN   TestRunnerTimesOutAStuckCheck
+--- PASS: TestRunnerTimesOutAStuckCheck (0.03s)
+=== RUN   TestRunnerBudgetStopsTheRemainingChecks
+--- PASS: TestRunnerBudgetStopsTheRemainingChecks (0.03s)
+=== RUN   TestRunnerCancelCurrentContinues
+--- PASS: TestRunnerCancelCurrentContinues (0.00s)
+=== RUN   TestRunnerCancelAllKeepsCompletedResults
+--- PASS: TestRunnerCancelAllKeepsCompletedResults (0.00s)
+=== RUN   TestRunnerCancelWhenIdle
+--- PASS: TestRunnerCancelWhenIdle (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/app	0.666s

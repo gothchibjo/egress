@@ -1,0 +1,16 @@
+=== RUN   TestDNSCheckDoHMatch
+--- PASS: TestDNSCheckDoHMatch (0.00s)
+=== RUN   TestDNSCheckDoHDiffer
+--- PASS: TestDNSCheckDoHDiffer (0.00s)
+=== RUN   TestDNSCheckDoHFailureKeepsSystemAnswer
+--- PASS: TestDNSCheckDoHFailureKeepsSystemAnswer (0.00s)
+=== RUN   TestDNSCheckDoHWithoutSystemAnswer
+--- PASS: TestDNSCheckDoHWithoutSystemAnswer (0.00s)
+=== RUN   TestDNSCheckDoHReturnsSERVFAIL
+--- PASS: TestDNSCheckDoHReturnsSERVFAIL (0.00s)
+=== RUN   TestCloudflareDoHResolve
+--- PASS: TestCloudflareDoHResolve (0.00s)
+=== RUN   TestCloudflareDoHHTTPError
+--- PASS: TestCloudflareDoHHTTPError (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	0.290s

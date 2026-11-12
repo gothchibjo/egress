@@ -1,0 +1,52 @@
+=== RUN   TestSupportedPlatformCapabilities
+--- PASS: TestSupportedPlatformCapabilities (0.00s)
+=== RUN   TestSystemCapabilities
+--- PASS: TestSystemCapabilities (0.00s)
+=== RUN   TestDetectNetworkContext
+--- PASS: TestDetectNetworkContext (0.00s)
+=== RUN   TestDetectNetworkContextStatesAbsence
+--- PASS: TestDetectNetworkContextStatesAbsence (0.00s)
+=== RUN   TestDetectNetworkContextKeepsProxiesWhenInterfacesFail
+--- PASS: TestDetectNetworkContextKeepsProxiesWhenInterfacesFail (0.00s)
+=== RUN   TestVPNKind
+--- PASS: TestVPNKind (0.00s)
+=== RUN   TestProxyValuesStayRedactedInContext
+--- PASS: TestProxyValuesStayRedactedInContext (0.00s)
+=== RUN   TestParseResolvConf
+--- PASS: TestParseResolvConf (0.00s)
+=== RUN   TestParseResolvConfEmpty
+--- PASS: TestParseResolvConfEmpty (0.00s)
+=== RUN   TestParseScutilDNS
+--- PASS: TestParseScutilDNS (0.00s)
+=== RUN   TestParseScutilDNSEmpty
+--- PASS: TestParseScutilDNSEmpty (0.00s)
+=== RUN   TestReadResolvers
+--- PASS: TestReadResolvers (0.01s)
+=== RUN   TestReadInterfaces
+--- PASS: TestReadInterfaces (0.00s)
+=== RUN   TestDetectPrivilege
+--- PASS: TestDetectPrivilege (0.00s)
+=== RUN   TestDetectProxyEnvEmpty
+--- PASS: TestDetectProxyEnvEmpty (0.00s)
+=== RUN   TestDetectProxyEnvUppercase
+--- PASS: TestDetectProxyEnvUppercase (0.00s)
+=== RUN   TestDetectProxyEnvLowercaseSources
+--- PASS: TestDetectProxyEnvLowercaseSources (0.00s)
+=== RUN   TestDetectProxyEnvReportsBothCaseVariants
+--- PASS: TestDetectProxyEnvReportsBothCaseVariants (0.00s)
+=== RUN   TestDetectProxyEnvRedactsCredentials
+--- PASS: TestDetectProxyEnvRedactsCredentials (0.00s)
+=== RUN   TestDetectProxyEnvReadsProcessEnvironment
+--- PASS: TestDetectProxyEnvReadsProcessEnvironment (0.00s)
+=== RUN   TestParseDarwinRouteIPv4
+--- PASS: TestParseDarwinRouteIPv4 (0.00s)
+=== RUN   TestParseDarwinRouteIPv6
+--- PASS: TestParseDarwinRouteIPv6 (0.00s)
+=== RUN   TestParseDarwinRouteWithoutGateway
+--- PASS: TestParseDarwinRouteWithoutGateway (0.00s)
+=== RUN   TestParseDarwinRouteIncomplete
+--- PASS: TestParseDarwinRouteIncomplete (0.00s)
+=== RUN   TestReadDefaultRoute
+--- PASS: TestReadDefaultRoute (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/platform	0.334s

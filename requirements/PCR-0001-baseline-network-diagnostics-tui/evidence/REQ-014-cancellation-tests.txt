@@ -1,0 +1,24 @@
+=== RUN   TestExportRefusesToOverwriteWithoutConfirmation
+--- PASS: TestExportRefusesToOverwriteWithoutConfirmation (0.00s)
+=== RUN   TestExportOverwriteConfirmationWritesFile
+--- PASS: TestExportOverwriteConfirmationWritesFile (0.00s)
+=== RUN   TestExportPromptCancelDoesNotWrite
+--- PASS: TestExportPromptCancelDoesNotWrite (0.00s)
+=== RUN   TestExportWorksForCancelledRuns
+--- PASS: TestExportWorksForCancelledRuns (0.00s)
+=== RUN   TestCtrlCRequiresConfirmation
+--- PASS: TestCtrlCRequiresConfirmation (0.00s)
+=== RUN   TestRunProgressMessage
+--- PASS: TestRunProgressMessage (0.00s)
+=== RUN   TestCancelKeysRequestRunnerCancellation
+--- PASS: TestCancelKeysRequestRunnerCancellation (0.00s)
+=== RUN   TestFooterShowsCancelHintsWhileRunning
+--- PASS: TestFooterShowsCancelHintsWhileRunning (0.00s)
+=== RUN   TestConfirmQuitCancelsRunningBaseline
+--- PASS: TestConfirmQuitCancelsRunningBaseline (0.00s)
+=== RUN   TestCancelledRunIsLabelled
+--- PASS: TestCancelledRunIsLabelled (0.00s)
+=== RUN   TestHelpDocumentsCancelKeys
+--- PASS: TestHelpDocumentsCancelKeys (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.227s

@@ -1,0 +1,10 @@
+Command: egress --json (no elevation)
+Date: 2026-11-12
+Exit code: 1
+Mode: unprivileged
+Checks: 17
+
+Skipped checks:
+  mtu.pmtu: raw ICMP DF probe requires elevated mode; run with elevation (sudo)
+
+Raw-socket evidence:

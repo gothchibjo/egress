@@ -1,0 +1,16 @@
+=== RUN   TestICMPCheckPass
+--- PASS: TestICMPCheckPass (0.00s)
+=== RUN   TestICMPCheckSingleResponse
+--- PASS: TestICMPCheckSingleResponse (0.00s)
+=== RUN   TestLatencyStatistics
+=== RUN   TestLatencyStatistics/odd_sample
+=== RUN   TestLatencyStatistics/even_sample
+=== RUN   TestLatencyStatistics/single_response
+=== RUN   TestLatencyStatistics/two_responses
+--- PASS: TestLatencyStatistics (0.00s)
+    --- PASS: TestLatencyStatistics/odd_sample (0.00s)
+    --- PASS: TestLatencyStatistics/even_sample (0.00s)
+    --- PASS: TestLatencyStatistics/single_response (0.00s)
+    --- PASS: TestLatencyStatistics/two_responses (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	0.310s

@@ -1,0 +1,32 @@
+=== RUN   TestAggregateVerdict
+=== RUN   TestAggregateVerdict/all_pass_is_healthy
+=== RUN   TestAggregateVerdict/a_warning_degrades
+=== RUN   TestAggregateVerdict/a_core_failure_blocks
+=== RUN   TestAggregateVerdict/skipped_does_not_hide_a_pass
+=== RUN   TestAggregateVerdict/all_skipped_cannot_establish_health
+=== RUN   TestAggregateVerdict/one_failing_anchor_while_another_passes_is_degraded
+=== RUN   TestAggregateVerdict/a_single_failing_anchor_alone_is_degraded
+=== RUN   TestAggregateVerdict/every_anchor_failing_blocks
+=== RUN   TestAggregateVerdict/one_anchor_failing_with_a_skip_elsewhere_is_degraded
+=== RUN   TestAggregateVerdict/most_severe_finding_wins_over_order
+--- PASS: TestAggregateVerdict (0.00s)
+    --- PASS: TestAggregateVerdict/all_pass_is_healthy (0.00s)
+    --- PASS: TestAggregateVerdict/a_warning_degrades (0.00s)
+    --- PASS: TestAggregateVerdict/a_core_failure_blocks (0.00s)
+    --- PASS: TestAggregateVerdict/skipped_does_not_hide_a_pass (0.00s)
+    --- PASS: TestAggregateVerdict/all_skipped_cannot_establish_health (0.00s)
+    --- PASS: TestAggregateVerdict/one_failing_anchor_while_another_passes_is_degraded (0.00s)
+    --- PASS: TestAggregateVerdict/a_single_failing_anchor_alone_is_degraded (0.00s)
+    --- PASS: TestAggregateVerdict/every_anchor_failing_blocks (0.00s)
+    --- PASS: TestAggregateVerdict/one_anchor_failing_with_a_skip_elsewhere_is_degraded (0.00s)
+    --- PASS: TestAggregateVerdict/most_severe_finding_wins_over_order (0.00s)
+=== RUN   TestAggregateVerdictRequiresResults
+--- PASS: TestAggregateVerdictRequiresResults (0.00s)
+=== RUN   TestAggregateVerdictRejectsEvidenceFreeResult
+--- PASS: TestAggregateVerdictRejectsEvidenceFreeResult (0.00s)
+=== RUN   TestAggregateVerdictIsDeterministic
+--- PASS: TestAggregateVerdictIsDeterministic (0.00s)
+=== RUN   TestAggregateVerdictFindingIsACopy
+--- PASS: TestAggregateVerdictFindingIsACopy (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/domain	0.348s

@@ -1,0 +1,10 @@
+=== RUN   TestRunnerBudgetStopsTheRemainingChecks
+--- PASS: TestRunnerBudgetStopsTheRemainingChecks (0.03s)
+=== RUN   TestRunnerCancelCurrentContinues
+--- PASS: TestRunnerCancelCurrentContinues (0.00s)
+=== RUN   TestRunnerCancelAllKeepsCompletedResults
+--- PASS: TestRunnerCancelAllKeepsCompletedResults (0.00s)
+=== RUN   TestRunnerCancelWhenIdle
+--- PASS: TestRunnerCancelWhenIdle (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/app	0.263s

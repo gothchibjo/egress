@@ -1,0 +1,50 @@
+=== RUN   TestContextPageShowsSources
+--- PASS: TestContextPageShowsSources (0.00s)
+=== RUN   TestContextPageStatesAbsence
+--- PASS: TestContextPageStatesAbsence (0.00s)
+=== RUN   TestContextPageWithoutCollectedContext
+--- PASS: TestContextPageWithoutCollectedContext (0.00s)
+=== RUN   TestContextPageReportsInterfaceError
+--- PASS: TestContextPageReportsInterfaceError (0.00s)
+=== RUN   TestContextPageReturnsToItsOrigin
+--- PASS: TestContextPageReturnsToItsOrigin (0.00s)
+=== RUN   TestContextPageScrollsOnShortTerminals
+--- PASS: TestContextPageScrollsOnShortTerminals (0.00s)
+=== RUN   TestExportIncludesNetworkContext
+--- PASS: TestExportIncludesNetworkContext (0.00s)
+=== RUN   TestExportWithoutContextOmitsIt
+--- PASS: TestExportWithoutContextOmitsIt (0.00s)
+=== RUN   TestContextPageStatesTheSourceRuleOnceAtTheTop
+--- PASS: TestContextPageStatesTheSourceRuleOnceAtTheTop (0.00s)
+=== RUN   TestExportDefaultWritesTimestampedFile
+--- PASS: TestExportDefaultWritesTimestampedFile (0.00s)
+=== RUN   TestExportRefusesToOverwriteWithoutConfirmation
+--- PASS: TestExportRefusesToOverwriteWithoutConfirmation (0.00s)
+=== RUN   TestExportOverwriteConfirmationWritesFile
+--- PASS: TestExportOverwriteConfirmationWritesFile (0.00s)
+=== RUN   TestExportPromptAcceptsAPath
+--- PASS: TestExportPromptAcceptsAPath (0.00s)
+=== RUN   TestExportPromptCancelDoesNotWrite
+--- PASS: TestExportPromptCancelDoesNotWrite (0.00s)
+=== RUN   TestExportPromptSwallowsDashboardKeys
+--- PASS: TestExportPromptSwallowsDashboardKeys (0.00s)
+=== RUN   TestExportWithoutResults
+--- PASS: TestExportWithoutResults (0.00s)
+=== RUN   TestExportWorksForCancelledRuns
+--- PASS: TestExportWorksForCancelledRuns (0.00s)
+=== RUN   TestExportFailureIsReported
+--- PASS: TestExportFailureIsReported (0.00s)
+=== RUN   TestExportKeepsTerminalHeight
+--- PASS: TestExportKeepsTerminalHeight (0.00s)
+=== RUN   TestFooterHintsFollowContext
+--- PASS: TestFooterHintsFollowContext (0.00s)
+=== RUN   TestNoticeClearsOnTheNextAction
+--- PASS: TestNoticeClearsOnTheNextAction (0.00s)
+=== RUN   TestNoticeExpiresAfterTimeout
+--- PASS: TestNoticeExpiresAfterTimeout (0.00s)
+=== RUN   TestStaleNoticeTimerKeepsTheNewerMessage
+--- PASS: TestStaleNoticeTimerKeepsTheNewerMessage (0.00s)
+=== RUN   TestNoticeSharesTheFooterStatusLine
+--- PASS: TestNoticeSharesTheFooterStatusLine (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.611s

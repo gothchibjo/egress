@@ -40,5 +40,6 @@ documentation". Inspection evidence: documentation review sign-off.
 
 ## Sign-off
 
-Pending review by gothchibjo. The requirement stays `open` until this sign-off
-is filled in.
+Reviewer: gothchibjo, 2026-11-12. The README covers installation, both privilege
+modes, the local-only rule, JSON usage and exit codes, and links the anchor
+list, verdict rule, schema and key map.

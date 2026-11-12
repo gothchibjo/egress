@@ -1,0 +1,42 @@
+=== RUN   TestDestinationsPageHelpReturns
+--- PASS: TestDestinationsPageHelpReturns (0.00s)
+=== RUN   TestDetailScrollsLongEvidence
+--- PASS: TestDetailScrollsLongEvidence (0.00s)
+=== RUN   TestDetailPageScrollsByPage
+--- PASS: TestDetailPageScrollsByPage (0.00s)
+=== RUN   TestDetailSwitchesChecksWithHL
+--- PASS: TestDetailSwitchesChecksWithHL (0.00s)
+=== RUN   TestDetailKeepsTerminalHeight
+--- PASS: TestDetailKeepsTerminalHeight (0.00s)
+=== RUN   TestExportPromptSwallowsDashboardKeys
+--- PASS: TestExportPromptSwallowsDashboardKeys (0.00s)
+=== RUN   TestKeyboardNavigation
+--- PASS: TestKeyboardNavigation (0.00s)
+=== RUN   TestEnterOpensDetailAndEscGoesBack
+--- PASS: TestEnterOpensDetailAndEscGoesBack (0.00s)
+=== RUN   TestHelpOverlayDocumentsEveryKey
+--- PASS: TestHelpOverlayDocumentsEveryKey (0.00s)
+=== RUN   TestHelpFitsMinimumTerminal
+--- PASS: TestHelpFitsMinimumTerminal (0.00s)
+=== RUN   TestHelpReturnsToPreviousPage
+--- PASS: TestHelpReturnsToPreviousPage (0.00s)
+=== RUN   TestFooterHintsFollowContext
+--- PASS: TestFooterHintsFollowContext (0.00s)
+=== RUN   TestProblemJumpCyclesWarnAndFail
+--- PASS: TestProblemJumpCyclesWarnAndFail (0.00s)
+=== RUN   TestProblemJumpFromANonProblemRow
+--- PASS: TestProblemJumpFromANonProblemRow (0.00s)
+=== RUN   TestProblemJumpWithoutProblems
+--- PASS: TestProblemJumpWithoutProblems (0.00s)
+=== RUN   TestProblemJumpWorksOnDetail
+--- PASS: TestProblemJumpWorksOnDetail (0.00s)
+=== RUN   TestNoticeSharesTheFooterStatusLine
+--- PASS: TestNoticeSharesTheFooterStatusLine (0.00s)
+=== RUN   TestCancelKeysRequestRunnerCancellation
+--- PASS: TestCancelKeysRequestRunnerCancellation (0.00s)
+=== RUN   TestFooterShowsCancelHintsWhileRunning
+--- PASS: TestFooterShowsCancelHintsWhileRunning (0.00s)
+=== RUN   TestHelpDocumentsCancelKeys
+--- PASS: TestHelpDocumentsCancelKeys (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.297s

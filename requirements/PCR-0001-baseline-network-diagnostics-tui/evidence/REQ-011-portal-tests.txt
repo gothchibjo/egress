@@ -1,0 +1,21 @@
+=== RUN   TestPortalCheckHealthy
+--- PASS: TestPortalCheckHealthy (0.00s)
+=== RUN   TestPortalCheckRedirect
+--- PASS: TestPortalCheckRedirect (0.00s)
+=== RUN   TestPortalCheckAlteredBody
+--- PASS: TestPortalCheckAlteredBody (0.00s)
+=== RUN   TestPortalCheckNonOKStatus
+--- PASS: TestPortalCheckNonOKStatus (0.00s)
+=== RUN   TestPortalCheckTransportError
+--- PASS: TestPortalCheckTransportError (0.00s)
+=== RUN   TestPortalCheckSnippetIsBounded
+--- PASS: TestPortalCheckSnippetIsBounded (0.00s)
+=== RUN   TestPortalCheckCancelled
+--- PASS: TestPortalCheckCancelled (0.00s)
+=== RUN   TestNewPortalCheckDefaults
+--- PASS: TestNewPortalCheckDefaults (0.00s)
+=== RUN   TestPortalCheckIntegration
+    portal_test.go:223: set EGRESS_INTEGRATION=1 to run the live captive portal check
+--- SKIP: TestPortalCheckIntegration (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	0.325s

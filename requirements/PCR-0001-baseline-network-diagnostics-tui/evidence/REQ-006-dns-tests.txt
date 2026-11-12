@@ -1,0 +1,20 @@
+=== RUN   TestDNSCheckPass
+--- PASS: TestDNSCheckPass (0.00s)
+=== RUN   TestDNSCheckNXDOMAIN
+--- PASS: TestDNSCheckNXDOMAIN (0.00s)
+=== RUN   TestDNSCheckPartialFailureIsWarn
+--- PASS: TestDNSCheckPartialFailureIsWarn (0.00s)
+=== RUN   TestDNSCheckNoResolvers
+--- PASS: TestDNSCheckNoResolvers (0.00s)
+=== RUN   TestDNSCheckResolverConfigError
+--- PASS: TestDNSCheckResolverConfigError (0.00s)
+=== RUN   TestDNSCheckCancelled
+--- PASS: TestDNSCheckCancelled (0.00s)
+=== RUN   TestDNSCheckIPv6ServerAddress
+--- PASS: TestDNSCheckIPv6ServerAddress (0.00s)
+=== RUN   TestDNSCheckSortsAnswers
+--- PASS: TestDNSCheckSortsAnswers (0.00s)
+=== RUN   TestDNSCheckUnsupportedPlatform
+--- PASS: TestDNSCheckUnsupportedPlatform (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	0.314s
