@@ -108,7 +108,7 @@ func TestDestinationsPageHelpReturns(t *testing.T) {
 	model, _ = pressKey(t, model, "d")
 	model, _ = pressKey(t, model, "?")
 
-	if view := model.View(); !strings.Contains(view, "HELP") || !strings.Contains(view, "outbound destinations") {
+	if view := model.View(); !strings.Contains(view, "HELP") || !strings.Contains(view, "destinations") {
 		t.Fatalf("help does not document the destination page:\n%s", view)
 	}
 	model, _ = pressKey(t, model, "esc")

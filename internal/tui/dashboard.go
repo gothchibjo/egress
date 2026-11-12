@@ -123,6 +123,7 @@ type Model struct {
 	helpReturn         viewState
 	destinationsReturn viewState
 	destinationOffset  int
+	detailOffset       int
 	confirmQuit        bool
 	running            bool
 	cancelled          bool
@@ -273,6 +274,7 @@ func (m Model) Resize(width, height int) Model {
 func (m Model) Select(index int) Model {
 	m.selected = index
 	m.clampSelection()
+	m.detailOffset = 0
 	return m
 }
 

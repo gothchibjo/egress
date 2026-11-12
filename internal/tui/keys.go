@@ -46,6 +46,7 @@ func (m Model) updateDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		if _, ok := m.SelectedResult(); ok {
 			m.view = viewDetail
+			m.detailOffset = 0
 		}
 	case "?":
 		m.helpReturn = viewDashboard
@@ -77,13 +78,21 @@ func (m Model) updateDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) updateDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "up", "k":
-		return m.move(-1), nil
+		m.detailOffset = clampOffset(m.detailOffset-1, m.detailMaxOffset())
 	case "down", "j":
-		return m.move(1), nil
+		m.detailOffset = clampOffset(m.detailOffset+1, m.detailMaxOffset())
+	case "pgup":
+		m.detailOffset = clampOffset(m.detailOffset-m.detailBodyHeight(), m.detailMaxOffset())
+	case "pgdown":
+		m.detailOffset = clampOffset(m.detailOffset+m.detailBodyHeight(), m.detailMaxOffset())
 	case "g":
-		return m.Select(0), nil
+		m.detailOffset = 0
 	case "G":
-		return m.Select(len(rows(m.results)) - 1), nil
+		m.detailOffset = m.detailMaxOffset()
+	case "h", "[":
+		return m.move(-1), nil
+	case "l", "]":
+		return m.move(1), nil
 	case "esc":
 		m.view = viewDashboard
 	case "x":
@@ -201,7 +210,7 @@ func (m Model) footerHints() string {
 	}
 	switch m.view {
 	case viewDetail:
-		return "↑/k ↓/j move" + sep + "esc back" + sep + "? help" + sep + "q quit"
+		return "↑/k ↓/j scroll" + sep + "h/l check" + sep + "esc back" + sep + "? help"
 	case viewDestinations:
 		return "j/k scroll" + sep + "esc back" + sep + "? help" + sep + "q quit"
 	case viewHelp:
@@ -217,19 +226,19 @@ func helpLines() []string {
 	return []string{
 		" HELP",
 		" NAVIGATION",
-		"   ↑ / k    move up",
-		"   ↓ / j    move down",
-		"   g / G    first / last check",
-		"   enter    open the selected check",
-		"   esc      go back",
-		"   d        outbound destinations",
+		"   ↑/k ↓/j    move or scroll",
+		"   g / G      first / last",
+		"   h/l [ ]    previous / next check",
+		"   PgUp/PgDn  scroll one page",
+		"   enter      open · esc back",
+		"   d          destinations",
 		" ACTIONS",
-		"   x / X    cancel check / baseline",
-		"   e / E    export JSON (default / path)",
-		"   ctrl+c   quit with confirmation",
+		"   e / E      export default / path",
+		"   x / X      cancel check / baseline",
+		"   q/ctrl+c   quit, ctrl+c confirms",
 		" VERDICT",
-		"   healthy  every check passed or was skipped",
-		"   degraded warn, isolated anchor fail or no pass",
-		"   blocked  a core check failed or every anchor failed",
+		"   healthy    all passed or skipped",
+		"   degraded   warn, isolated anchor, no pass",
+		"   blocked    core fail, all anchors fail",
 	}
 }

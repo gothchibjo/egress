@@ -110,7 +110,7 @@ func (m Model) renderNormal() string {
 
 	list := block(m.listLines(listWidth, bodyHeight), listWidth, bodyHeight)
 	separator := block(m.separatorLines(bodyHeight), separatorWidth, bodyHeight)
-	detail := block(m.detailLines(detailWidth, bodyHeight), detailWidth, bodyHeight)
+	detail := block(m.detailPreview(detailWidth, bodyHeight), detailWidth, bodyHeight)
 	body := lipgloss.JoinHorizontal(lipgloss.Top, list, separator, detail)
 
 	lines := append(header, strings.Split(body, "\n")...)
@@ -140,7 +140,7 @@ func (m Model) renderCompact() string {
 	}
 
 	list := block(m.listLines(m.width, listHeight), m.width, listHeight)
-	detail := block(m.detailLines(m.width, detailHeight), m.width, detailHeight)
+	detail := block(m.detailPreview(m.width, detailHeight), m.width, detailHeight)
 
 	lines := append([]string{}, header...)
 	lines = append(lines, strings.Split(list, "\n")...)
@@ -273,7 +273,9 @@ func (m Model) listLines(width, height int) []string {
 	return lines
 }
 
-func (m Model) detailLines(width, height int) []string {
+// detailLines returns the full evidence for the selected check. Callers decide
+// how much of it fits on screen.
+func (m Model) detailLines(width int) []string {
 	grouped := rows(m.results)
 	if len(grouped) == 0 {
 		note := " The dashboard appears when the baseline reports results."
@@ -333,10 +335,24 @@ func (m Model) detailLines(width, height int) []string {
 		lines = append(lines, m.field("error", result.Error, width)...)
 	}
 
-	if height > 0 && len(lines) > height {
-		lines = lines[:height]
-	}
 	return lines
+}
+
+// detailPreview truncates the evidence pane and marks the cut, so a long check
+// never looks complete when it is not.
+func (m Model) detailPreview(width, height int) []string {
+	lines := m.detailLines(width)
+	if height <= 0 || len(lines) <= height {
+		return lines
+	}
+	visible := height - 1
+	if visible < 0 {
+		visible = 0
+	}
+	preview := make([]string, 0, height)
+	preview = append(preview, lines[:visible]...)
+	preview = append(preview, m.theme().muted.Render(" … enter for the full evidence"))
+	return preview
 }
 
 func (m Model) field(label, value string, width int) []string {
@@ -536,20 +552,52 @@ func (m Model) renderDetailPage() string {
 	case LayoutTooSmall:
 		return m.renderTooSmall()
 	}
+	bodyHeight := m.detailBodyHeight()
+	offset := clampOffset(m.detailOffset, m.detailMaxOffset())
+	evidence := m.detailLines(m.width)
+
 	position := ""
 	if len(m.results) > 0 {
-		position = fmt.Sprintf("%d/%d ", m.selected+1, len(m.results))
+		position = fmt.Sprintf("%d/%d", m.selected+1, len(m.results))
 	}
+	if len(evidence) > bodyHeight {
+		end := offset + bodyHeight
+		if end > len(evidence) {
+			end = len(evidence)
+		}
+		position += fmt.Sprintf("  %d-%d/%d", offset+1, end, len(evidence))
+	}
+	if position != "" {
+		position += " "
+	}
+
 	header := m.renderPageHeader("DETAIL", position)
 	footer := m.renderHintFooter(m.footerHints())
-	bodyHeight := m.height - len(header) - len(footer)
-	if bodyHeight < 1 {
-		bodyHeight = 1
-	}
-	body := block(m.detailLines(m.width, bodyHeight), m.width, bodyHeight)
+	body := block(evidence[offset:], m.width, bodyHeight)
 	lines := append(header, strings.Split(body, "\n")...)
 	lines = append(lines, footer...)
 	return strings.Join(lines, "\n")
+}
+
+// detailBodyHeight is the number of evidence lines the detail page can show.
+func (m Model) detailBodyHeight() int {
+	header := m.renderPageHeader("DETAIL", "")
+	footer := m.renderHintFooter("")
+	height := m.height - len(header) - len(footer)
+	if height < 1 {
+		height = 1
+	}
+	return height
+}
+
+// detailMaxOffset is the furthest the detail page can scroll.
+func (m Model) detailMaxOffset() int {
+	total := len(m.detailLines(m.width))
+	height := m.detailBodyHeight()
+	if total <= height {
+		return 0
+	}
+	return total - height
 }
 
 func (m Model) renderDestinations() string {

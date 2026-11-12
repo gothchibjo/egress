@@ -559,3 +559,6 @@ recorded as part of REQ-002, not as a new requirement.
 - 2026-11-12 — REQ-022 adds `--json` and non-interactive stdout, `--schema`, the
   documented exit codes and the `e`/`E` export with overwrite confirmation; the
   envelope now carries mode, verdict, classification and destinations.
+- 2026-11-12 — REQ-021 keeps long evidence reachable: the dashboard pane marks
+  truncation, the detail page scrolls with arrows, `PgUp`/`PgDn` and `g`/`G`,
+  and `h`/`l` switch checks instead of moving an invisible selection.

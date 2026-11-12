@@ -52,6 +52,11 @@ dashboard it does nothing. `ctrl+c` asks before quitting; `q` is the immediate
 exit. `x` stops only the running check and lets the baseline continue; `X` stops
 the baseline but keeps completed results and labels the run `cancelled`.
 
+The evidence pane on the dashboard truncates long evidence and ends with
+`… enter for the full evidence`. The detail page keeps the whole record, shows
+the visible line range in the header and scrolls instead of truncating; `h`/`l`
+change the selected check and reset the scroll to the top.
+
 The `d` page lists the documented outbound endpoints from [the outbound
 destination list]. It scrolls with `j`/`k` and `g`/`G` and returns to the page
 it was opened from.
