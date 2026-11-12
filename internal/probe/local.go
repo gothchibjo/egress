@@ -4,6 +4,7 @@ package probe
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,19 +15,12 @@ import (
 
 // LinkSource supplies read-only host network state.
 type LinkSource interface {
+	Platform() string
 	Interfaces() ([]platform.Interface, error)
 	DefaultRoute(platform.Family) (platform.DefaultRoute, bool, error)
 }
 
-type systemLinkSource struct{}
-
-func (systemLinkSource) Interfaces() ([]platform.Interface, error) {
-	return platform.ReadInterfaces()
-}
-
-func (systemLinkSource) DefaultRoute(family platform.Family) (platform.DefaultRoute, bool, error) {
-	return platform.ReadDefaultRoute(family)
-}
+var _ LinkSource = (platform.Capabilities)(nil)
 
 // LocalCheck reports interfaces, link state, addresses and the default route.
 type LocalCheck struct {
@@ -36,13 +30,13 @@ type LocalCheck struct {
 
 // NewLocalCheck returns the local link check backed by the host platform.
 func NewLocalCheck() LocalCheck {
-	return LocalCheck{source: systemLinkSource{}, now: time.Now}
+	return LocalCheck{source: platform.System(), now: time.Now}
 }
 
 // NewLocalCheckWithSource builds the check with an injected source and clock.
 func NewLocalCheckWithSource(source LinkSource, now func() time.Time) LocalCheck {
 	if source == nil {
-		source = systemLinkSource{}
+		source = platform.System()
 	}
 	if now == nil {
 		now = time.Now
@@ -69,8 +63,16 @@ func (c LocalCheck) Run(ctx context.Context) domain.Result {
 		return result
 	}
 
+	result.Measurements = append(result.Measurements, domain.Measurement{Name: "platform", Value: c.source.Platform()})
+
 	var issues []string
 	interfaces, interfaceErr := c.source.Interfaces()
+	if errors.Is(interfaceErr, platform.ErrUnsupported) {
+		result.Status = domain.StatusSkipped
+		result.Measurements = append(result.Measurements, domain.Measurement{Name: "interfaces", Value: "unsupported"})
+		result.Diagnostic = "interface inspection is not supported on this platform"
+		return result
+	}
 	active := false
 	for _, iface := range interfaces {
 		state := "down"
@@ -95,10 +97,17 @@ func (c LocalCheck) Run(ctx context.Context) domain.Result {
 	}
 
 	hasRoute := false
+	unsupportedRoutes := 0
 	var routeErrors []string
 	for _, family := range []platform.Family{platform.FamilyIPv4, platform.FamilyIPv6} {
 		route, found, err := c.source.DefaultRoute(family)
 		switch {
+		case errors.Is(err, platform.ErrUnsupported):
+			unsupportedRoutes++
+			result.Measurements = append(result.Measurements, domain.Measurement{
+				Name:  "default_route." + family.String(),
+				Value: "unsupported",
+			})
 		case err != nil:
 			routeErrors = append(routeErrors, fmt.Sprintf("%s: %v", family, err))
 			result.Measurements = append(result.Measurements, domain.Measurement{
@@ -121,6 +130,11 @@ func (c LocalCheck) Run(ctx context.Context) domain.Result {
 				Value: "none",
 			})
 		}
+	}
+	if unsupportedRoutes == 2 {
+		result.Status = domain.StatusSkipped
+		result.Diagnostic = "default route inspection is not supported on this platform"
+		return result
 	}
 	if len(routeErrors) > 0 {
 		if result.Error != "" {

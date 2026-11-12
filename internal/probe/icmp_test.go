@@ -454,3 +454,23 @@ func TestICMPChecksIntegration(t *testing.T) {
 		fmt.Printf("%s: %s %q\n", check.ID(), result.Status, result.Diagnostic)
 	}
 }
+
+func TestICMPCheckUnsupportedGateway(t *testing.T) {
+	dial := &fakeDial{conn: &fakeEchoConn{}}
+	check := testICMPCheck("gateway.reach", "default gateway", ICMPOptions{}, dial)
+	check.useGateway = true
+	check.gatewayFn = func(platform.Family) (platform.DefaultRoute, bool, error) {
+		return platform.DefaultRoute{}, false, platform.ErrUnsupported
+	}
+	result := check.Run(context.Background())
+
+	if result.Status != domain.StatusSkipped {
+		t.Fatalf("status = %q, want skipped", result.Status)
+	}
+	if !strings.Contains(result.Diagnostic, "not supported") {
+		t.Fatalf("diagnostic = %q", result.Diagnostic)
+	}
+	if dial.calls != 0 {
+		t.Fatal("probe opened a socket on an unsupported platform")
+	}
+}

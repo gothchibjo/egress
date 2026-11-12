@@ -447,3 +447,21 @@ func TestDNSCheckIntegration(t *testing.T) {
 	}
 	t.Logf("status=%s diagnostic=%q measurements=%+v", result.Status, result.Diagnostic, result.Measurements)
 }
+
+func TestDNSCheckUnsupportedPlatform(t *testing.T) {
+	check := newDNSCheck(fakeResolverSource{err: platform.ErrUnsupported}, &fakeExchanger{})
+	result := check.Run(context.Background())
+
+	if result.Status != domain.StatusSkipped {
+		t.Fatalf("status = %q, want skipped", result.Status)
+	}
+	if !strings.Contains(result.Diagnostic, "not supported") {
+		t.Fatalf("diagnostic = %q", result.Diagnostic)
+	}
+	if value, _ := findMeasurement(result, "resolvers"); value != "unsupported" {
+		t.Fatalf("resolvers = %q", value)
+	}
+	if err := result.Validate(); err != nil {
+		t.Fatalf("result is invalid: %v", err)
+	}
+}

@@ -2,6 +2,7 @@ package probe
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"sort"
@@ -91,7 +92,7 @@ func newGatewayCheck(opts ICMPOptions) ICMPCheck {
 		opts:       opts,
 		dial:       dialICMP,
 		resolve:    resolveOne,
-		gatewayFn:  platform.ReadDefaultRoute,
+		gatewayFn:  platform.System().DefaultRoute,
 		now:        time.Now,
 	}
 }
@@ -104,7 +105,7 @@ func newAnchorCheck(anchor domain.Anchor, opts ICMPOptions) ICMPCheck {
 		dial:      dialICMP,
 		resolve:   resolveOne,
 		now:       time.Now,
-		gatewayFn: platform.ReadDefaultRoute,
+		gatewayFn: platform.System().DefaultRoute,
 	}
 }
 
@@ -238,6 +239,9 @@ func (c ICMPCheck) target(ctx context.Context) (net.IP, string, error) {
 
 	for _, family := range []platform.Family{platform.FamilyIPv4, platform.FamilyIPv6} {
 		route, found, err := c.gatewayFn(family)
+		if errors.Is(err, platform.ErrUnsupported) {
+			return nil, "default route inspection is not supported on this platform", nil
+		}
 		if err != nil {
 			return nil, "", fmt.Errorf("read %s default route: %w", family, err)
 		}

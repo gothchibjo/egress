@@ -1,3 +1,5 @@
+//go:build darwin || linux
+
 // Command egress runs the baseline and opens the interactive dashboard.
 package main
 

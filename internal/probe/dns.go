@@ -56,10 +56,12 @@ type ResolverSource interface {
 	Resolvers() ([]platform.Resolver, error)
 }
 
-type systemResolverSource struct{}
+type systemResolverSource struct {
+	caps platform.Capabilities
+}
 
-func (systemResolverSource) Resolvers() ([]platform.Resolver, error) {
-	return platform.ReadResolvers()
+func (s systemResolverSource) Resolvers() ([]platform.Resolver, error) {
+	return s.caps.Resolvers()
 }
 
 // DNSCheck reports configured resolvers and canary resolution per resolver.
@@ -75,7 +77,7 @@ type DNSCheck struct {
 func NewDNSCheck() DNSCheck {
 	timeout := defaultDNSTimeout
 	return DNSCheck{
-		resolvers: systemResolverSource{},
+		resolvers: systemResolverSource{caps: platform.System()},
 		exchanger: miekgExchanger{client: &dns.Client{Timeout: timeout}},
 		doh:       cloudflareDoH{client: &http.Client{Timeout: 3 * time.Second}, endpoint: DefaultDoHEndpoint},
 		now:       time.Now,
@@ -92,7 +94,7 @@ func NewDNSCheckWithSource(resolvers ResolverSource, exchanger DNSExchanger, now
 func NewDNSCheckWithClients(resolvers ResolverSource, exchanger DNSExchanger, doh DoHResolver, now func() time.Time) DNSCheck {
 	timeout := defaultDNSTimeout
 	if resolvers == nil {
-		resolvers = systemResolverSource{}
+		resolvers = systemResolverSource{caps: platform.System()}
 	}
 	if exchanger == nil {
 		exchanger = miekgExchanger{client: &dns.Client{Timeout: timeout}}
@@ -125,6 +127,12 @@ func (c DNSCheck) Run(ctx context.Context) domain.Result {
 
 	resolvers, err := c.resolvers.Resolvers()
 	if err != nil {
+		if errors.Is(err, platform.ErrUnsupported) {
+			result.Status = domain.StatusSkipped
+			result.Measurements = []domain.Measurement{{Name: "resolvers", Value: "unsupported"}}
+			result.Diagnostic = "resolver configuration is not supported on this platform"
+			return result
+		}
 		result.Status = domain.StatusFail
 		result.Error = err.Error()
 		result.Measurements = []domain.Measurement{{Name: "resolvers", Value: "unavailable"}}

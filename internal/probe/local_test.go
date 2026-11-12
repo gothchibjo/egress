@@ -18,6 +18,10 @@ type fakeLinkSource struct {
 	route      func(platform.Family) (platform.DefaultRoute, bool, error)
 }
 
+func (f fakeLinkSource) Platform() string {
+	return "test"
+}
+
 func (f fakeLinkSource) Interfaces() ([]platform.Interface, error) {
 	if f.interfaces == nil {
 		return nil, nil
@@ -77,6 +81,7 @@ func TestLocalCheckPass(t *testing.T) {
 	}
 
 	want := map[string]string{
+		"platform":                "test",
 		"interface.lo0.state":     "up",
 		"interface.en0.state":     "up",
 		"interface.en0.addresses": "192.168.1.5/24, fe80::1/64",
@@ -257,5 +262,44 @@ func TestLocalCheckPlatform(t *testing.T) {
 	}
 	if len(result.Measurements) == 0 {
 		t.Fatal("platform run produced no observations")
+	}
+}
+
+func TestLocalCheckUnsupportedInterfaces(t *testing.T) {
+	check := NewLocalCheckWithSource(fakeLinkSource{
+		interfaces: func() ([]platform.Interface, error) {
+			return nil, platform.ErrUnsupported
+		},
+	}, nil)
+	result := check.Run(context.Background())
+
+	if result.Status != domain.StatusSkipped {
+		t.Fatalf("status = %q, want skipped", result.Status)
+	}
+	if !strings.Contains(result.Diagnostic, "not supported") {
+		t.Fatalf("diagnostic = %q", result.Diagnostic)
+	}
+	if err := result.Validate(); err != nil {
+		t.Fatalf("result is invalid: %v", err)
+	}
+}
+
+func TestLocalCheckUnsupportedRoutes(t *testing.T) {
+	check := NewLocalCheckWithSource(fakeLinkSource{
+		interfaces: interfacesOK(),
+		route: func(platform.Family) (platform.DefaultRoute, bool, error) {
+			return platform.DefaultRoute{}, false, platform.ErrUnsupported
+		},
+	}, nil)
+	result := check.Run(context.Background())
+
+	if result.Status != domain.StatusSkipped {
+		t.Fatalf("status = %q, want skipped", result.Status)
+	}
+	if !strings.Contains(result.Diagnostic, "default route") {
+		t.Fatalf("diagnostic = %q", result.Diagnostic)
+	}
+	if err := result.Validate(); err != nil {
+		t.Fatalf("result is invalid: %v", err)
 	}
 }
