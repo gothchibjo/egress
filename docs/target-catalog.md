@@ -8,6 +8,7 @@ date: 2026-11-13
 
 - [Catalog](#catalog)
 - [Defaults](#defaults)
+- [Custom targets](#custom-targets)
 - [Versioning](#versioning)
 
 ## Catalog
@@ -34,6 +35,23 @@ no configuration file and no network access.
 Every preset enables the same probe protocols by default: ICMP echo, TCP
 connect, TLS ClientHello and HTTP GET. The default ports are the TCP ports of
 the ladder; DNS resolution always runs first and ICMP does not use a port.
+
+## Custom targets
+
+The picker accepts `host[:port][@protocol]`:
+
+- host — hostname, IPv4 literal, IPv6 literal, or bracketed `[IPv6]` when a port
+  follows;
+- port — optional, 1-65535;
+- protocol — optional override: `tcp`, `tls`, `http` or `icmp`.
+
+Examples: `example.com`, `example.com:8443`, `[2001:db8::1]:443@tls`,
+`1.2.3.4:53@tcp`.
+
+Full URLs with a scheme or path are rejected. Hostnames are resolved before the
+run and the addresses are shown in the picker; an unresolvable name stays
+selectable and becomes a diagnostic result during the run. Custom targets are
+de-duplicated by host, port and protocol.
 
 ## Versioning
 

@@ -265,12 +265,14 @@ implementation in the order above.
 
 # Guard Log
 
-| Date       | REQ     | Guard                                                     | Check                                                                                                                                            | Result |
-| :--------- | :------ | :-------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- | :----- |
-| 2026-11-13 | REQ-001 | The catalog stays static and built into the binary in v1. | No catalog file, environment override or remote fetch exists or is planned; the catalog will be a constant slice in `internal/domain/target.go`. | pass   |
-| 2026-11-13 | REQ-001 | Catalog entries require no remote update mechanism.       | No update client, URL or dependency is introduced; the catalog accessor takes no parameters and performs no I/O.                                 | pass   |
-| 2026-11-13 | REQ-002 | An empty selection cannot start a run.                    | The picker is new and has no run path yet; Enter will be gated on a non-empty selection and a test asserts the start callback is not invoked.    | pass   |
-| 2026-11-13 | REQ-002 | Filtering never changes the selection silently.           | Selection is a set keyed by preset id, independent of the filtered view; a test toggles rows, filters and re-reads the set.                      | pass   |
+| Date       | REQ     | Guard                                                               | Check                                                                                                                                            | Result |
+| :--------- | :------ | :------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------- | :----- |
+| 2026-11-13 | REQ-001 | The catalog stays static and built into the binary in v1.           | No catalog file, environment override or remote fetch exists or is planned; the catalog will be a constant slice in `internal/domain/target.go`. | pass   |
+| 2026-11-13 | REQ-001 | Catalog entries require no remote update mechanism.                 | No update client, URL or dependency is introduced; the catalog accessor takes no parameters and performs no I/O.                                 | pass   |
+| 2026-11-13 | REQ-002 | An empty selection cannot start a run.                              | The picker is new and has no run path yet; Enter will be gated on a non-empty selection and a test asserts the start callback is not invoked.    | pass   |
+| 2026-11-13 | REQ-002 | Filtering never changes the selection silently.                     | Selection is a set keyed by preset id, independent of the filtered view; a test toggles rows, filters and re-reads the set.                      | pass   |
+| 2026-11-13 | REQ-003 | Full URLs with scheme and path remain out of v1.                    | The parser rejects any input containing `://`, `/`, `?` or `#`, and a test asserts the error message names the limitation.                       | pass   |
+| 2026-11-13 | REQ-003 | An unresolvable hostname produces a diagnostic result, not a crash. | Resolution errors are stored on the custom target and rendered as `unresolved: ...`; a test injects a failing resolver.                          | pass   |
 
 # Implementation Log
 
@@ -289,3 +291,7 @@ implementation in the order above.
 - 2026-11-13 — REQ-002 picker polish: rows render as `Name (host)`, and `←`/`→`
   move the cursor to the nearest entry in the adjacent column using the same
   layout the renderer uses; edges and the single-column layout do not move.
+- 2026-11-13 — REQ-003 parses custom targets (`host[:port][@protocol]`), rejects
+  URLs, paths and invalid ports inline, resolves hostnames off the event loop,
+  shows the addresses or the resolution error, and de-duplicates by normalized
+  key.

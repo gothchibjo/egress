@@ -1,13 +1,18 @@
 package tui
 
 import (
+	"context"
+	"errors"
+	"net"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/gothchibjo/egress/internal/domain"
 )
 
-func pickerModel(t *testing.T, start func(presets []domain.Preset, custom []string)) Model {
+func pickerModel(t *testing.T, start func(presets []domain.Preset, custom []domain.Target)) Model {
 	t.Helper()
 	return fixtureModel(t, 100, 30, WithoutColor(), WithStartSelection(start))
 }
@@ -92,7 +97,7 @@ func TestPickerFilterKeepsSelection(t *testing.T) {
 
 func TestPickerEmptySelectionDoesNotStart(t *testing.T) {
 	started := 0
-	model := pickerModel(t, func([]domain.Preset, []string) { started++ })
+	model := pickerModel(t, func([]domain.Preset, []domain.Target) { started++ })
 	model, _ = pressKey(t, model, "t")
 
 	model, cmd := pressKey(t, model, "enter")
@@ -109,8 +114,8 @@ func TestPickerEmptySelectionDoesNotStart(t *testing.T) {
 
 func TestPickerStartsWithTheSelectedPresets(t *testing.T) {
 	var gotPresets []domain.Preset
-	var gotCustom []string
-	model := pickerModel(t, func(presets []domain.Preset, custom []string) {
+	var gotCustom []domain.Target
+	model := pickerModel(t, func(presets []domain.Preset, custom []domain.Target) {
 		gotPresets = presets
 		gotCustom = custom
 	})
@@ -133,8 +138,8 @@ func TestPickerStartsWithTheSelectedPresets(t *testing.T) {
 }
 
 func TestPickerCustomTargetInline(t *testing.T) {
-	var gotCustom []string
-	model := pickerModel(t, func(_ []domain.Preset, custom []string) { gotCustom = custom })
+	var gotCustom []domain.Target
+	model := pickerModel(t, func(_ []domain.Preset, custom []domain.Target) { gotCustom = custom })
 	model, _ = pressKey(t, model, "t")
 
 	model, _ = pressKey(t, model, "c")
@@ -151,7 +156,7 @@ func TestPickerCustomTargetInline(t *testing.T) {
 	}
 
 	model, _ = pressKey(t, model, "enter")
-	if len(gotCustom) != 1 || gotCustom[0] != "example.net" {
+	if len(gotCustom) != 1 || gotCustom[0].Host != "example.net" {
 		t.Fatalf("started with custom targets %v", gotCustom)
 	}
 }
@@ -176,7 +181,7 @@ func TestPickerCustomTargetCanBeRemoved(t *testing.T) {
 
 func TestPickerEscReturnsWithoutRunning(t *testing.T) {
 	started := 0
-	model := pickerModel(t, func([]domain.Preset, []string) { started++ })
+	model := pickerModel(t, func([]domain.Preset, []domain.Target) { started++ })
 	model, _ = pressKey(t, model, "t")
 	model, _ = pressKey(t, model, " ")
 
@@ -439,5 +444,136 @@ func TestPickerArrowKeysKeepCursorVisible(t *testing.T) {
 	assertBlockShape(t, view, 100, 20)
 	if !strings.Contains(view, pickerCursorName(t, model)) {
 		t.Fatalf("cursor entry is not on screen:\n%s", view)
+	}
+}
+
+func typeCustomTarget(t *testing.T, model Model, input string) (Model, tea.Cmd) {
+	t.Helper()
+	model, _ = pressKey(t, model, "c")
+	for _, r := range input {
+		model, _ = pressKey(t, model, string(r))
+	}
+	return pressKey(t, model, "enter")
+}
+
+func TestPickerRejectsInvalidCustomTargets(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{input: "https://example.com", want: "full URLs"},
+		{input: "example.com/path", want: "path"},
+		{input: "example.com:70000", want: "port"},
+		{input: "example.com@quic", want: "unknown protocol"},
+	}
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			model := pickerModel(t, nil)
+			model, _ = pressKey(t, model, "t")
+			model, _ = typeCustomTarget(t, model, test.input)
+
+			view := model.View()
+			if !strings.Contains(view, test.want) {
+				t.Fatalf("error does not mention %q:\n%s", test.want, view)
+			}
+			if !strings.Contains(view, "0 selected") {
+				t.Fatalf("invalid target was selected:\n%s", view)
+			}
+			if len(model.picker.custom) != 0 {
+				t.Fatalf("invalid target was stored: %+v", model.picker.custom)
+			}
+		})
+	}
+}
+
+func TestPickerAcceptsIPv6AndOverrides(t *testing.T) {
+	model := pickerModel(t, nil)
+	model, _ = pressKey(t, model, "t")
+	model, _ = typeCustomTarget(t, model, "[2001:db8::1]:8443@tls")
+
+	if len(model.picker.custom) != 1 {
+		t.Fatalf("custom targets = %+v", model.picker.custom)
+	}
+	target := model.picker.custom[0].Target
+	if target.Host != "2001:db8::1" || target.Port != 8443 || target.Protocol != domain.PresetTLS {
+		t.Fatalf("parsed target = %+v", target)
+	}
+	if !strings.Contains(model.View(), "[2001:db8::1]:8443@tls") {
+		t.Fatalf("canonical form is not shown:\n%s", model.View())
+	}
+}
+
+func TestPickerDeduplicatesCustomTargets(t *testing.T) {
+	model := pickerModel(t, nil)
+	model, _ = pressKey(t, model, "t")
+	model, _ = typeCustomTarget(t, model, "Example.COM")
+	model, _ = typeCustomTarget(t, model, "example.com")
+
+	if len(model.picker.custom) != 1 {
+		t.Fatalf("custom targets = %+v", model.picker.custom)
+	}
+	if !strings.Contains(model.View(), "already selected") {
+		t.Fatalf("duplicate is not explained:\n%s", model.View())
+	}
+}
+
+func TestPickerShowsResolvedAddresses(t *testing.T) {
+	resolver := func(context.Context, string) ([]net.IP, error) {
+		return []net.IP{net.ParseIP("93.184.216.34")}, nil
+	}
+	model := fixtureModel(t, 100, 30, WithoutColor(), WithResolver(resolver))
+	model, _ = pressKey(t, model, "t")
+	model, cmd := typeCustomTarget(t, model, "example.com")
+	if cmd == nil {
+		t.Fatal("hostname resolution was not scheduled")
+	}
+	model = applyMessage(t, model, cmd())
+
+	if view := model.View(); !strings.Contains(view, "example.com (93.184.216.34)") {
+		t.Fatalf("resolved address is not shown:\n%s", view)
+	}
+}
+
+func TestPickerShowsUnresolvedHostname(t *testing.T) {
+	resolver := func(context.Context, string) ([]net.IP, error) {
+		return nil, errors.New("no such host")
+	}
+	var gotCustom []domain.Target
+	model := fixtureModel(t, 100, 30, WithoutColor(),
+		WithResolver(resolver),
+		WithStartSelection(func(_ []domain.Preset, custom []domain.Target) { gotCustom = custom }))
+	model, _ = pressKey(t, model, "t")
+	model, cmd := typeCustomTarget(t, model, "missing.invalid")
+	if cmd == nil {
+		t.Fatal("hostname resolution was not scheduled")
+	}
+	model = applyMessage(t, model, cmd())
+
+	if view := model.View(); !strings.Contains(view, "unresolved: no such host") {
+		t.Fatalf("resolution error is hidden:\n%s", view)
+	}
+	if !strings.Contains(model.View(), "1 selected") {
+		t.Fatalf("unresolved target is not counted:\n%s", model.View())
+	}
+
+	model, _ = pressKey(t, model, "enter")
+	if len(gotCustom) != 1 || gotCustom[0].Host != "missing.invalid" {
+		t.Fatalf("unresolved target was not passed to the run: %v", gotCustom)
+	}
+}
+
+func TestPickerSkipsResolutionForIPLiterals(t *testing.T) {
+	resolver := func(context.Context, string) ([]net.IP, error) {
+		t.Fatal("resolver called for an IP literal")
+		return nil, nil
+	}
+	model := fixtureModel(t, 100, 30, WithoutColor(), WithResolver(resolver))
+	model, _ = pressKey(t, model, "t")
+	model, cmd := typeCustomTarget(t, model, "1.2.3.4:53")
+	if cmd != nil {
+		t.Fatal("IP literal triggered a resolution command")
+	}
+	if view := model.View(); strings.Contains(view, "resolving") {
+		t.Fatalf("IP literal is marked as resolving:\n%s", view)
 	}
 }

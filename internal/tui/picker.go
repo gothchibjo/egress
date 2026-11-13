@@ -1,14 +1,20 @@
 package tui
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/gothchibjo/egress/internal/domain"
 )
+
+// customResolveTimeout bounds one hostname resolution in the picker.
+const customResolveTimeout = 3 * time.Second
 
 // Column thresholds for the picker layout.
 const (
@@ -23,19 +29,28 @@ type pickerState struct {
 	filter       string
 	filtering    bool
 	selected     map[string]bool
-	custom       []string
+	custom       []customTarget
 	customInput  string
 	customActive bool
+}
+
+// customTarget is a parsed custom destination with its resolution state.
+type customTarget struct {
+	Input     string
+	Target    domain.Target
+	Addresses []string
+	Resolving bool
+	Err       string
 }
 
 // pickerEntry is one navigable row: a preset or a custom target.
 type pickerEntry struct {
 	preset domain.Preset
-	custom string
+	custom *customTarget
 }
 
 func (e pickerEntry) isCustom() bool {
-	return e.custom != ""
+	return e.custom != nil
 }
 
 // openPicker shows the picker without losing the current selection.
@@ -141,23 +156,72 @@ func (m Model) startSelection() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// addCustomTarget stores the typed target. Validation and resolution belong to
-// REQ-003; the picker only rejects empty and duplicate input.
+// addCustomTarget parses and stores the typed target, then resolves hostnames in
+// the background so the addresses are visible before the run starts.
 func (m Model) addCustomTarget() (tea.Model, tea.Cmd) {
-	target := strings.TrimSpace(m.picker.customInput)
-	m.picker.customActive = false
-	m.picker.customInput = ""
-	if target == "" {
-		return m.setNotice("custom target is empty")
+	parsed, err := domain.ParseTarget(m.picker.customInput)
+	if err != nil {
+		return m.setNotice(err.Error())
 	}
 	for _, existing := range m.picker.custom {
-		if existing == target {
+		if existing.Target.Key() == parsed.Key() {
 			return m.setNotice("target is already selected")
 		}
 	}
-	m.picker.custom = append(m.picker.custom, target)
+
+	m.picker.custom = append(m.picker.custom, customTarget{
+		Input:     parsed.String(),
+		Target:    parsed,
+		Resolving: net.ParseIP(parsed.Host) == nil,
+	})
+	m.picker.customActive = false
+	m.picker.customInput = ""
 	m.picker.cursor = len(m.pickerEntries()) - 1
-	return m, nil
+
+	if ip := net.ParseIP(parsed.Host); ip != nil {
+		return m, nil
+	}
+	return m, m.resolveCustom(parsed)
+}
+
+// resolveCustom resolves one custom hostname off the event loop.
+func (m Model) resolveCustom(target domain.Target) tea.Cmd {
+	resolve := m.opts.resolve
+	key := target.Key()
+	host := target.Host
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), customResolveTimeout)
+		defer cancel()
+		addresses, err := resolve(ctx, host)
+		if err != nil {
+			return customResolvedMsg{Key: key, Err: err.Error()}
+		}
+		values := make([]string, 0, len(addresses))
+		for _, address := range addresses {
+			values = append(values, address.String())
+		}
+		return customResolvedMsg{Key: key, Addresses: values}
+	}
+}
+
+// defaultResolver resolves a hostname with the system resolver.
+func defaultResolver(ctx context.Context, host string) ([]net.IP, error) {
+	addresses, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	ips := make([]net.IP, 0, len(addresses))
+	for _, address := range addresses {
+		ips = append(ips, address.IP)
+	}
+	return ips, nil
+}
+
+// customResolvedMsg stores the resolution outcome on the matching target.
+type customResolvedMsg struct {
+	Key       string
+	Addresses []string
+	Err       string
 }
 
 // togglePickerRow selects a preset or removes a custom row.
@@ -228,8 +292,8 @@ func (m Model) pickerEntries() []pickerEntry {
 			entries = append(entries, pickerEntry{preset: preset})
 		}
 	}
-	for _, custom := range m.picker.custom {
-		entries = append(entries, pickerEntry{custom: custom})
+	for i := range m.picker.custom {
+		entries = append(entries, pickerEntry{custom: &m.picker.custom[i]})
 	}
 	return entries
 }
@@ -240,14 +304,17 @@ func presetMatches(preset domain.Preset, filter string) bool {
 }
 
 // pickerSelection returns the selected presets and custom targets.
-func (m Model) pickerSelection() ([]domain.Preset, []string) {
+func (m Model) pickerSelection() ([]domain.Preset, []domain.Target) {
 	presets := make([]domain.Preset, 0, len(m.picker.selected))
 	for _, preset := range domain.PresetCatalog() {
 		if m.picker.selected[preset.ID] {
 			presets = append(presets, preset)
 		}
 	}
-	custom := append([]string(nil), m.picker.custom...)
+	custom := make([]domain.Target, 0, len(m.picker.custom))
+	for _, entry := range m.picker.custom {
+		custom = append(custom, entry.Target)
+	}
 	return presets, custom
 }
 
@@ -318,7 +385,7 @@ func (m Model) pickerLines(height int) []string {
 			prefix = "> "
 		}
 		if entry.isCustom() {
-			lines = append(lines, prefix+"[x] "+entry.custom)
+			lines = append(lines, prefix+"[x] "+m.customTargetLabel(entry.custom))
 			continue
 		}
 
@@ -570,13 +637,27 @@ func (m Model) pickerItemLine(item pickerItem) string {
 		prefix = "> "
 	}
 	if item.entry.isCustom() {
-		return prefix + "[x] " + item.entry.custom
+		return prefix + "[x] " + m.customTargetLabel(item.entry.custom)
 	}
 	box := "[ ]"
 	if m.picker.selected[item.entry.preset.ID] {
 		box = "[x]"
 	}
 	return m.pickerPresetLine(item.entry.preset, prefix, box)
+}
+
+// customTargetLabel renders a custom target with its resolution state.
+func (m Model) customTargetLabel(entry *customTarget) string {
+	label := entry.Input
+	switch {
+	case entry.Resolving:
+		label += " (resolving...)"
+	case entry.Err != "":
+		label += " (unresolved: " + entry.Err + ")"
+	case len(entry.Addresses) > 0:
+		label += " (" + strings.Join(entry.Addresses, ", ") + ")"
+	}
+	return label
 }
 
 // pickerPresetLine renders one preset as "Name (host)". The host is muted when

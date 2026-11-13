@@ -1,7 +1,9 @@
 package tui
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -53,7 +55,8 @@ type options struct {
 	networkContext *platform.NetworkContext
 	contextErr     string
 	rerun          func()
-	startSelection func(presets []domain.Preset, custom []string)
+	startSelection func(presets []domain.Preset, custom []domain.Target)
+	resolve        func(ctx context.Context, host string) ([]net.IP, error)
 	cancelCurrent  func()
 	cancelAll      func()
 }
@@ -123,8 +126,17 @@ func WithContext(context platform.NetworkContext, err error) Option {
 }
 
 // WithStartSelection wires the picker to the run starter.
-func WithStartSelection(start func(presets []domain.Preset, custom []string)) Option {
+func WithStartSelection(start func(presets []domain.Preset, custom []domain.Target)) Option {
 	return func(o *options) { o.startSelection = start }
+}
+
+// WithResolver overrides hostname resolution for custom targets.
+func WithResolver(resolve func(ctx context.Context, host string) ([]net.IP, error)) Option {
+	return func(o *options) {
+		if resolve != nil {
+			o.resolve = resolve
+		}
+	}
 }
 
 // WithRerun wires the dashboard re-run action to the session owner.
@@ -196,6 +208,9 @@ func New(results []domain.Result, verdict domain.Verdict, opts ...Option) Model 
 	if model.opts.now == nil {
 		model.opts.now = time.Now
 	}
+	if model.opts.resolve == nil {
+		model.opts.resolve = defaultResolver
+	}
 	model.clampSelection()
 	return model
 }
@@ -235,6 +250,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.failRun(msg.Err), nil
 		}
 		return m.finishRun(msg.Run), nil
+	case customResolvedMsg:
+		for i := range m.picker.custom {
+			if m.picker.custom[i].Target.Key() == msg.Key {
+				m.picker.custom[i].Resolving = false
+				m.picker.custom[i].Addresses = msg.Addresses
+				m.picker.custom[i].Err = msg.Err
+			}
+		}
+		return m, nil
 	case noticeExpiredMsg:
 		if msg.ID == m.noticeID {
 			m.notice = ""
