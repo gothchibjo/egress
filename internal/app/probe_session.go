@@ -19,6 +19,11 @@ type ProbeLadder interface {
 	Run(ctx context.Context, target domain.ProbeTarget) []domain.StepResult
 }
 
+// StepReporter is an optional ladder that reports each finished step.
+type StepReporter interface {
+	RunWithProgress(ctx context.Context, target domain.ProbeTarget, onStep func(domain.StepResult)) []domain.StepResult
+}
+
 // TargetState is the lifecycle of one target inside a session.
 type TargetState string
 
@@ -53,6 +58,9 @@ type ProbeProgress struct {
 type ProbeSession struct {
 	ladder      ProbeLadder
 	concurrency int
+
+	// OnStep receives every finished step when the ladder reports them.
+	OnStep func(targetID string, step domain.StepResult)
 
 	mu            sync.Mutex
 	running       bool
@@ -146,7 +154,14 @@ func (s *ProbeSession) Run(ctx context.Context, targets []domain.ProbeTarget, pr
 					progress(ProbeProgress{TargetID: target.ID, Index: index, Total: len(targets)})
 				}
 
-				steps := s.ladder.Run(targetCtx, target)
+				var steps []domain.StepResult
+				if reporter, ok := s.ladder.(StepReporter); ok && s.OnStep != nil {
+					steps = reporter.RunWithProgress(targetCtx, target, func(step domain.StepResult) {
+						s.OnStep(target.ID, step)
+					})
+				} else {
+					steps = s.ladder.Run(targetCtx, target)
+				}
 
 				state := TargetDone
 				if targetCtx.Err() != nil {

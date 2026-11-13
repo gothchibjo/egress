@@ -1,0 +1,145 @@
+Run view walkthrough transcript
+Generated: 2026-11-13
+Command: EGRESS_TRANSCRIPT=1 go test ./internal/tui -run TestRunViewTranscript -v
+Source: internal/tui/run_view_transcript_test.go
+Reviewer sign-off: pending
+
+=== RUN   TestRunViewTranscript
+
+=== run view, wide (120x40) ===
+ egress — RUN                                                                                               1/2 targets 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ > Alpha ok · x Beta
+ LADDER                                          │  HOPS                                                                
+> ✓ dns           40ms                           │  TTL  ADDRESS                   LOSS     RTT                         
+  ✓ tcp.443       30ms                           │    1  192.0.2.1                   0%     12ms                        
+  ✓ icmp          20ms                           │    2  203.0.113.10                0%     35ms                        
+  ✓ trace        900ms                           │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+                                                 │                                                                      
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ unknown  (low)                                                                                                         
+ no blockage detected: every ladder step passed                                                                         
+ evidence: [active] all ladder steps passed                                                                             
+ caveat: Single vantage point: one observation from one network; absence of evidence is not proof of blocking.          
+ 3 opens the full verdict                                                                                               
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                              h/l target · 1/2/3 view · j/k scroll · x/X cancel · ? help
+
+=== run view, compact ladder (60x20) ===
+ egress — RUN                                   1/2 targets 
+────────────────────────────────────────────────────────────
+ > Alpha ok · x Beta
+ LADDER                                                     
+> ✓ dns           40ms                                      
+  ✓ tcp.443       30ms                                      
+  ✓ icmp          20ms                                      
+  ✓ trace        900ms                                      
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+────────────────────────────────────────────────────────────
+                    h/l tgt · 1-3 view · x/X cancel · ? help
+
+=== run view, compact hops (60x20) ===
+ egress — RUN                                   1/2 targets 
+────────────────────────────────────────────────────────────
+ > Alpha ok · x Beta
+ HOPS                                                       
+ TTL  ADDRESS                   LOSS     RTT                
+   1  192.0.2.1                   0%     12ms               
+   2  203.0.113.10                0%     35ms               
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+────────────────────────────────────────────────────────────
+                    h/l tgt · 1-3 view · x/X cancel · ? help
+
+=== run view, verdict (100x30) ===
+ egress — RUN                                                                           1/2 targets 
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ > Alpha ok · x Beta
+ unknown  (low)                                                                                     
+ no blockage detected: every ladder step passed                                                     
+ EVIDENCE                                                                                           
+   [active] all ladder steps passed                                                                 
+ REJECTED                                                                                           
+   dns-tampering: no divergence between the system resolver and DoH                                 
+   tcp-rst-injection: no TCP reset observed                                                         
+   ip-drop: the target answered at least one probe                                                  
+   port-block: the tested ports behaved the same                                                    
+   sni-tls-filtering: the real and decoy SNI behaved the same                                       
+   http-block: the HTTP step completed                                                              
+   throttling: no latency evidence above the threshold                                              
+ CAVEAT                                                                                             
+   Single vantage point: one observation from one network; absence of evidence is not proof of block
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                          h/l target · 1/2/3 view · j/k scroll · x/X cancel · ? help
+
+=== run view, below the minimum (50x15) ===
+ Terminal too small: 50x15                        
+                                                  
+ Need at least 60x20.                             
+ Resize the terminal to continue.                 
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+                                                  
+--- PASS: TestRunViewTranscript (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	(cached)

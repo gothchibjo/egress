@@ -116,7 +116,7 @@ func runWith(args []string, stdout, stderr io.Writer, newSession func(elevated b
 	if !ok {
 		return runJSON(stdout, stderr, session, mode, destinations, networkContext)
 	}
-	return runTUI(file, stderr, session, mode, destinations, destinationErr, networkContext, contextErr)
+	return runTUI(file, stderr, session, mode, destinations, destinationErr, networkContext, contextErr, privilege.RawICMP)
 }
 
 // runJSON runs one baseline and prints the JSON envelope. It never touches the
@@ -141,7 +141,7 @@ func runJSON(stdout, stderr io.Writer, session baselineRunner, mode string, dest
 }
 
 // runTUI wires the baseline session to the dashboard and returns its outcome.
-func runTUI(stdout *os.File, stderr io.Writer, session baselineRunner, mode string, destinations []domain.Destination, destinationErr error, networkContext platform.NetworkContext, contextErr error) int {
+func runTUI(stdout *os.File, stderr io.Writer, session baselineRunner, mode string, destinations []domain.Destination, destinationErr error, networkContext platform.NetworkContext, contextErr error, elevated bool) int {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -152,18 +152,78 @@ func runTUI(stdout *os.File, stderr io.Writer, session baselineRunner, mode stri
 		wg      sync.WaitGroup
 	)
 	var startRun func()
+	var startSelection func(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget
+
+	var probeMu sync.Mutex
+	var probeSession *app.ProbeSession
+	cancelTarget := func(targetID string) bool {
+		probeMu.Lock()
+		current := probeSession
+		probeMu.Unlock()
+		if current == nil {
+			return false
+		}
+		return current.CancelTarget(targetID)
+	}
+	cancelAllProbe := func() bool {
+		probeMu.Lock()
+		current := probeSession
+		probeMu.Unlock()
+		if current == nil {
+			return false
+		}
+		return current.CancelAll()
+	}
 
 	model := tui.New(nil, domain.Verdict{},
 		tui.WithMode(mode),
 		tui.WithDestinations(destinations, destinationErr),
 		tui.WithContext(networkContext, contextErr),
 		tui.WithRerun(func() { startRun() }),
+		tui.WithStartSelection(func(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget {
+			return startSelection(presets, custom)
+		}),
+		tui.WithProbeCancels(cancelTarget, cancelAllProbe),
 		tui.WithCancelHooks(
 			func() { session.CancelCurrent() },
 			func() { session.CancelAll() },
 		),
 	).StartRunning()
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithOutput(stdout), tea.WithInput(os.Stdin))
+
+	startSelection = func(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget {
+		targets := make([]domain.ProbeTarget, 0, len(presets)+len(custom))
+		for _, preset := range presets {
+			targets = append(targets, probe.TargetFromPreset(preset))
+		}
+		for _, target := range custom {
+			targets = append(targets, probe.TargetFromCustom(target))
+		}
+		if len(targets) == 0 {
+			return nil
+		}
+
+		session := app.NewProbeSession(probe.NewLadder(elevated))
+		session.OnStep = func(targetID string, step domain.StepResult) {
+			program.Send(tui.ProbeStepMsg{TargetID: targetID, Step: step})
+		}
+		probeMu.Lock()
+		probeSession = session
+		probeMu.Unlock()
+
+		go func() {
+			run, runErr := session.Run(ctx, targets, func(progress app.ProbeProgress) {
+				program.Send(tui.ProbeProgressMsg{Progress: progress})
+			})
+			probeMu.Lock()
+			if probeSession == session {
+				probeSession = nil
+			}
+			probeMu.Unlock()
+			program.Send(tui.ProbeCompleteMsg{Run: run, Err: runErr})
+		}()
+		return targets
+	}
 
 	startRun = func() {
 		wg.Add(1)

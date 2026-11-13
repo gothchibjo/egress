@@ -12,6 +12,7 @@ const (
 	viewDestinations
 	viewContext
 	viewPicker
+	viewRun
 )
 
 // updateKey dispatches a key press to the active page. Every action has a key;
@@ -32,6 +33,8 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateContextKey(msg)
 	case viewPicker:
 		return m.updatePickerKey(msg)
+	case viewRun:
+		return m.updateRunKey(msg)
 	case viewDetail:
 		return m.updateDetailKey(msg)
 	default:
@@ -290,6 +293,11 @@ func (m Model) footerHints() string {
 		return "j/k scroll" + sep + "esc back" + sep + "? help" + sep + "q quit"
 	case viewPicker:
 		return "space select" + sep + "/ filter" + sep + "c custom" + sep + "enter run" + sep + "esc back"
+	case viewRun:
+		if m.Layout() == LayoutCompact {
+			return "h/l tgt" + sep + "1-3 view" + sep + "x/X cancel" + sep + "? help"
+		}
+		return "h/l target" + sep + "1/2/3 view" + sep + "j/k scroll" + sep + "x/X cancel" + sep + "? help"
 	case viewHelp:
 		return "j/k scroll" + sep + "? close" + sep + "esc back"
 	default:

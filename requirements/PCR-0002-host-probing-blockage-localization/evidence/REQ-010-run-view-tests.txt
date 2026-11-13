@@ -1,0 +1,31 @@
+=== RUN   TestPickerStartWithoutRunView
+--- PASS: TestPickerStartWithoutRunView (0.00s)
+=== RUN   TestRunViewShowsTargetTabs
+--- PASS: TestRunViewShowsTargetTabs (0.00s)
+=== RUN   TestRunViewWideShowsLadderAndHops
+--- PASS: TestRunViewWideShowsLadderAndHops (0.00s)
+=== RUN   TestRunViewCompactSwitchesPanes
+--- PASS: TestRunViewCompactSwitchesPanes (0.00s)
+=== RUN   TestRunViewVerdictShowsLabelledEvidence
+--- PASS: TestRunViewVerdictShowsLabelledEvidence (0.00s)
+=== RUN   TestRunViewSwitchesTargets
+--- PASS: TestRunViewSwitchesTargets (0.00s)
+=== RUN   TestRunViewCancelsTargets
+--- PASS: TestRunViewCancelsTargets (0.00s)
+=== RUN   TestRunViewEscNeverCancels
+--- PASS: TestRunViewEscNeverCancels (0.00s)
+=== RUN   TestRunViewKeepsTerminalHeight
+--- PASS: TestRunViewKeepsTerminalHeight (0.00s)
+=== RUN   TestRunViewHelpReturns
+--- PASS: TestRunViewHelpReturns (0.00s)
+=== RUN   TestRunViewShowsLiveProgress
+--- PASS: TestRunViewShowsLiveProgress (0.00s)
+=== RUN   TestRunViewScrolling
+--- PASS: TestRunViewScrolling (0.00s)
+=== RUN   TestRunViewResizeKeepsState
+--- PASS: TestRunViewResizeKeepsState (0.00s)
+=== RUN   TestRunViewTranscript
+    run_view_transcript_test.go:13: set EGRESS_TRANSCRIPT=1 to print the run view transcript
+--- SKIP: TestRunViewTranscript (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.235s

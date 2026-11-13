@@ -285,6 +285,8 @@ implementation in the order above.
 | 2026-11-13 | REQ-008 | CDN and geo-DNS differences are not reported as tampering.          | The DNS branch is capped at medium and explicitly names CDN/geo answers as a legitimate cause of divergence.                                                     | pass   |
 | 2026-11-13 | REQ-009 | Concurrency is capped at four targets.                              | `MaxConcurrentTargets = 4` bounds the worker pool; a test records a peak of at most four concurrent ladders.                                                     | pass   |
 | 2026-11-13 | REQ-009 | Every probe timeout is bounded.                                     | Each ladder step runs under a 2 s deadline; a session test with a hung ladder returns after its context deadline.                                                | pass   |
+| 2026-11-13 | REQ-010 | Status never depends on color alone.                                | Target states and step statuses use text markers and words; monochrome and ASCII tests cover the run view.                                                       | pass   |
+| 2026-11-13 | REQ-010 | Minimum terminal sizes are enforced by the UI.                      | The run view reuses the layout thresholds: normal from 80x24, compact from 60x20, resize message below, stopped below 40x10.                                     | pass   |
 
 # Implementation Log
 
@@ -328,3 +330,7 @@ implementation in the order above.
 - 2026-11-13 — REQ-009 adds the probing session: at most four targets in
   parallel, sequential steps per target, per-target and whole-session
   cancellation, partial steps kept, and a second concurrent run rejected.
+- 2026-11-13 — REQ-010 adds the run view: target tabs with running/done/
+  cancelled states, ladder and hop panes side by side on wide terminals and
+  switchable on narrow ones, the verdict with labelled evidence, rejections and
+  caveat, live step progress, and x/X cancellation.

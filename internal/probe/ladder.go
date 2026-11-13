@@ -145,6 +145,7 @@ func TraceStep(tracer Tracer) TraceFunc {
 		if last != "" {
 			step.Measurements = append(step.Measurements, domain.Measurement{Name: "last_hop", Value: last})
 		}
+		step.Hops = append([]domain.Hop(nil), hops...)
 		step.Status = domain.StatusPass
 		switch {
 		case err != nil:
@@ -158,9 +159,18 @@ func TraceStep(tracer Tracer) TraceFunc {
 	}
 }
 
-// Run executes the ladder and returns every step in order. A failing step never
-// prevents later steps from running.
+// Run executes the ladder and returns every step in order.
 func (l Ladder) Run(ctx context.Context, target LadderTarget) []domain.StepResult {
+	return l.run(ctx, target, nil)
+}
+
+// RunWithProgress executes the ladder and reports every finished step to
+// onStep so the UI can show live progress.
+func (l Ladder) RunWithProgress(ctx context.Context, target LadderTarget, onStep func(domain.StepResult)) []domain.StepResult {
+	return l.run(ctx, target, onStep)
+}
+
+func (l Ladder) run(ctx context.Context, target LadderTarget, onStep func(domain.StepResult)) []domain.StepResult {
 	steps := make([]domain.StepResult, 0, 9)
 	order := 0
 	add := func(step domain.StepResult) {
@@ -170,6 +180,9 @@ func (l Ladder) Run(ctx context.Context, target LadderTarget) []domain.StepResul
 			step.Measurements = []domain.Measurement{}
 		}
 		steps = append(steps, step)
+		if onStep != nil {
+			onStep(step)
+		}
 	}
 
 	dnsStep, systemAnswers := l.runDNS(ctx, target)

@@ -14,7 +14,27 @@ import (
 
 func pickerModel(t *testing.T, start func(presets []domain.Preset, custom []domain.Target)) Model {
 	t.Helper()
-	return fixtureModel(t, 100, 30, WithoutColor(), WithStartSelection(start))
+	return fixtureModel(t, 100, 30, WithoutColor(), WithStartSelection(func(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget {
+		if start != nil {
+			start(presets, custom)
+		}
+		return probeTargetsFrom(presets, custom)
+	}))
+}
+
+func probeTargetsFrom(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget {
+	targets := make([]domain.ProbeTarget, 0, len(presets)+len(custom))
+	for _, preset := range presets {
+		targets = append(targets, domain.ProbeTarget{
+			ID: preset.ID, Label: preset.DisplayName, Host: preset.Host, Ports: preset.Ports, Protocols: preset.Protocols,
+		})
+	}
+	for _, target := range custom {
+		targets = append(targets, domain.ProbeTarget{
+			ID: target.String(), Label: target.String(), Host: target.Host, Ports: []int{443},
+		})
+	}
+	return targets
 }
 
 func TestPickerListsPresetsByCategory(t *testing.T) {
@@ -541,7 +561,10 @@ func TestPickerShowsUnresolvedHostname(t *testing.T) {
 	var gotCustom []domain.Target
 	model := fixtureModel(t, 100, 30, WithoutColor(),
 		WithResolver(resolver),
-		WithStartSelection(func(_ []domain.Preset, custom []domain.Target) { gotCustom = custom }))
+		WithStartSelection(func(_ []domain.Preset, custom []domain.Target) []domain.ProbeTarget {
+			gotCustom = custom
+			return probeTargetsFrom(nil, custom)
+		}))
 	model, _ = pressKey(t, model, "t")
 	model, cmd := typeCustomTarget(t, model, "missing.invalid")
 	if cmd == nil {

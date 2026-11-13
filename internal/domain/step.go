@@ -31,6 +31,8 @@ type StepResult struct {
 	Measurements []Measurement `json:"measurements"`
 	Diagnostic   string        `json:"diagnostic,omitempty"`
 	Error        string        `json:"error,omitempty"`
+	// Hops carries the path table for the trace step.
+	Hops []Hop `json:"hops,omitempty"`
 }
 
 // Errors raised by step validation.

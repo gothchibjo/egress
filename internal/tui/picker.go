@@ -152,8 +152,11 @@ func (m Model) startSelection() (tea.Model, tea.Cmd) {
 	if m.opts.startSelection == nil {
 		return m.setNotice("the run view is not available yet")
 	}
-	m.opts.startSelection(presets, custom)
-	return m, nil
+	targets := m.opts.startSelection(presets, custom)
+	if len(targets) == 0 {
+		return m.setNotice("no targets to probe")
+	}
+	return m.startRun(targets), nil
 }
 
 // addCustomTarget parses and stores the typed target, then resolves hostnames in

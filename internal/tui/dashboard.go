@@ -55,8 +55,10 @@ type options struct {
 	networkContext *platform.NetworkContext
 	contextErr     string
 	rerun          func()
-	startSelection func(presets []domain.Preset, custom []domain.Target)
+	startSelection func(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget
 	resolve        func(ctx context.Context, host string) ([]net.IP, error)
+	cancelTarget   func(targetID string) bool
+	cancelAllProbe func() bool
 	cancelCurrent  func()
 	cancelAll      func()
 }
@@ -125,9 +127,18 @@ func WithContext(context platform.NetworkContext, err error) Option {
 	}
 }
 
-// WithStartSelection wires the picker to the run starter.
-func WithStartSelection(start func(presets []domain.Preset, custom []domain.Target)) Option {
+// WithStartSelection wires the picker to the run starter. It returns the
+// targets the session accepted.
+func WithStartSelection(start func(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget) Option {
 	return func(o *options) { o.startSelection = start }
+}
+
+// WithProbeCancels wires the run-view cancellation controls.
+func WithProbeCancels(cancelTarget func(string) bool, cancelAll func() bool) Option {
+	return func(o *options) {
+		o.cancelTarget = cancelTarget
+		o.cancelAllProbe = cancelAll
+	}
 }
 
 // WithResolver overrides hostname resolution for custom targets.
@@ -166,6 +177,7 @@ type Model struct {
 	contextReturn      viewState
 	contextOffset      int
 	picker             pickerState
+	run                runState
 	confirmQuit        bool
 	running            bool
 	cancelled          bool
@@ -250,6 +262,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.failRun(msg.Err), nil
 		}
 		return m.finishRun(msg.Run), nil
+	case ProbeProgressMsg:
+		return m.markProbeTarget(msg.Progress), nil
+	case ProbeStepMsg:
+		return m.appendProbeStep(msg.TargetID, msg.Step), nil
+	case ProbeCompleteMsg:
+		return m.finishProbe(msg.Run, msg.Err), nil
 	case customResolvedMsg:
 		for i := range m.picker.custom {
 			if m.picker.custom[i].Target.Key() == msg.Key {
@@ -414,6 +432,8 @@ func (m Model) View() string {
 		return m.renderContext()
 	case viewPicker:
 		return m.renderPicker()
+	case viewRun:
+		return m.renderRun()
 	}
 	switch m.Layout() {
 	case LayoutStopped:
