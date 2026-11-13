@@ -269,3 +269,92 @@ func TestPickerStartWithoutRunView(t *testing.T) {
 		t.Fatalf("missing run-view notice:\n%s", model.View())
 	}
 }
+
+func TestPickerColumnCount(t *testing.T) {
+	tests := []struct {
+		width int
+		want  int
+	}{
+		{width: 60, want: 1},
+		{width: 80, want: 1},
+		{width: 99, want: 1},
+		{width: 100, want: 2},
+		{width: 120, want: 2},
+		{width: 159, want: 2},
+		{width: 160, want: 3},
+		{width: 220, want: 3},
+	}
+	for _, test := range tests {
+		model := fixtureModel(t, test.width, 30, WithoutColor())
+		if got := model.pickerColumns(); got != test.want {
+			t.Fatalf("width %d: columns = %d, want %d", test.width, got, test.want)
+		}
+	}
+}
+
+func TestPickerWideTerminalShowsEveryPreset(t *testing.T) {
+	for _, size := range []struct{ width, height int }{{120, 30}, {160, 40}} {
+		model := fixtureModel(t, size.width, size.height, WithoutColor())
+		model, _ = pressKey(t, model, "t")
+		view := model.View()
+		assertBlockShape(t, view, size.width, size.height)
+
+		for _, preset := range domain.PresetCatalog() {
+			if !strings.Contains(view, preset.DisplayName) {
+				t.Fatalf("%dx%d picker is missing %q without scrolling:\n%s",
+					size.width, size.height, preset.DisplayName, view)
+			}
+		}
+	}
+}
+
+func TestPickerGridKeepsCursorVisible(t *testing.T) {
+	model := fixtureModel(t, 100, 20, WithoutColor())
+	model, _ = pressKey(t, model, "t")
+
+	model, _ = pressKey(t, model, "G")
+	view := model.View()
+	assertBlockShape(t, view, 100, 20)
+	if !strings.Contains(view, "Tor") {
+		t.Fatalf("cursor page does not show the last entry:\n%s", view)
+	}
+
+	model, _ = pressKey(t, model, "g")
+	if !strings.Contains(model.View(), "YouTube") {
+		t.Fatalf("cursor page does not show the first entry:\n%s", model.View())
+	}
+}
+
+func TestPickerGridShowsCustomTarget(t *testing.T) {
+	model := fixtureModel(t, 120, 30, WithoutColor())
+	model, _ = pressKey(t, model, "t")
+	model, _ = pressKey(t, model, "c")
+	for _, key := range []string{"a", ".", "t", "e", "s", "t"} {
+		model, _ = pressKey(t, model, key)
+	}
+	model, _ = pressKey(t, model, "enter")
+
+	view := model.View()
+	if !strings.Contains(view, "CUSTOM") || !strings.Contains(view, "a.test") {
+		t.Fatalf("custom target is not in the grid:\n%s", view)
+	}
+	if !strings.Contains(view, "1 selected") {
+		t.Fatalf("custom target is not counted:\n%s", view)
+	}
+}
+
+func TestPickerRowFormat(t *testing.T) {
+	model := pickerModel(t, nil)
+	model, _ = pressKey(t, model, "t")
+
+	view := model.View()
+	if !strings.Contains(view, "YouTube (youtube.com)") {
+		t.Fatalf("row is not in Name (host) form:\n%s", view)
+	}
+	if strings.Contains(view, "YouTube           youtube.com") {
+		t.Fatalf("old padded row survived:\n%s", view)
+	}
+	if !strings.Contains(view, "Cloudflare DNS (1.1.1.1)") {
+		t.Fatalf("long names lost their host:\n%s", view)
+	}
+}

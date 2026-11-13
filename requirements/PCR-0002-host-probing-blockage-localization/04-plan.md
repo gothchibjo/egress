@@ -283,3 +283,6 @@ implementation in the order above.
   filter that preserves the selection, `c` for an inline custom target, a live
   selected count, cursor-driven scrolling, and `enter` that refuses an empty
   selection. The picker key is `t` (Revision 2).
+- 2026-11-13 — REQ-002 picker layout: one column below 100 columns, two from 100
+  and three from 160; category blocks are balanced across the available columns
+  and paged by whole columns so the cursor stays visible.

@@ -5,8 +5,15 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/gothchibjo/egress/internal/domain"
+)
+
+// Column thresholds for the picker layout.
+const (
+	pickerTwoColumnMinWidth   = 100
+	pickerThreeColumnMinWidth = 160
 )
 
 // pickerState is the target selection screen: presets grouped by category,
@@ -194,16 +201,28 @@ func (m Model) normalizePicker() Model {
 }
 
 // pickerEntries returns the visible rows in display order: presets grouped by
-// category, then custom targets. The filter matches presets only.
+// category in first-appearance order, then custom targets. The filter matches
+// presets only.
 func (m Model) pickerEntries() []pickerEntry {
 	filter := strings.ToLower(strings.TrimSpace(m.picker.filter))
-	entries := make([]pickerEntry, 0, len(domain.PresetCatalog())+len(m.picker.custom))
 
+	order := make([]string, 0, 8)
+	byCategory := make(map[string][]domain.Preset, 8)
 	for _, preset := range domain.PresetCatalog() {
 		if filter != "" && !presetMatches(preset, filter) {
 			continue
 		}
-		entries = append(entries, pickerEntry{preset: preset})
+		if _, seen := byCategory[preset.Category]; !seen {
+			order = append(order, preset.Category)
+		}
+		byCategory[preset.Category] = append(byCategory[preset.Category], preset)
+	}
+
+	entries := make([]pickerEntry, 0, len(domain.PresetCatalog())+len(m.picker.custom))
+	for _, category := range order {
+		for _, preset := range byCategory[category] {
+			entries = append(entries, pickerEntry{preset: preset})
+		}
 	}
 	for _, custom := range m.picker.custom {
 		entries = append(entries, pickerEntry{custom: custom})
@@ -266,12 +285,16 @@ func (m Model) renderPicker() string {
 	return strings.Join(lines, "\n")
 }
 
-// pickerLines renders the grouped rows with checkboxes. The list scrolls so the
-// cursor row is always visible.
+// pickerLines renders the grouped rows with checkboxes. Narrow terminals keep
+// one scrolling column; wide terminals flow the categories into two or three
+// columns and paginate by column.
 func (m Model) pickerLines(height int) []string {
 	entries := m.pickerEntries()
 	if len(entries) == 0 {
 		return []string{"", " no targets match the filter"}
+	}
+	if columns := m.pickerColumns(); columns > 1 {
+		return m.pickerGrid(entries, columns, height)
 	}
 
 	lines := make([]string, 0, len(entries)+8)
@@ -302,7 +325,7 @@ func (m Model) pickerLines(height int) []string {
 		if m.picker.selected[entry.preset.ID] {
 			box = "[x]"
 		}
-		lines = append(lines, fmt.Sprintf("%s%s %-17s %s", prefix, box, entry.preset.DisplayName, entry.preset.Host))
+		lines = append(lines, m.pickerPresetLine(entry.preset, prefix, box))
 	}
 
 	if height > 0 && len(lines) > height {
@@ -316,4 +339,172 @@ func (m Model) pickerLines(height int) []string {
 		lines = lines[offset : offset+height]
 	}
 	return lines
+}
+
+// pickerColumns returns the number of columns for the current width.
+func (m Model) pickerColumns() int {
+	switch {
+	case m.width >= pickerThreeColumnMinWidth:
+		return 3
+	case m.width >= pickerTwoColumnMinWidth:
+		return 2
+	default:
+		return 1
+	}
+}
+
+// pickerItem is a heading or an entry in the column flow.
+type pickerItem struct {
+	heading string
+	entry   *pickerEntry
+	index   int
+}
+
+// pickerGrid balances the category blocks across the available columns and
+// pages by whole columns so the cursor stays visible.
+func (m Model) pickerGrid(entries []pickerEntry, columns, height int) []string {
+	items, entryItem := m.pickerItems(entries)
+	if len(items) == 0 || height < 1 {
+		return nil
+	}
+
+	blocks := pickerBlocks(items)
+	target := (len(items) + columns - 1) / columns
+	if target < 1 {
+		target = 1
+	}
+	if target > height {
+		target = height
+	}
+
+	grouped := make([][]int, 0, columns)
+	current := make([]int, 0, target)
+	flush := func() {
+		if len(current) == 0 {
+			return
+		}
+		grouped = append(grouped, current)
+		current = make([]int, 0, target)
+	}
+
+	for _, block := range blocks {
+		for len(block) > 0 {
+			if len(current) > 0 && len(current)+len(block) > target && len(current) >= target/2 && len(grouped) < columns-1 {
+				flush()
+				continue
+			}
+			if len(current) >= height {
+				flush()
+				continue
+			}
+			limit := height - len(current)
+			take := len(block)
+			if take > limit {
+				take = limit
+			}
+			current = append(current, block[:take]...)
+			block = block[take:]
+			if len(current) >= height {
+				flush()
+			}
+		}
+	}
+	flush()
+
+	columnOfItem := make([]int, len(items))
+	for c, column := range grouped {
+		for _, index := range column {
+			columnOfItem[index] = c
+		}
+	}
+
+	cursor := m.picker.cursor
+	if cursor < 0 || cursor >= len(entryItem) {
+		cursor = 0
+	}
+	cursorColumn := columnOfItem[entryItem[cursor]]
+	start := (cursorColumn / columns) * columns
+	if start >= len(grouped) {
+		start = 0
+	}
+
+	columnWidth := (m.width - 2*(columns-1)) / columns
+	if columnWidth < 20 {
+		columnWidth = 20
+	}
+
+	rendered := make([]string, 0, columns)
+	for c := start; c < start+columns && c < len(grouped); c++ {
+		lines := make([]string, 0, len(grouped[c]))
+		for _, index := range grouped[c] {
+			lines = append(lines, m.pickerItemLine(items[index]))
+		}
+		rendered = append(rendered, block(lines, columnWidth, height))
+	}
+	return strings.Split(lipgloss.JoinHorizontal(lipgloss.Top, rendered...), "\n")
+}
+
+// pickerBlocks groups the flat item list into heading-plus-entries blocks.
+func pickerBlocks(items []pickerItem) [][]int {
+	blocks := make([][]int, 0, 8)
+	for i, item := range items {
+		if item.heading != "" || len(blocks) == 0 {
+			blocks = append(blocks, []int{i})
+			continue
+		}
+		last := len(blocks) - 1
+		blocks[last] = append(blocks[last], i)
+	}
+	return blocks
+}
+
+// pickerItems flattens the grouped rows into headings and entries.
+func (m Model) pickerItems(entries []pickerEntry) ([]pickerItem, []int) {
+	items := make([]pickerItem, 0, len(entries)+8)
+	entryItem := make([]int, len(entries))
+	category := ""
+	for i, entry := range entries {
+		if entry.isCustom() {
+			if category != "\x00custom" {
+				category = "\x00custom"
+				items = append(items, pickerItem{heading: "CUSTOM"})
+			}
+		} else if entry.preset.Category != category {
+			category = entry.preset.Category
+			items = append(items, pickerItem{heading: strings.ToUpper(category)})
+		}
+		entryItem[i] = len(items)
+		items = append(items, pickerItem{entry: &entries[i], index: i})
+	}
+	return items, entryItem
+}
+
+// pickerItemLine renders one heading or row inside a column.
+func (m Model) pickerItemLine(item pickerItem) string {
+	if item.heading != "" {
+		return " " + m.theme().heading.Render(item.heading)
+	}
+	prefix := "  "
+	if item.index == m.picker.cursor {
+		prefix = "> "
+	}
+	if item.entry.isCustom() {
+		return prefix + "[x] " + item.entry.custom
+	}
+	box := "[ ]"
+	if m.picker.selected[item.entry.preset.ID] {
+		box = "[x]"
+	}
+	return m.pickerPresetLine(item.entry.preset, prefix, box)
+}
+
+// pickerPresetLine renders one preset as "Name (host)". The host is muted when
+// colour is enabled so the name leads, and no fixed padding is used, which keeps
+// multi-column layouts compact.
+func (m Model) pickerPresetLine(preset domain.Preset, prefix, box string) string {
+	host := " (" + preset.Host + ")"
+	if m.opts.color {
+		host = m.theme().muted.Render(host)
+	}
+	return prefix + box + " " + preset.DisplayName + host
 }
