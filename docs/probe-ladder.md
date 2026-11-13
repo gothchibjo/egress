@@ -31,6 +31,13 @@ The three SNI variants stay distinguishable by step id and by the `sni`
 measurement. A TLS alert is a warning, not a failure; a network error is a
 failure.
 
+### Tracing methods
+
+| Session                  | Method                                                              | Requirement                                                                               |
+| :----------------------- | :------------------------------------------------------------------ | :---------------------------------------------------------------------------------------- |
+| `limited` (unprivileged) | UDP probes with growing TTL, ICMP errors read through a ping socket | works without root                                                                        |
+| `elevated`               | ICMP echo probes with growing TTL over a raw socket                 | needs a raw socket; falls back to UDP with a stated reason when the socket is unavailable |
+
 ## Timing
 
 Every step runs under a 2 s context deadline. A step that times out records the

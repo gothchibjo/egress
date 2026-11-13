@@ -282,7 +282,6 @@ implementation in the order above.
   constant in `internal/domain/target.go`, with content, copy and determinism
   tests and `docs/target-catalog.md`. The requirement stays open until the
   session export (REQ-011) reports the catalog version.
-
 - 2026-11-13 — REQ-002 adds the target picker: categories with checkboxes, `/`
   filter that preserves the selection, `c` for an inline custom target, a live
   selected count, cursor-driven scrolling, and `enter` that refuses an empty
@@ -301,3 +300,7 @@ implementation in the order above.
   comparison, TCP per port, three SNI variants, HTTP, ICMP and a trace step that
   stays skipped until REQ-005; every step has its own 2 s timeout, timing and
   measurements.
+- 2026-11-13 — REQ-005 adds UDP tracepath-style tracing for limited sessions and
+  an ICMP tracer for elevated sessions, falling back to UDP with a stated reason
+  when a raw socket is unavailable; the ladder's trace step keeps partial paths
+  and marks truncated discovery as a warning.

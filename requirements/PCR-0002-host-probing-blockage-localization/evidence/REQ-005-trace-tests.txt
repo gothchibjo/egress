@@ -1,0 +1,25 @@
+=== RUN   TestLadderIncludesTheTraceStep
+--- PASS: TestLadderIncludesTheTraceStep (0.00s)
+=== RUN   TestQuotedUDPPort
+--- PASS: TestQuotedUDPPort (0.00s)
+=== RUN   TestRTTStats
+--- PASS: TestRTTStats (0.00s)
+=== RUN   TestNewTracerSelectsTheMethod
+--- PASS: TestNewTracerSelectsTheMethod (0.00s)
+=== RUN   TestNewTracerElevatedFallsBackWithoutRaw
+--- PASS: TestNewTracerElevatedFallsBackWithoutRaw (0.00s)
+=== RUN   TestICMPTracerRequiresPrivileges
+--- PASS: TestICMPTracerRequiresPrivileges (0.00s)
+=== RUN   TestTraceStepReportsHops
+--- PASS: TestTraceStepReportsHops (0.00s)
+=== RUN   TestTraceStepKeepsPartialPath
+--- PASS: TestTraceStepKeepsPartialPath (0.00s)
+=== RUN   TestTraceStepWithoutResponsesWarns
+--- PASS: TestTraceStepWithoutResponsesWarns (0.00s)
+=== RUN   TestTraceStepReportsFailure
+--- PASS: TestTraceStepReportsFailure (0.00s)
+=== RUN   TestUDPTracerIntegration
+    trace_test.go:169: set EGRESS_INTEGRATION=1 to run the live traceroute
+--- SKIP: TestUDPTracerIntegration (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	0.264s

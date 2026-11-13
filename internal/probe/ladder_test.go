@@ -290,3 +290,23 @@ func TestLadderIntegration(t *testing.T) {
 		}
 	}
 }
+
+func TestLadderIncludesTheTraceStep(t *testing.T) {
+	ladder := testLadder()
+	ladder.trace = TraceStep(fakeTracer{hops: []domain.Hop{{TTL: 1, Address: "192.0.2.1", Sent: 3, Received: 3}}})
+
+	steps := ladder.Run(context.Background(), presetTarget(t, "github"))
+	trace := steps[len(steps)-1]
+	if trace.Kind != domain.StepTrace || trace.ID != "trace" {
+		t.Fatalf("last step = %+v", trace)
+	}
+	if trace.Status != domain.StatusPass {
+		t.Fatalf("trace status = %q", trace.Status)
+	}
+	if measurementValue(trace.Measurements, "method") != "fake" {
+		t.Fatalf("trace method = %q", measurementValue(trace.Measurements, "method"))
+	}
+	if measurementValue(trace.Measurements, "hops") != "1" {
+		t.Fatalf("trace hops = %q", measurementValue(trace.Measurements, "hops"))
+	}
+}

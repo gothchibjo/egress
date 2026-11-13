@@ -1,0 +1,4 @@
+=== RUN   TestUDPTracerIntegration
+--- PASS: TestUDPTracerIntegration (2.53s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	2.798s

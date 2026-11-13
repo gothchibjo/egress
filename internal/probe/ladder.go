@@ -19,6 +19,7 @@ import (
 
 const (
 	defaultLadderTimeout = 2 * time.Second
+	traceStepBudget      = 20 * time.Second
 	decoySNI             = "example.org"
 )
 
@@ -61,15 +62,16 @@ func TargetFromCustom(target domain.Target) LadderTarget {
 
 // Ladder runs the independent probe steps for one target.
 type Ladder struct {
-	timeout   time.Duration
-	now       func() time.Time
-	resolve   func(ctx context.Context, host string) ([]string, error)
-	doh       DoHResolver
-	dial      tcpDialer
-	http      HTTPDoer
-	echo      func(ctx context.Context, ip net.IP) (time.Duration, error)
-	handshake func(ctx context.Context, conn net.Conn, serverName string) error
-	trace     TraceFunc
+	tracerInfo TracerInfo
+	timeout    time.Duration
+	now        func() time.Time
+	resolve    func(ctx context.Context, host string) ([]string, error)
+	doh        DoHResolver
+	dial       tcpDialer
+	http       HTTPDoer
+	echo       func(ctx context.Context, ip net.IP) (time.Duration, error)
+	handshake  func(ctx context.Context, conn net.Conn, serverName string) error
+	trace      TraceFunc
 }
 
 // TraceFunc produces the traceroute step. It arrives with REQ-005; until then
@@ -79,17 +81,79 @@ type TraceFunc func(ctx context.Context, target LadderTarget) domain.StepResult
 // NewLadder wires the real clients for one session.
 func NewLadder(elevated bool) Ladder {
 	timeout := defaultLadderTimeout
-	return Ladder{
-		timeout: timeout,
-		now:     time.Now,
-		resolve: lookupAddresses,
-		doh:     cloudflareDoH{client: &http.Client{Timeout: 3 * time.Second}, endpoint: DefaultDoHEndpoint},
-		dial:    defaultTCPDialer(timeout),
-		http:    &http.Client{Timeout: timeout, CheckRedirect: noRedirect},
+	tracer, tracerInfo := NewTracer(elevated)
+	ladder := Ladder{
+		tracerInfo: tracerInfo,
+		timeout:    timeout,
+		now:        time.Now,
+		resolve:    lookupAddresses,
+		doh:        cloudflareDoH{client: &http.Client{Timeout: 3 * time.Second}, endpoint: DefaultDoHEndpoint},
+		dial:       defaultTCPDialer(timeout),
+		http:       &http.Client{Timeout: timeout, CheckRedirect: noRedirect},
 		echo: func(ctx context.Context, ip net.IP) (time.Duration, error) {
 			return echoOnce(ctx, ip, elevated, timeout)
 		},
 		handshake: tlsHandshake,
+	}
+	ladder.trace = TraceStep(tracer)
+	return ladder
+}
+
+// TracerInfo reports the tracing method and session mode selected for this
+// ladder.
+func (l Ladder) TracerInfo() TracerInfo {
+	return l.tracerInfo
+}
+
+// TraceStep adapts a tracer into the ladder's trace step. It runs under its own
+// budget because a path discovery needs longer than one probe.
+func TraceStep(tracer Tracer) TraceFunc {
+	return func(ctx context.Context, target LadderTarget) domain.StepResult {
+		traceCtx, cancel := context.WithTimeout(ctx, traceStepBudget)
+		defer cancel()
+
+		started := time.Now()
+		hops, err := tracer.Trace(traceCtx, target.Host)
+		step := domain.StepResult{
+			ID:           "trace",
+			Kind:         domain.StepTrace,
+			Target:       target.Host,
+			StartedAt:    started,
+			DurationMS:   time.Since(started).Milliseconds(),
+			Measurements: []domain.Measurement{},
+		}
+		if err != nil && len(hops) == 0 {
+			step.Status = domain.StatusFail
+			step.Diagnostic = "path discovery failed"
+			step.Error = err.Error()
+			return step
+		}
+
+		responding, last := 0, ""
+		for _, hop := range hops {
+			if hop.Address != "" {
+				responding++
+				last = hop.Address
+			}
+		}
+		step.Measurements = append(step.Measurements,
+			domain.Measurement{Name: "method", Value: tracer.Method()},
+			domain.Measurement{Name: "hops", Value: strconv.Itoa(len(hops))},
+			domain.Measurement{Name: "responding_hops", Value: strconv.Itoa(responding)},
+		)
+		if last != "" {
+			step.Measurements = append(step.Measurements, domain.Measurement{Name: "last_hop", Value: last})
+		}
+		step.Status = domain.StatusPass
+		switch {
+		case err != nil:
+			step.Status = domain.StatusWarn
+			step.Diagnostic = "path discovery truncated: " + err.Error()
+		case responding == 0:
+			step.Status = domain.StatusWarn
+			step.Diagnostic = "no hop answered; ICMP may be filtered"
+		}
+		return step
 	}
 }
 
