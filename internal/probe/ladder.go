@@ -23,18 +23,12 @@ const (
 	decoySNI             = "example.org"
 )
 
-// LadderTarget is one destination the ladder probes.
-type LadderTarget struct {
-	ID        string
-	Label     string
-	Host      string
-	Ports     []int
-	Protocols []domain.PresetProtocol
-}
+// LadderTarget is the probe destination type, shared with the session layer.
+type LadderTarget = domain.ProbeTarget
 
 // TargetFromPreset builds a ladder target from a catalog preset.
-func TargetFromPreset(preset domain.Preset) LadderTarget {
-	return LadderTarget{
+func TargetFromPreset(preset domain.Preset) domain.ProbeTarget {
+	return domain.ProbeTarget{
 		ID:        preset.ID,
 		Label:     preset.DisplayName,
 		Host:      preset.Host,
@@ -44,7 +38,7 @@ func TargetFromPreset(preset domain.Preset) LadderTarget {
 }
 
 // TargetFromCustom builds a ladder target from a parsed custom target.
-func TargetFromCustom(target domain.Target) LadderTarget {
+func TargetFromCustom(target domain.Target) domain.ProbeTarget {
 	ports := []int{443}
 	if target.Port > 0 {
 		ports = []int{target.Port}
@@ -57,7 +51,7 @@ func TargetFromCustom(target domain.Target) LadderTarget {
 	if label == "" {
 		label = target.Host
 	}
-	return LadderTarget{ID: label, Label: label, Host: target.Host, Ports: ports, Protocols: protocols}
+	return domain.ProbeTarget{ID: label, Label: label, Host: target.Host, Ports: ports, Protocols: protocols}
 }
 
 // Ladder runs the independent probe steps for one target.
@@ -183,6 +177,9 @@ func (l Ladder) Run(ctx context.Context, target LadderTarget) []domain.StepResul
 
 	if hasProtocol(target.Protocols, domain.PresetTCP) {
 		for _, port := range target.Ports {
+			if ctx.Err() != nil {
+				return steps
+			}
 			add(l.runTCP(ctx, target, port))
 		}
 	}
@@ -196,16 +193,21 @@ func (l Ladder) Run(ctx context.Context, target LadderTarget) []domain.StepResul
 			{id: "decoy", sni: decoySNI},
 			{id: "absent", sni: ""},
 		} {
+			if ctx.Err() != nil {
+				return steps
+			}
 			add(l.runTLS(ctx, target, port, variant.id, variant.sni))
 		}
 	}
-	if hasProtocol(target.Protocols, domain.PresetHTTP) && len(target.Ports) > 0 {
+	if ctx.Err() == nil && hasProtocol(target.Protocols, domain.PresetHTTP) && len(target.Ports) > 0 {
 		add(l.runHTTP(ctx, target, target.Ports[0]))
 	}
-	if hasProtocol(target.Protocols, domain.PresetICMP) {
+	if ctx.Err() == nil && hasProtocol(target.Protocols, domain.PresetICMP) {
 		add(l.runICMP(ctx, target, systemAnswers))
 	}
-	add(l.runTrace(ctx, target))
+	if ctx.Err() == nil {
+		add(l.runTrace(ctx, target))
+	}
 
 	return steps
 }

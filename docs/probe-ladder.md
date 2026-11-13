@@ -49,6 +49,13 @@ A failing or skipped step never cancels a later step. A DNS failure still allows
 TCP and TLS probes when the host is an IP literal, and a TCP refusal still lets
 the HTTP and ICMP steps run.
 
+## Scheduling
+
+A session probes at most four targets concurrently, and each target's ladder
+steps run sequentially. `CancelTarget` stops one target; `CancelAll` stops the
+session. A cancelled target keeps the steps it collected before the
+cancellation, so partial evidence stays exportable.
+
 ## Localization
 
 The hop table feeds `domain.LocalizePath`, which yields one of three findings:

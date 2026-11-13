@@ -310,3 +310,14 @@ func TestLadderIncludesTheTraceStep(t *testing.T) {
 		t.Fatalf("trace hops = %q", measurementValue(trace.Measurements, "hops"))
 	}
 }
+
+func TestLadderStopsWhenCancelled(t *testing.T) {
+	ladder := testLadder()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	steps := ladder.Run(ctx, presetTarget(t, "github"))
+	if len(steps) != 1 || steps[0].Kind != domain.StepDNS {
+		t.Fatalf("steps after cancellation = %d, want only dns: %+v", len(steps), steps)
+	}
+}

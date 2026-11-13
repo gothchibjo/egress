@@ -283,6 +283,8 @@ implementation in the order above.
 | 2026-11-13 | REQ-007 | The taxonomy is not extended without a new PCR.                     | `BlockageType.valid()` enumerates exactly the eight frozen members; an unknown type fails validation and a test rejects it.                                      | pass   |
 | 2026-11-13 | REQ-008 | Silence is never presented as proof of censorship.                  | Passive evidence is labelled, high confidence requires an active observation, and every hypothesis keeps the vantage caveat.                                     | pass   |
 | 2026-11-13 | REQ-008 | CDN and geo-DNS differences are not reported as tampering.          | The DNS branch is capped at medium and explicitly names CDN/geo answers as a legitimate cause of divergence.                                                     | pass   |
+| 2026-11-13 | REQ-009 | Concurrency is capped at four targets.                              | `MaxConcurrentTargets = 4` bounds the worker pool; a test records a peak of at most four concurrent ladders.                                                     | pass   |
+| 2026-11-13 | REQ-009 | Every probe timeout is bounded.                                     | Each ladder step runs under a 2 s deadline; a session test with a hung ladder returns after its context deadline.                                                | pass   |
 
 # Implementation Log
 
@@ -323,3 +325,6 @@ implementation in the order above.
   high confidence without an active observation, names ICMP rate limiting, shows
   both DNS answer sets with the CDN/geo caveat and keeps reset and drop findings
   distinct.
+- 2026-11-13 — REQ-009 adds the probing session: at most four targets in
+  parallel, sequential steps per target, per-target and whole-session
+  cancellation, partial steps kept, and a second concurrent run rejected.
