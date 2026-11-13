@@ -253,6 +253,11 @@ shell, runner and platform adapters.
 The plan is not approved: `plan_approval` stays `false` until a human approves
 it.
 
+## Revision 2 — 2026-11-13
+
+The picker key is `t`, not `p`: `p` has been bound to "previous problem" on the
+dashboard since PCR-0001. No requirement changes.
+
 ## Approval — 2026-11-13
 
 Approved by gothchibjo. Revision 1 is the working plan; the 16 REQs are open for
@@ -264,6 +269,8 @@ implementation in the order above.
 | :--------- | :------ | :-------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- | :----- |
 | 2026-11-13 | REQ-001 | The catalog stays static and built into the binary in v1. | No catalog file, environment override or remote fetch exists or is planned; the catalog will be a constant slice in `internal/domain/target.go`. | pass   |
 | 2026-11-13 | REQ-001 | Catalog entries require no remote update mechanism.       | No update client, URL or dependency is introduced; the catalog accessor takes no parameters and performs no I/O.                                 | pass   |
+| 2026-11-13 | REQ-002 | An empty selection cannot start a run.                    | The picker is new and has no run path yet; Enter will be gated on a non-empty selection and a test asserts the start callback is not invoked.    | pass   |
+| 2026-11-13 | REQ-002 | Filtering never changes the selection silently.           | Selection is a set keyed by preset id, independent of the filtered view; a test toggles rows, filters and re-reads the set.                      | pass   |
 
 # Implementation Log
 
@@ -271,3 +278,8 @@ implementation in the order above.
   constant in `internal/domain/target.go`, with content, copy and determinism
   tests and `docs/target-catalog.md`. The requirement stays open until the
   session export (REQ-011) reports the catalog version.
+
+- 2026-11-13 — REQ-002 adds the target picker: categories with checkboxes, `/`
+  filter that preserves the selection, `c` for an inline custom target, a live
+  selected count, cursor-driven scrolling, and `enter` that refuses an empty
+  selection. The picker key is `t` (Revision 2).

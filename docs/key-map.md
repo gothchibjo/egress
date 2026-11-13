@@ -19,39 +19,50 @@ implemented. The requirement is defined by [REQ-021].
 
 ## Keys
 
-| Context               | Key             | Action                             |
-| :-------------------- | :-------------- | :--------------------------------- |
-| Dashboard             | `↑`, `k`        | move selection up                  |
-| Dashboard             | `↓`, `j`        | move selection down                |
-| Dashboard             | `g`, `G`        | select the first or last check     |
-| Dashboard             | `enter`         | open the selected check detail     |
-| Dashboard             | `e`             | write `egress-<timestamp>.json`    |
-| Dashboard             | `E`             | choose the export path             |
-| Export prompt         | `enter`         | write the file                     |
-| Export prompt         | `esc`, `ctrl+c` | close the prompt without writing   |
-| Overwrite prompt      | `y`             | replace the existing file          |
-| Overwrite prompt      | `n`, `esc`      | keep the existing file             |
-| Dashboard, detail     | `d`             | open the outbound destination list |
-| Dashboard, detail     | `c`             | open the proxy and tunnel context  |
-| Detail                | `↑`, `k`        | scroll the evidence up             |
-| Detail                | `↓`, `j`        | scroll the evidence down           |
-| Detail                | `PgUp`, `PgDn`  | scroll one page                    |
-| Detail                | `g`, `G`        | jump to the top or end             |
-| Detail                | `h`, `[`        | open the previous check            |
-| Detail                | `l`, `]`        | open the next check                |
-| Destinations, context | `↑`, `k`        | scroll up                          |
-| Destinations, context | `↓`, `j`        | scroll down                        |
-| Destinations, context | `g`, `G`        | jump to the first or last row      |
-| Destinations, context | `esc`           | go back to the previous page       |
-| Running baseline      | `x`             | cancel the current check           |
-| Running baseline      | `X`             | cancel the baseline, keep results  |
-| Detail, help, context | `esc`           | go back one page                   |
-| Dashboard, detail     | `?`             | open help                          |
-| Help                  | `?`, `esc`      | close help and return              |
-| Dashboard, detail     | `q`             | quit immediately                   |
-| Dashboard, detail     | `ctrl+c`        | ask for confirmation, then quit    |
-| Confirmation          | `y`             | quit                               |
-| Confirmation          | `n`, `esc`      | cancel and stay                    |
+| Context               | Key             | Action                                     |
+| :-------------------- | :-------------- | :----------------------------------------- |
+| Dashboard             | `↑`, `k`        | move selection up                          |
+| Dashboard             | `↓`, `j`        | move selection down                        |
+| Dashboard             | `g`, `G`        | select the first or last check             |
+| Dashboard             | `enter`         | open the selected check detail             |
+| Dashboard             | `e`             | write `egress-<timestamp>.json`            |
+| Dashboard             | `E`             | choose the export path                     |
+| Export prompt         | `enter`         | write the file                             |
+| Export prompt         | `esc`, `ctrl+c` | close the prompt without writing           |
+| Overwrite prompt      | `y`             | replace the existing file                  |
+| Overwrite prompt      | `n`, `esc`      | keep the existing file                     |
+| Dashboard, detail     | `d`             | open the outbound destination list         |
+| Dashboard, detail     | `c`             | open the proxy and tunnel context          |
+| Dashboard             | `t`             | open the target picker                     |
+| Picker                | `↑`, `k`        | move the cursor up                         |
+| Picker                | `↓`, `j`        | move the cursor down                       |
+| Picker                | `g`, `G`        | jump to the first or last row              |
+| Picker                | `space`         | select a preset or remove a custom         |
+| Picker                | `/`             | filter presets                             |
+| Picker filter         | `enter`, `esc`  | apply or clear the filter                  |
+| Picker                | `c`             | add a custom target                        |
+| Picker custom         | `enter`, `esc`  | add or cancel the custom target            |
+| Picker                | `enter`         | start when at least one target is selected |
+| Picker                | `esc`           | return without running                     |
+| Detail                | `↑`, `k`        | scroll the evidence up                     |
+| Detail                | `↓`, `j`        | scroll the evidence down                   |
+| Detail                | `PgUp`, `PgDn`  | scroll one page                            |
+| Detail                | `g`, `G`        | jump to the top or end                     |
+| Detail                | `h`, `[`        | open the previous check                    |
+| Detail                | `l`, `]`        | open the next check                        |
+| Destinations, context | `↑`, `k`        | scroll up                                  |
+| Destinations, context | `↓`, `j`        | scroll down                                |
+| Destinations, context | `g`, `G`        | jump to the first or last row              |
+| Destinations, context | `esc`           | go back to the previous page               |
+| Running baseline      | `x`             | cancel the current check                   |
+| Running baseline      | `X`             | cancel the baseline, keep results          |
+| Detail, help, context | `esc`           | go back one page                           |
+| Dashboard, detail     | `?`             | open help                                  |
+| Help                  | `?`, `esc`      | close help and return                      |
+| Dashboard, detail     | `q`             | quit immediately                           |
+| Dashboard, detail     | `ctrl+c`        | ask for confirmation, then quit            |
+| Confirmation          | `y`             | quit                                       |
+| Confirmation          | `n`, `esc`      | cancel and stay                            |
 
 `esc` never quits, never cancels a check and never changes the selection; on the
 dashboard it does nothing. `ctrl+c` asks before quitting; `q` is the immediate
@@ -82,15 +93,16 @@ on the next action, and it never adds a row to the footer.
 
 ## Pages
 
-| Page          | Content                                           |
-| :------------ | :------------------------------------------------ |
-| Dashboard     | path list, evidence pane, contextual footer hints |
-| Detail        | one scrollable check with its full evidence       |
-| Help          | scrollable key map and verdict semantics          |
-| Destinations  | documented outbound endpoints and their transport |
-| Context       | proxy and tunnel context with its source          |
-| Export prompt | default export path with overwrite confirmation   |
-| Quit          | confirmation after `ctrl+c`                       |
+| Page          | Content                                                   |
+| :------------ | :-------------------------------------------------------- |
+| Dashboard     | path list, evidence pane, contextual footer hints         |
+| Detail        | one scrollable check with its full evidence               |
+| Help          | scrollable key map and verdict semantics                  |
+| Destinations  | documented outbound endpoints and their transport         |
+| Context       | proxy and tunnel context with its source                  |
+| Picker        | target selection with categories, filter and custom input |
+| Export prompt | default export path with overwrite confirmation           |
+| Quit          | confirmation after `ctrl+c`                               |
 
 ## Verdict semantics
 

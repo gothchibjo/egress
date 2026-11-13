@@ -53,6 +53,7 @@ type options struct {
 	networkContext *platform.NetworkContext
 	contextErr     string
 	rerun          func()
+	startSelection func(presets []domain.Preset, custom []string)
 	cancelCurrent  func()
 	cancelAll      func()
 }
@@ -121,6 +122,11 @@ func WithContext(context platform.NetworkContext, err error) Option {
 	}
 }
 
+// WithStartSelection wires the picker to the run starter.
+func WithStartSelection(start func(presets []domain.Preset, custom []string)) Option {
+	return func(o *options) { o.startSelection = start }
+}
+
 // WithRerun wires the dashboard re-run action to the session owner.
 func WithRerun(rerun func()) Option {
 	return func(o *options) { o.rerun = rerun }
@@ -147,6 +153,7 @@ type Model struct {
 	detailOffset       int
 	contextReturn      viewState
 	contextOffset      int
+	picker             pickerState
 	confirmQuit        bool
 	running            bool
 	cancelled          bool
@@ -173,6 +180,7 @@ func New(results []domain.Result, verdict domain.Verdict, opts ...Option) Model 
 		width:      80,
 		height:     24,
 		opts:       options{color: colorEnabled()},
+		picker:     pickerState{selected: make(map[string]bool)},
 	}
 	for _, opt := range opts {
 		opt(&model.opts)
@@ -380,6 +388,8 @@ func (m Model) View() string {
 		return m.renderDestinations()
 	case viewContext:
 		return m.renderContext()
+	case viewPicker:
+		return m.renderPicker()
 	}
 	switch m.Layout() {
 	case LayoutStopped:

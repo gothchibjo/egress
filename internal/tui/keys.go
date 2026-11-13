@@ -11,6 +11,7 @@ const (
 	viewHelp
 	viewDestinations
 	viewContext
+	viewPicker
 )
 
 // updateKey dispatches a key press to the active page. Every action has a key;
@@ -29,6 +30,8 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateDestinationsKey(msg)
 	case viewContext:
 		return m.updateContextKey(msg)
+	case viewPicker:
+		return m.updatePickerKey(msg)
 	case viewDetail:
 		return m.updateDetailKey(msg)
 	default:
@@ -66,6 +69,8 @@ func (m Model) updateDashboardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.view = viewDestinations
 	case "c":
 		return m.openContext(viewDashboard), nil
+	case "t":
+		return m.openPicker(), nil
 	case "e":
 		return m.exportCurrent()
 	case "E":
@@ -283,10 +288,15 @@ func (m Model) footerHints() string {
 		return "↑/k ↓/j scroll" + sep + "h/l check" + sep + "esc back" + sep + "? help"
 	case viewDestinations, viewContext:
 		return "j/k scroll" + sep + "esc back" + sep + "? help" + sep + "q quit"
+	case viewPicker:
+		return "space select" + sep + "/ filter" + sep + "c custom" + sep + "enter run" + sep + "esc back"
 	case viewHelp:
 		return "j/k scroll" + sep + "? close" + sep + "esc back"
 	default:
-		return "↑/k ↓/j move" + sep + "enter open" + sep + "? help" + sep + "q quit"
+		if m.Layout() == LayoutCompact {
+			return "↑↓ move" + sep + "enter open" + sep + "t targets" + sep + "q quit"
+		}
+		return "↑/k ↓/j move" + sep + "enter open" + sep + "t targets" + sep + "? help" + sep + "q quit"
 	}
 }
 
@@ -303,6 +313,7 @@ func helpLines() []string {
 		"   PgUp/PgDn  scroll one page",
 		"   enter      open · esc back",
 		"   c / d      context / destinations",
+		"   t          choose targets",
 		" ACTIONS",
 		"   r          run the baseline again",
 		"   e / E      export default / path",
