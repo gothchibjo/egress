@@ -273,6 +273,8 @@ implementation in the order above.
 | 2026-11-13 | REQ-002 | Filtering never changes the selection silently.                     | Selection is a set keyed by preset id, independent of the filtered view; a test toggles rows, filters and re-reads the set.                      | pass   |
 | 2026-11-13 | REQ-003 | Full URLs with scheme and path remain out of v1.                    | The parser rejects any input containing `://`, `/`, `?` or `#`, and a test asserts the error message names the limitation.                       | pass   |
 | 2026-11-13 | REQ-003 | An unresolvable hostname produces a diagnostic result, not a crash. | Resolution errors are stored on the custom target and rendered as `unresolved: ...`; a test injects a failing resolver.                          | pass   |
+| 2026-11-13 | REQ-004 | Probes go only to selected targets and declared resolvers.          | The ladder takes an explicit target and uses the configured resolvers plus the documented DoH endpoint; no other destination is dialed.          | pass   |
+| 2026-11-13 | REQ-004 | Every probe step has a bounded timeout.                             | Each step runs under a 2 s context deadline; a timed-out step becomes a fail or skipped result and never blocks later steps.                     | pass   |
 
 # Implementation Log
 
@@ -295,3 +297,7 @@ implementation in the order above.
   URLs, paths and invalid ports inline, resolves hostnames off the event loop,
   shows the addresses or the resolution error, and de-duplicates by normalized
   key.
+- 2026-11-13 — REQ-004 adds the independent ladder per target: DNS with DoH
+  comparison, TCP per port, three SNI variants, HTTP, ICMP and a trace step that
+  stays skipped until REQ-005; every step has its own 2 s timeout, timing and
+  measurements.

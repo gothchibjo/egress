@@ -1,0 +1,4 @@
+=== RUN   TestLadderIntegration
+--- PASS: TestLadderIntegration (0.62s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	(cached)
