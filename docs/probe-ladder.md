@@ -49,6 +49,20 @@ A failing or skipped step never cancels a later step. A DNS failure still allows
 TCP and TLS probes when the host is an IP literal, and a TCP refusal still lets
 the HTTP and ICMP steps run.
 
+## Localization
+
+The hop table feeds `domain.LocalizePath`, which yields one of three findings:
+
+- `path complete at hop N` when the target answered;
+- `drop after hop N` when the replies stop and the ladder did not reach the
+  target;
+- `inconclusive between hops N and M` when the trace was truncated or the target
+  answered the ladder, so the silence is likely ICMP filtering.
+
+Every finding lists the alternative explanations; a silent hop alone is never
+presented as proof of blocking. The localization is cross-checked with the
+ladder's TCP, DNS and HTTP outcomes.
+
 ## Destinations
 
 The ladder dials only the selected target and the configured resolvers plus the

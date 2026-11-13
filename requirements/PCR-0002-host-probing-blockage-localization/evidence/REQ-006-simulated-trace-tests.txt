@@ -1,0 +1,18 @@
+=== RUN   TestLocalizePathComplete
+--- PASS: TestLocalizePathComplete (0.00s)
+=== RUN   TestLocalizePathDrop
+--- PASS: TestLocalizePathDrop (0.00s)
+=== RUN   TestLocalizePathTruncatedIsInconclusive
+--- PASS: TestLocalizePathTruncatedIsInconclusive (0.00s)
+=== RUN   TestLocalizePathLadderReachableIsInconclusive
+--- PASS: TestLocalizePathLadderReachableIsInconclusive (0.00s)
+=== RUN   TestLocalizePathNoReplies
+--- PASS: TestLocalizePathNoReplies (0.00s)
+=== RUN   TestLocalizePathStarInTheMiddleDoesNotLookLikeADrop
+--- PASS: TestLocalizePathStarInTheMiddleDoesNotLookLikeADrop (0.00s)
+=== RUN   TestLocalizePathWithoutData
+--- PASS: TestLocalizePathWithoutData (0.00s)
+=== RUN   TestHopLossPercent
+--- PASS: TestHopLossPercent (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/domain	(cached)

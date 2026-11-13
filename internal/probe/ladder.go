@@ -62,6 +62,7 @@ func TargetFromCustom(target domain.Target) LadderTarget {
 
 // Ladder runs the independent probe steps for one target.
 type Ladder struct {
+	tracer     Tracer
 	tracerInfo TracerInfo
 	timeout    time.Duration
 	now        func() time.Time
@@ -83,6 +84,7 @@ func NewLadder(elevated bool) Ladder {
 	timeout := defaultLadderTimeout
 	tracer, tracerInfo := NewTracer(elevated)
 	ladder := Ladder{
+		tracer:     tracer,
 		tracerInfo: tracerInfo,
 		timeout:    timeout,
 		now:        time.Now,
@@ -97,6 +99,11 @@ func NewLadder(elevated bool) Ladder {
 	}
 	ladder.trace = TraceStep(tracer)
 	return ladder
+}
+
+// Tracer returns the tracing method selected for this ladder.
+func (l Ladder) Tracer() Tracer {
+	return l.tracer
 }
 
 // TracerInfo reports the tracing method and session mode selected for this
