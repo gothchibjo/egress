@@ -1,0 +1,259 @@
+---
+pcr: PCR-0002
+title: Interactive host probing and blockage localization
+status: plan_approved
+basis: 03-technical.yaml (frozen)
+revised: 2026-11-13
+approved_by: gothchibjo
+approved_at: 2026-11-13
+---
+
+# Plan Invariants
+
+- The contract is sealed: `03-technical.yaml` is `frozen` and its REQ titles,
+  descriptions, acceptance criteria, dependencies, verification and guard
+  conditions are not editable here. A scope deviation routes to change control
+  as a new PCR via `req-workflow`, not to a plan edit.
+- Every task implements an existing REQ. A missing or contradictory requirement
+  is reported, never patched into the plan.
+- Each REQ is worked only after `req-guards` passes its guard conditions, and is
+  closed only with the evidence its section names.
+- Development runs in the existing `github.com/gothchibjo/egress` module and
+  reuses the PCR-0001 building blocks: domain result model, runner, platform
+  capabilities, report envelope, dashboard shell.
+- PCR-0001 behaviour is sealed by its own tests: the baseline dashboard, its
+  keys, its JSON envelope (`result-v1`) and exit codes must stay unchanged. A
+  regression there blocks the REQ being worked on.
+- No new dependency is added without a stated reason in the REQ section.
+- Domain types stay independent of the TUI, OS probing and I/O.
+
+# Structural Decisions
+
+| Decision        | Choice                                                                                                                                                      | Reason                                                                        |
+| :-------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------- |
+| Entry point     | the picker opens from the PCR-0001 dashboard with `p`; `Esc` returns without running                                                                        | REQ-002 says "from the dashboard"; the baseline stays one key away            |
+| Session model   | new `internal/domain/session.go`: `Session`, `Target`, `LadderStep`, `Hop`, `Hypothesis`                                                                    | REQ-004…REQ-008 need richer evidence than the baseline `Result`               |
+| Probe packages  | extend `internal/probe` with `ladder.go`, `tls.go`, `http_probe.go`, `trace_udp.go`, `trace_icmp.go`, `scheduler.go` (scheduler may live in `internal/app`) | one probe package keeps the adapter boundary                                  |
+| Concurrency     | `internal/app` scheduler: worker pool capped at four targets, ladder steps sequential per target                                                            | REQ-009                                                                       |
+| JSON            | new `session-v1` envelope and schema in `internal/report`; `result-v1` stays untouched for the baseline CLI                                                 | REQ-011 needs targets, steps, hops; changing `result-v1` would break PCR-0001 |
+| Tracing         | UDP tracepath-style by default, ICMP traceroute only when already elevated                                                                                  | REQ-005                                                                       |
+| TLS probe       | ClientHello with real, decoy and absent SNI over TCP, classified by the first server record, alert or reset                                                 | REQ-004                                                                       |
+| Limits          | 2 s per probe, 3 probes per hop, 30 hops, 4 targets                                                                                                         | REQ-009 bounded timeouts                                                      |
+| Catalog version | constant in code, reported in every session and the export                                                                                                  | REQ-001                                                                       |
+
+# Execution Order
+
+Topological by frozen `dependencies`, ties by REQ id.
+
+## REQ-001 — Static preset target catalog (must, s)
+
+- Define the catalog type: display name, host, category, default ports and
+  protocols, stable id.
+- Ship the eleven entries: YouTube, Telegram, Discord, GitHub, Google,
+  Cloudflare, Wikipedia, X, Tor, 1.1.1.1, 8.8.8.8.
+- Add the catalog version constant and expose it on the session.
+- Tests: all eleven present, every entry exposes its probed address, unique ids,
+  load without file or network access.
+- Guards: the catalog is static and built into the binary; no update mechanism.
+- Evidence: catalog review sign-off, traceability matrix.
+
+## REQ-002 — Target picker with multi-select and filter (must, m)
+
+- Add a `picker` view reachable from the dashboard with `p`; `Esc` returns.
+- Render categories with a visible checkbox per row, the display label and the
+  probed address.
+- Implement `/` filtering that preserves the current selection, `Space` toggle,
+  a persistent selected count, and inline custom-target entry.
+- `Enter` starts the run only with at least one target; an empty selection shows
+  a concrete explanation.
+- Tests at 80x24 and 60x20: checkbox state, filter keeps selection, count,
+  empty-selection guard, `Esc` runs nothing.
+- Guards: an empty selection cannot start a run; filtering never changes the
+  selection silently.
+- Evidence: TUI walkthrough notes, traceability matrix.
+
+## REQ-003 — Custom target validation and resolution (must, s)
+
+- Parse `host`, IPv4/IPv6 literal, optional `:port` and an optional protocol
+  override; reject full URLs with scheme or path.
+- Validate inline: empty host, bad literal, port outside 1-65535.
+- Resolve hostnames with the system resolver before probing and show the
+  resolved addresses; de-duplicate targets by resolved address and port.
+- An unresolvable hostname becomes a diagnostic result, not a crash.
+- Tests: valid host, IPv4, IPv6, ports 0/65536, duplicates, unresolvable host,
+  URL rejection.
+- Guards: URLs with scheme and path are out of v1; resolution failure is
+  diagnostic.
+- Evidence: unit test report, TUI walkthrough notes.
+
+## REQ-004 — Layered probe ladder per target (must, l)
+
+- Add the ladder orchestrator per target: DNS (system + DoH comparison), TCP
+  connect on the target ports, TLS ClientHello with real/decoy/absent SNI, HTTP
+  GET, ICMP echo; traceroute runs alongside.
+- Model every step as an independent result with order, timestamp, duration,
+  target and raw evidence; a failed step never cancels later steps.
+- A DNS failure still allows TCP probes when an IP is known.
+- Keep real, decoy and absent SNI outcomes distinguishable.
+- Tests: unit with fakes per step; opt-in integration against the curated
+  anchors.
+- Guards: probes only to selected targets and declared resolvers; every step
+  bounded.
+- Evidence: integration test report, traceability matrix.
+
+## REQ-005 — Privilege mode and tracing method (must, m)
+
+- Implement UDP tracepath-style tracing for unprivileged sessions.
+- Add ICMP traceroute behind the existing elevated capability check.
+- Label the session `limited` or `elevated` in the run view and the export.
+- Explain a missing raw-socket capability with an elevation hint; never prompt
+  or escalate.
+- Tests: method selection per mode, label, hint, identical result meanings.
+- Guards: unprivileged default; elevation explicit.
+- Evidence: unprivileged test report, elevated mode test report.
+
+## REQ-006 — Path discovery and drop-hop localization (must, l)
+
+- Build the hop table from trace data: per-hop sent/received, loss, min/median
+  latency.
+- Localize the path break as "drop after hop N" or "inconclusive between hops N
+  and M"; never present a silent hop as proof of blocking.
+- Cross-check the localization against TCP and DNS outcomes; ambiguous stars
+  produce an inconclusive segment with alternatives.
+- Simulation tests with crafted hop data: clean path, single drop, star range,
+  contradictory ladder evidence.
+- Guards: single vantage point; no packet capture.
+- Evidence: simulated trace test report, traceability matrix.
+
+## REQ-007 — Blockage taxonomy and ranked hypothesis (must, l)
+
+- Define the taxonomy: DNS tampering, TCP RST injection, IP drop/blackhole, port
+  block, SNI/TLS filtering, HTTP block/captive portal, throttling, unknown.
+- Produce per target one ranked hypothesis with confidence, supporting evidence
+  and rejected alternatives; `unknown` is a valid terminal outcome.
+- Document the ranking rule in `docs/blockage-taxonomy.md`.
+- Tests: one case per taxonomy member, rejected alternatives, no verdict without
+  evidence, `unknown` for thin evidence.
+- Guards: a verdict always carries evidence; the taxonomy is not extended.
+- Evidence: classification test report, verdict rule review sign-off.
+
+## REQ-008 — Active-versus-passive evidence interpretation (must, m)
+
+- Label every evidence line `active` or `passive`.
+- Forbid high confidence for a timeout-only case; name ICMP rate limiting when
+  responses are absent.
+- Show both DNS answer sets with the CDN/geo caveat; keep RST and drop verdicts
+  distinguishable.
+- Tests: RST vs drop, timeout-only, rate-limited ICMP, CDN answer variance,
+  captive portal.
+- Guards: silence is never proof of censorship; CDN differences are not
+  tampering.
+- Evidence: unit test report, interpretation review sign-off.
+
+## REQ-009 — Scheduling, concurrency and cancellation (must, m)
+
+- Add a scheduler in `internal/app`: at most four targets concurrently, ladder
+  steps sequential per target, bounded probe timeout and retry count.
+- Key semantics: `x` stops the current target, `X` stops all targets, `Esc`
+  never cancels, `Ctrl-C` asks before quitting.
+- Keep partial results exportable and the UI responsive; a hung probe cannot
+  stall the session beyond its timeout.
+- Tests with fake probes and a fake clock: concurrency cap, order, cancellation,
+  timeout, partial results.
+- Guards: concurrency capped at four; every timeout bounded.
+- Evidence: concurrency test report, cancellation test report.
+
+## REQ-010 — Adaptive run view with target tabs (must, l)
+
+- Render target tabs with running/done/cancelled states and the views Ladder,
+  Hops and Verdict.
+- Wide terminals show ladder and hops side by side; narrow terminals switch
+  between them. Keep the 80x24 / 60x20 / 40x10 thresholds of the existing shell.
+- Reuse the status marker and colour rules: monochrome and ASCII stay readable,
+  `NO_COLOR` honoured, 120/256/16-colour profiles.
+- Resizing reflows without losing the selected target, tab or scroll offset.
+- Help is reachable from the run view.
+- Tests: layout thresholds, tab states, monochrome, ASCII, resize, transcript.
+- Guards: status never depends on colour; minimum sizes enforced.
+- Evidence: TUI walkthrough notes, terminal matrix.
+
+## REQ-011 — Session JSON export (must, m)
+
+- Add `session-v1`: targets, ladder steps, raw evidence, hops, hypothesis,
+  confidence, timestamps, privilege mode, catalog version, context and
+  destination list.
+- Add `session-v1.schema.json` and validate every export in tests.
+- `e` writes `egress-<timestamp>.json`, shows the path; `E` opens a path prompt;
+  an existing file needs confirmation. Partial results after cancellation export
+  the same way.
+- Tests: schema validation, default name, overwrite confirmation, cancelled
+  session, no secrets, no unrelated host data.
+- Guards: no history or database; export contains only current-session data.
+- Evidence: JSON schema validation report, TUI walkthrough notes.
+
+## REQ-012 — Local-only operation and destination transparency (must, s)
+
+- Build the per-run destination list: selected target addresses and declared
+  resolvers, shown in the run view and included in the export.
+- Confirm no telemetry, upload, enrichment or background call is added.
+- Extend `docs/outbound-destinations.md` with the session destinations.
+- Inspection: call-site inventory, attributed network capture, code review.
+- Guards: only declared destinations receive traffic; no telemetry.
+- Evidence: network capture review, code review sign-off.
+
+## REQ-013 — Proxy and VPN context display (should, s)
+
+- Reuse `platform.DetectNetworkContext` for proxy variables and tunnel
+  interfaces.
+- Show the context in the run view and the session export, with sources and an
+  explicit absence state.
+- Tests: detected proxy, detected tunnel, both absent, export parity.
+- Guards: context is informational only; no setting is modified.
+- Evidence: unit test report, TUI walkthrough notes.
+
+## REQ-014 — Limitations and confidence disclosure (should, s)
+
+- Add the caveat block to every verdict, results view and export: single vantage
+  point, the false-positive risks of each probe, absence of evidence is not
+  proof, and a suggestion to re-run from another network.
+- Make the caveat impossible to hide or collapse.
+- Inspection against the verdict and export output plus walkthrough.
+- Guards: the caveat cannot be hidden; no claim of proof.
+- Evidence: verdict review sign-off, TUI walkthrough notes.
+
+## REQ-015 — Tool survey and feature rationale document (should, s)
+
+- Write `docs/tool-survey.md` comparing ping, traceroute, mtr, tcptraceroute,
+  nexttrace, trippy, dig/dog, curl, OONI Probe and RIPE Atlas: capability and
+  privilege model.
+- List adopted, deferred and rejected features with reasons, each adopted item
+  linked to its BR.
+- Keep the document updated when scope changes.
+- Guards: English; only the surveyed tools are named.
+- Evidence: documentation review sign-off.
+
+## REQ-016 — In-app help for picker and results (could, s)
+
+- Extend the help overlay for the picker and the run view: selection, ladder
+  steps, hop-table reading, taxonomy, confidence levels and keys.
+- Dismissal returns to the same state without losing the run.
+- Tests: help reachable from both views, content matches the key map, run state
+  preserved.
+- Guards: help matches the implemented key map; dismissal never resets the run.
+- Evidence: TUI walkthrough notes, key map review sign-off.
+
+# Plan Lifecycle
+
+## Revision 1 — 2026-11-13
+
+Initial plan for the frozen PCR-0002 contract: 16 REQs, topological order,
+`session-v1` export alongside the sealed `result-v1`, and reuse of the PCR-0001
+shell, runner and platform adapters.
+
+The plan is not approved: `plan_approval` stays `false` until a human approves
+it.
+
+## Approval — 2026-11-13
+
+Approved by gothchibjo. Revision 1 is the working plan; the 16 REQs are open for
+implementation in the order above.
