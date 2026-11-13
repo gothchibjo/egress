@@ -279,6 +279,8 @@ implementation in the order above.
 | 2026-11-13 | REQ-005 | Elevation is explicit and user-initiated.                           | No prompt, re-exec or setuid path exists; the elevated branch only reacts to the already-detected euid and falls back to UDP when the raw socket is unavailable. | pass   |
 | 2026-11-13 | REQ-006 | Localization relies on a single vantage point.                      | Every localization carries the single-vantage-point alternative; no finding claims a global view.                                                                | pass   |
 | 2026-11-13 | REQ-006 | No packet capture is used in v1.                                    | Path discovery uses TTL-limited probes and ICMP errors only; no capture API or pcap dependency exists.                                                           | pass   |
+| 2026-11-13 | REQ-007 | A verdict is never produced without evidence.                       | `Hypothesis.Validate` rejects an empty evidence list; every classifier branch builds at least one evidence line.                                                 | pass   |
+| 2026-11-13 | REQ-007 | The taxonomy is not extended without a new PCR.                     | `BlockageType.valid()` enumerates exactly the eight frozen members; an unknown type fails validation and a test rejects it.                                      | pass   |
 
 # Implementation Log
 
@@ -311,3 +313,7 @@ implementation in the order above.
 - 2026-11-13 — REQ-006 adds the hop table report and `LocalizePath`: complete,
   drop after hop N, or inconclusive between hops N and M, cross-checked with the
   ladder and always carrying alternative explanations.
+- 2026-11-13 — REQ-007 adds the closed taxonomy, the deterministic ranking and
+  `Hypothesis` with evidence, rejected alternatives, confidence and the
+  single-vantage caveat; ten scenarios cover the members and the unknown
+  outcome.
