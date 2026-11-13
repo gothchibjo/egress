@@ -64,11 +64,15 @@ func LocalizePath(hops []Hop, opts PathOptions) Localization {
 
 	maxTTL := hops[len(hops)-1].TTL
 	lastTTL := 0
-	lastAddress := ""
+	targetTTL := 0
 	for _, hop := range hops {
 		if hop.Address != "" {
 			lastTTL = hop.TTL
-			lastAddress = hop.Address
+		}
+		for _, address := range hop.AllAddresses() {
+			if opts.TargetIP != "" && address == opts.TargetIP {
+				targetTTL = hop.TTL
+			}
 		}
 	}
 
@@ -79,18 +83,18 @@ func LocalizePath(hops []Hop, opts PathOptions) Localization {
 			ToTTL:   maxTTL,
 			Summary: fmt.Sprintf("inconclusive between hops %d and %d: no hop answered", hops[0].TTL, maxTTL),
 			Alternatives: []string{
-				"ICMP may be filtered along the whole path",
-				"the target may not answer probes",
+				"routers may not answer this probe type",
+				"the target may answer other protocols only",
 				"single vantage point",
 			},
 		}
 	}
 
-	if opts.TargetIP != "" && lastAddress == opts.TargetIP {
+	if targetTTL > 0 {
 		return Localization{
 			Kind:     PathComplete,
-			AfterTTL: lastTTL,
-			Summary:  fmt.Sprintf("path complete at hop %d", lastTTL),
+			AfterTTL: targetTTL,
+			Summary:  fmt.Sprintf("path complete at hop %d", targetTTL),
 			Alternatives: []string{
 				"the path may differ for other protocols or ports",
 				"single vantage point",
@@ -107,10 +111,10 @@ func LocalizePath(hops []Hop, opts PathOptions) Localization {
 			"single vantage point",
 		}
 		if opts.LadderReachable {
-			reason = "the target answered the ladder, so the silent hops are likely ICMP filtering"
+			reason = "the target answered a transport step, but these hops returned no probe reply"
 			alternatives = []string{
-				"a router may rate-limit or block ICMP",
-				"the target may answer other protocols only",
+				"a router may rate-limit or block probe replies",
+				"the path may differ between TCP and ICMP",
 				"single vantage point",
 			}
 		}

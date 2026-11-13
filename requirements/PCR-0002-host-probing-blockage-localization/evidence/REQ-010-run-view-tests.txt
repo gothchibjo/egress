@@ -1,3 +1,21 @@
+=== RUN   TestLocalizePathComplete
+--- PASS: TestLocalizePathComplete (0.00s)
+=== RUN   TestLocalizePathDrop
+--- PASS: TestLocalizePathDrop (0.00s)
+=== RUN   TestLocalizePathTruncatedIsInconclusive
+--- PASS: TestLocalizePathTruncatedIsInconclusive (0.00s)
+=== RUN   TestLocalizePathLadderReachableIsInconclusive
+--- PASS: TestLocalizePathLadderReachableIsInconclusive (0.00s)
+=== RUN   TestLocalizePathNoReplies
+--- PASS: TestLocalizePathNoReplies (0.00s)
+=== RUN   TestLocalizePathStarInTheMiddleDoesNotLookLikeADrop
+--- PASS: TestLocalizePathStarInTheMiddleDoesNotLookLikeADrop (0.00s)
+=== RUN   TestLocalizePathWithoutData
+--- PASS: TestLocalizePathWithoutData (0.00s)
+=== RUN   TestLocalizePathFindsTargetAmongAddresses
+--- PASS: TestLocalizePathFindsTargetAmongAddresses (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/domain	0.249s
 === RUN   TestPickerStartWithoutRunView
 --- PASS: TestPickerStartWithoutRunView (0.00s)
 === RUN   TestRunViewShowsTargetTabs
@@ -54,11 +72,19 @@
 --- PASS: TestRunViewWrapsLongHopAddresses (0.00s)
 === RUN   TestRunViewHidesUnknownForCleanTargets
 --- PASS: TestRunViewHidesUnknownForCleanTargets (0.00s)
+=== RUN   TestRunViewExplainsATunneledPath
+--- PASS: TestRunViewExplainsATunneledPath (0.00s)
+=== RUN   TestRunViewShowsEveryRouterAtAHop
+--- PASS: TestRunViewShowsEveryRouterAtAHop (0.00s)
+=== RUN   TestRunViewTrimsTrailingSilentHops
+--- PASS: TestRunViewTrimsTrailingSilentHops (0.00s)
+=== RUN   TestRunViewMarksTheTargetAndLossyHops
+--- PASS: TestRunViewMarksTheTargetAndLossyHops (0.00s)
 === RUN   TestRunViewTranscript
     run_view_transcript_test.go:13: set EGRESS_TRANSCRIPT=1 to print the run view transcript
 --- SKIP: TestRunViewTranscript (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/tui	0.251s
+ok  	github.com/gothchibjo/egress/internal/tui	0.412s
 === RUN   TestProbeSessionCapsConcurrency
 --- PASS: TestProbeSessionCapsConcurrency (0.02s)
 === RUN   TestProbeSessionCancelsOneTarget
@@ -76,7 +102,7 @@ ok  	github.com/gothchibjo/egress/internal/tui	0.251s
 === RUN   TestProbeSessionReportsFinishedTargets
 --- PASS: TestProbeSessionReportsFinishedTargets (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/app	(cached)
+ok  	github.com/gothchibjo/egress/internal/app	0.804s
 === RUN   TestLadderIncludesTheTraceStep
 --- PASS: TestLadderIncludesTheTraceStep (0.00s)
 === RUN   TestLadderPlanMatchesStartEvents
@@ -96,7 +122,14 @@ ok  	github.com/gothchibjo/egress/internal/app	(cached)
 === RUN   TestTraceStepReportsFailure
 --- PASS: TestTraceStepReportsFailure (0.00s)
 === RUN   TestUDPTracerIntegration
-    trace_test.go:169: set EGRESS_INTEGRATION=1 to run the live traceroute
+    trace_test.go:174: set EGRESS_INTEGRATION=1 to run the live traceroute
 --- SKIP: TestUDPTracerIntegration (0.00s)
+=== RUN   TestTraceBandsAreDistinct
+--- PASS: TestTraceBandsAreDistinct (0.00s)
+=== RUN   TestUDPTracerReachesTheTarget
+    trace_test.go:219: set EGRESS_INTEGRATION=1 to run the live traceroute
+--- SKIP: TestUDPTracerReachesTheTarget (0.00s)
+=== RUN   TestUDPTracePortsUseTheStandardLayout
+--- PASS: TestUDPTracePortsUseTheStandardLayout (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/probe	(cached)
+ok  	github.com/gothchibjo/egress/internal/probe	0.783s

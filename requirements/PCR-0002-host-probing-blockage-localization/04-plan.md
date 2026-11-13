@@ -359,3 +359,24 @@ implementation in the order above.
 - 2026-11-13 — REQ-007/REQ-010: a clean target is reported as
   `no blockage detected` instead of `unknown (low)`; the taxonomy type stays
   `unknown` and a `no_blockage` flag carries the distinction.
+- 2026-11-13 — REQ-010: an all-silent trace is explained instead of drawn as
+  broken hops; the HOPS title carries the tracing method and the traced address,
+  and the docs describe tunneled paths.
+- 2026-11-13 — REQ-010/REQ-006: the hop table lists every router that answered
+  at a TTL and trims trailing silent hops to one row, so different targets no
+  longer look like identical walls of stars; reverse DNS names stay out of v1.
+- 2026-11-13 — REQ-005/REQ-006: every trace gets its own UDP port band and ICMP
+  echo id, so concurrent targets cannot cross-attribute hops; the hop table
+  lists all responding routers and trims trailing silent hops.
+- 2026-11-13 — REQ-004/REQ-005: the ladder resolves once and probes the same
+  IPv4 address in TCP, TLS, ICMP and the trace; the trace records that address
+  and the HOPS title shows exactly what was traced.
+- 2026-11-13 — REQ-010: a target reached by a transport step no longer shows a
+  trailing star; the hop table ends at the last answering router and the
+  localization explains the missing ICMP replies.
+- 2026-11-13 — REQ-005/REQ-010: unprivileged UDP tracing now uses the standard
+  traceroute port layout and serializes traces, so the target appears on the TTL
+  where the familiar `traceroute` shows it instead of stopping at an arbitrary
+  high port. The hop table marks the target hop, partial loss and the silent
+  drop boundary, and the localization states facts instead of asserting ICMP
+  filtering.

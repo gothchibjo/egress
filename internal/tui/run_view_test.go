@@ -500,3 +500,138 @@ func TestRunViewHidesUnknownForCleanTargets(t *testing.T) {
 		t.Fatalf("clean target has no explicit outcome:\n%s", view)
 	}
 }
+
+func TestRunViewExplainsATunneledPath(t *testing.T) {
+	steps := []domain.StepResult{
+		runStep("dns", domain.StepDNS, domain.StatusPass, 400, domain.Measurement{Name: "system.answers", Value: "87.120.36.68"}),
+	}
+	trace := runStep("trace", domain.StepTrace, domain.StatusWarn, 15000, domain.Measurement{Name: "method", Value: "udp"})
+	trace.Diagnostic = "no hop answered; ICMP may be filtered"
+	trace.Hops = []domain.Hop{
+		{TTL: 1, Sent: 3},
+		{TTL: 2, Sent: 3},
+		{TTL: 3, Sent: 3},
+	}
+	steps = append(steps, trace)
+	targets := runTargets()
+	model := runModel(t, 120, 40)
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetDone, Steps: steps},
+		{Target: targets[1], State: app.TargetDone},
+	}}})
+
+	view := model.View()
+	if !strings.Contains(view, "no hop answered") {
+		t.Fatalf("tunneled path is not explained:\n%s", view)
+	}
+	if strings.Contains(view, "100%") {
+		t.Fatalf("tunneled path is drawn as broken hops:\n%s", view)
+	}
+	if !strings.Contains(view, "87.120.36.68") {
+		t.Fatalf("traced address is missing:\n%s", view)
+	}
+}
+
+func TestRunViewShowsEveryRouterAtAHop(t *testing.T) {
+	steps := []domain.StepResult{
+		runStep("dns", domain.StepDNS, domain.StatusPass, 10, domain.Measurement{Name: "system.answers", Value: "203.0.113.10"}),
+	}
+	trace := runStep("trace", domain.StepTrace, domain.StatusPass, 500, domain.Measurement{Name: "method", Value: "udp"})
+	trace.Hops = []domain.Hop{{
+		TTL: 5, Address: "109.206.242.94",
+		Addresses: []string{"109.206.242.94", "109.206.242.60"},
+		Sent:      3, Received: 3, RTTMedianMS: 20,
+	}}
+	steps = append(steps, trace)
+	targets := runTargets()
+	model := runModel(t, 160, 40)
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetDone, Steps: steps},
+		{Target: targets[1], State: app.TargetDone},
+	}}})
+	model, _ = pressKey(t, model, "2")
+
+	view := model.View()
+	if !strings.Contains(view, "109.206.242.94") || !strings.Contains(view, "109.206.242.60") {
+		t.Fatalf("a hop with two routers shows only one:\n%s", view)
+	}
+}
+
+func TestRunViewTrimsTrailingSilentHops(t *testing.T) {
+	steps := []domain.StepResult{
+		runStep("dns", domain.StepDNS, domain.StatusPass, 10, domain.Measurement{Name: "system.answers", Value: "203.0.113.10"}),
+	}
+	trace := runStep("trace", domain.StepTrace, domain.StatusWarn, 500, domain.Measurement{Name: "method", Value: "udp"})
+	trace.Hops = []domain.Hop{
+		{TTL: 1, Address: "192.0.2.1", Sent: 3, Received: 3},
+		{TTL: 2, Address: "198.51.100.1", Sent: 3, Received: 3},
+		{TTL: 3, Sent: 3},
+		{TTL: 4, Sent: 3},
+		{TTL: 5, Sent: 3},
+	}
+	steps = append(steps, trace)
+	targets := runTargets()
+	model := runModel(t, 160, 40)
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetDone, Steps: steps},
+		{Target: targets[1], State: app.TargetDone},
+	}}})
+	model, _ = pressKey(t, model, "2")
+
+	view := model.View()
+	if strings.Contains(view, "5  *") || strings.Contains(view, "4  *") {
+		t.Fatalf("trailing silent hops are still listed:\n%s", view)
+	}
+	if !strings.Contains(view, "3  *") {
+		t.Fatalf("the first silent hop is not shown:\n%s", view)
+	}
+
+	// When a transport step reaches the target, the trailing star is dropped.
+	reached := []domain.StepResult{
+		runStep("dns", domain.StepDNS, domain.StatusPass, 10, domain.Measurement{Name: "system.answers", Value: "203.0.113.10"}),
+		runStep("tcp.443", domain.StepTCP, domain.StatusPass, 20, domain.Measurement{Name: "outcome", Value: "connected"}),
+		trace,
+	}
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetDone, Steps: reached},
+		{Target: targets[1], State: app.TargetDone},
+	}}})
+	view = model.View()
+	if strings.Contains(view, "3  *") {
+		t.Fatalf("a reachable target still shows a trailing star:\n%s", view)
+	}
+}
+
+func TestRunViewMarksTheTargetAndLossyHops(t *testing.T) {
+	steps := []domain.StepResult{
+		runStep("dns", domain.StepDNS, domain.StatusPass, 10, domain.Measurement{Name: "system.answers", Value: "203.0.113.10"}),
+		runStep("tcp.443", domain.StepTCP, domain.StatusPass, 20, domain.Measurement{Name: "outcome", Value: "connected"}),
+	}
+	trace := runStep("trace", domain.StepTrace, domain.StatusPass, 500,
+		domain.Measurement{Name: "method", Value: "icmp"},
+		domain.Measurement{Name: "address", Value: "203.0.113.10"})
+	trace.Hops = []domain.Hop{
+		{TTL: 1, Address: "192.0.2.1", Sent: 3, Received: 3, RTTMedianMS: 10},
+		{TTL: 2, Address: "198.51.100.1", Sent: 3, Received: 2, RTTMedianMS: 20},
+		{TTL: 3, Address: "203.0.113.10", Sent: 3, Received: 3, RTTMedianMS: 30},
+	}
+	steps = append(steps, trace)
+	targets := runTargets()
+	model := runModel(t, 160, 40)
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetDone, Steps: steps},
+		{Target: targets[1], State: app.TargetDone},
+	}}})
+	model, _ = pressKey(t, model, "2")
+
+	view := model.View()
+	if !strings.Contains(view, "→   3") {
+		t.Fatalf("the target hop is not marked:\n%s", view)
+	}
+	if !strings.Contains(view, "!   2") {
+		t.Fatalf("a hop with partial loss is not marked:\n%s", view)
+	}
+	if !strings.Contains(view, "path complete at hop 3") {
+		t.Fatalf("the localization is missing:\n%s", view)
+	}
+}

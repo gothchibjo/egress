@@ -627,9 +627,33 @@ func (m Model) runHopsLines(width, height int) []string {
 	if method != "" {
 		name = "HOPS (" + method + ")"
 	}
+	if address := tracedAddress(target.steps); address != "" && width >= 50 {
+		name += " -> " + address
+	}
 	title := m.paneTitle(name, runViewHops)
 	if len(target.path.Hops) == 0 {
 		return []string{title, "", " no path data yet"}
+	}
+
+	allSilent := true
+	for _, hop := range target.path.Hops {
+		if hop.Received > 0 {
+			allSilent = false
+			break
+		}
+	}
+	if allSilent {
+		lines := []string{title, "", " no hop answered on " + method}
+		if ladderReached(target.steps) {
+			lines = append(lines, " the target answered a transport step; no router returned a probe reply")
+		} else {
+			lines = append(lines, " the target did not answer any ladder step")
+		}
+		lines = append(lines, fmt.Sprintf(" %d TTLs probed without a reply", len(target.path.Hops)))
+		if summary := target.path.Localization.Summary; summary != "" {
+			lines = append(lines, "", " "+summary)
+		}
+		return wrapPaneLines(lines, width)
 	}
 
 	narrow := width < 56
@@ -637,26 +661,31 @@ func (m Model) runHopsLines(width, height int) []string {
 	if addressWidth < 18 {
 		addressWidth = 18
 	}
-	table := make([]string, 0, len(target.path.Hops)+2)
+	// A target that answered the ladder is reachable even when the traceroute
+	// received no ICMP reply for the last TTLs; do not draw a trailing star.
+	hops := trimSilentTail(target.path.Hops, !ladderReached(target.steps))
+	targetIP := tracedAddress(target.steps)
+	table := make([]string, 0, len(hops)+2)
 	if narrow {
-		table = append(table, fmt.Sprintf(" %3s  %s", "TTL", "ADDRESS"), "      LOSS / RTT")
+		table = append(table, fmt.Sprintf("  %3s  %s", "TTL", "ADDRESS"), "        LOSS / RTT")
 	} else {
-		table = append(table, fmt.Sprintf(" %3s  %-*s %5s %7s", "TTL", addressWidth, "ADDRESS", "LOSS", "RTT"))
+		table = append(table, fmt.Sprintf("  %3s  %-*s %5s %7s", "TTL", addressWidth-2, "ADDRESS", "LOSS", "RTT"))
 	}
-	for _, hop := range target.path.Hops {
-		address := hop.Address
+	for index, hop := range hops {
+		address := hopAddress(hop)
 		if address == "" {
 			address = "*"
 		}
-		if narrow || lipgloss.Width(address) > addressWidth {
+		marker := hopMarker(hop, targetIP, index == len(hops)-1)
+		if narrow || lipgloss.Width(address) > addressWidth-2 {
 			table = append(table,
-				fmt.Sprintf(" %3d  %s", hop.TTL, address),
-				fmt.Sprintf("      %d%% loss  %dms", hop.LossPercent(), hop.RTTMedianMS),
+				fmt.Sprintf("%s %3d  %s", marker, hop.TTL, address),
+				fmt.Sprintf("        %d%% loss  %dms", hop.LossPercent(), hop.RTTMedianMS),
 			)
 			continue
 		}
-		table = append(table, fmt.Sprintf(" %3d  %-*s %4d%% %6dms",
-			hop.TTL, addressWidth, address, hop.LossPercent(), hop.RTTMedianMS))
+		table = append(table, fmt.Sprintf("%s %3d  %-*s %4d%% %6dms",
+			marker, hop.TTL, addressWidth-2, address, hop.LossPercent(), hop.RTTMedianMS))
 	}
 	if summary := target.path.Localization.Summary; summary != "" {
 		table = append(table, "", " "+summary)
@@ -847,4 +876,104 @@ func (m Model) clipLabel(text string, width int) string {
 		ellipsis = "..."
 	}
 	return clip(text, width-lipgloss.Width(ellipsis)) + ellipsis
+}
+
+// tracedAddress returns the address the ladder resolved for the target.
+func tracedAddress(steps []domain.StepResult) string {
+	for _, step := range steps {
+		if step.Kind == domain.StepTrace {
+			for _, measurement := range step.Measurements {
+				if measurement.Name == "address" && measurement.Value != "" {
+					return measurement.Value
+				}
+			}
+		}
+	}
+	for _, step := range steps {
+		switch step.Kind {
+		case domain.StepDNS:
+			for _, measurement := range step.Measurements {
+				if measurement.Name == "system.answers" && measurement.Value != "" && measurement.Value != "none" {
+					if index := strings.Index(measurement.Value, ","); index >= 0 {
+						return strings.TrimSpace(measurement.Value[:index])
+					}
+					return strings.TrimSpace(measurement.Value)
+				}
+			}
+		case domain.StepICMP:
+			for _, measurement := range step.Measurements {
+				if measurement.Name == "address" && measurement.Value != "" {
+					return measurement.Value
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// hopMarker flags what deserves attention in a table that otherwise follows
+// the familiar traceroute layout: the target hop, a hop with partial loss and
+// the silent hop where the replies stop.
+func hopMarker(hop domain.Hop, targetIP string, last bool) string {
+	if targetIP != "" {
+		for _, address := range hop.AllAddresses() {
+			if address == targetIP {
+				return "→"
+			}
+		}
+	}
+	if hop.Received == 0 {
+		if last {
+			return "x"
+		}
+		return " "
+	}
+	if hop.Received < hop.Sent {
+		return "!"
+	}
+	return " "
+}
+
+// hopAddress joins every router that answered at one TTL.
+func hopAddress(hop domain.Hop) string {
+	if len(hop.Addresses) > 0 {
+		return strings.Join(hop.Addresses, ", ")
+	}
+	return hop.Address
+}
+
+// trimSilentTail drops trailing silent hops so a table does not end in a wall
+// of stars. One silent hop is kept only when the target was not reachable on a
+// ladder step, to show where the replies stop.
+func trimSilentTail(hops []domain.Hop, keepSilent bool) []domain.Hop {
+	last := -1
+	for i, hop := range hops {
+		if hop.Received > 0 {
+			last = i
+		}
+	}
+	if last < 0 || last == len(hops)-1 {
+		return hops
+	}
+	end := last + 1
+	if keepSilent {
+		end = last + 2
+	}
+	if end > len(hops) {
+		end = len(hops)
+	}
+	return hops[:end]
+}
+
+// ladderReached reports whether a transport step reached the target.
+func ladderReached(steps []domain.StepResult) bool {
+	for _, step := range steps {
+		switch step.Kind {
+		case domain.StepTCP, domain.StepTLS, domain.StepHTTP:
+			if step.Status == domain.StatusPass {
+				return true
+			}
+		}
+	}
+	return false
 }

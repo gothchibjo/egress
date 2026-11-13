@@ -9,13 +9,13 @@ Reviewer sign-off: pending
 === run view, wide (120x40) ===
  egress — RUN                                                                                               1/2 targets 
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
- TARGETS               │  LADDER ·                              │  HOPS (udp)                                           
-> ✓ Alpha              │   ✓ dns           40ms                 │  TTL  ADDRESS                                         
-  x Beta               │   ✓ tcp.443       30ms                 │       LOSS / RTT                                      
-                       │   ✓ icmp          20ms                 │    1  192.0.2.1                                       
-                       │   ✓ trace        900ms                 │       0% loss  12ms                                   
-                       │                                        │    2  203.0.113.10                                    
-                       │                                        │       0% loss  35ms                                   
+ TARGETS               │  LADDER ·                              │  HOPS (udp) -> 203.0.113.10                           
+> ✓ Alpha              │   ✓ dns           40ms                 │   TTL  ADDRESS                                        
+  x Beta               │   ✓ tcp.443       30ms                 │         LOSS / RTT                                    
+                       │   ✓ icmp          20ms                 │     1  192.0.2.1                                      
+                       │   ✓ trace        900ms                 │         0% loss  12ms                                 
+                       │                                        │ →   2  203.0.113.10                                   
+                       │                                        │         0% loss  35ms                                 
                        │                                        │                                                       
                        │                                        │  path complete at hop 2                               
                        │                                        │                                                       
@@ -74,12 +74,12 @@ Reviewer sign-off: pending
  egress — RUN                                   1/2 targets 
 ────────────────────────────────────────────────────────────
  TARGETS         │  HOPS (udp) ·                            
-> ✓ Alpha        │  TTL  ADDRESS                            
-  x Beta         │       LOSS / RTT                         
-                 │    1  192.0.2.1                          
-                 │       0% loss  12ms                      
-                 │    2  203.0.113.10                       
-                 │       0% loss  35ms                      
+> ✓ Alpha        │   TTL  ADDRESS                           
+  x Beta         │         LOSS / RTT                       
+                 │     1  192.0.2.1                         
+                 │         0% loss  12ms                    
+                 │ →   2  203.0.113.10                      
+                 │         0% loss  35ms                    
                  │                                          
                  │  path complete at hop 2                  
                  │                                          
@@ -142,4 +142,4 @@ Reviewer sign-off: pending
                                                   
 --- PASS: TestRunViewTranscript (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/tui	0.278s
+ok  	github.com/gothchibjo/egress/internal/tui	(cached)

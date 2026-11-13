@@ -69,9 +69,8 @@ type Ladder struct {
 	trace      TraceFunc
 }
 
-// TraceFunc produces the traceroute step. It arrives with REQ-005; until then
-// the ladder reports the step as skipped.
-type TraceFunc func(ctx context.Context, target LadderTarget) domain.StepResult
+// TraceFunc produces the traceroute step for one resolved address.
+type TraceFunc func(ctx context.Context, target LadderTarget, address string) domain.StepResult
 
 // NewLadder wires the real clients for one session.
 func NewLadder(elevated bool) Ladder {
@@ -109,12 +108,18 @@ func (l Ladder) TracerInfo() TracerInfo {
 // TraceStep adapts a tracer into the ladder's trace step. It runs under its own
 // budget because a path discovery needs longer than one probe.
 func TraceStep(tracer Tracer) TraceFunc {
-	return func(ctx context.Context, target LadderTarget) domain.StepResult {
+	return func(ctx context.Context, target LadderTarget, address string) domain.StepResult {
 		traceCtx, cancel := context.WithTimeout(ctx, traceStepBudget)
 		defer cancel()
 
 		started := time.Now()
-		hops, err := tracer.Trace(traceCtx, target.Host)
+		var hops []domain.Hop
+		var err error
+		if ip := net.ParseIP(address); ip != nil {
+			hops, err = tracer.TraceIP(traceCtx, ip)
+		} else {
+			hops, err = tracer.Trace(traceCtx, target.Host)
+		}
 		step := domain.StepResult{
 			ID:           "trace",
 			Kind:         domain.StepTrace,
@@ -139,6 +144,7 @@ func TraceStep(tracer Tracer) TraceFunc {
 		}
 		step.Measurements = append(step.Measurements,
 			domain.Measurement{Name: "method", Value: tracer.Method()},
+			domain.Measurement{Name: "address", Value: address},
 			domain.Measurement{Name: "hops", Value: strconv.Itoa(len(hops))},
 			domain.Measurement{Name: "responding_hops", Value: strconv.Itoa(responding)},
 		)
@@ -216,6 +222,11 @@ func (l Ladder) run(ctx context.Context, target LadderTarget, onStart func(domai
 	announce("dns", domain.StepDNS)
 	dnsStep, systemAnswers := l.runDNS(ctx, target)
 	add(dnsStep)
+	primary := preferredAnswer(systemAnswers)
+	dialHost := target.Host
+	if primary != "" {
+		dialHost = primary
+	}
 
 	if hasProtocol(target.Protocols, domain.PresetTCP) {
 		for _, port := range target.Ports {
@@ -223,7 +234,7 @@ func (l Ladder) run(ctx context.Context, target LadderTarget, onStart func(domai
 				return steps
 			}
 			announce(fmt.Sprintf("tcp.%d", port), domain.StepTCP)
-			add(l.runTCP(ctx, target, port))
+			add(l.runTCP(ctx, target, port, dialHost))
 		}
 	}
 	if hasProtocol(target.Protocols, domain.PresetTLS) && len(target.Ports) > 0 {
@@ -240,7 +251,7 @@ func (l Ladder) run(ctx context.Context, target LadderTarget, onStart func(domai
 				return steps
 			}
 			announce("tls."+variant.id, domain.StepTLS)
-			add(l.runTLS(ctx, target, port, variant.id, variant.sni))
+			add(l.runTLS(ctx, target, port, dialHost, variant.id, variant.sni))
 		}
 	}
 	if ctx.Err() == nil && hasProtocol(target.Protocols, domain.PresetHTTP) && len(target.Ports) > 0 {
@@ -249,23 +260,23 @@ func (l Ladder) run(ctx context.Context, target LadderTarget, onStart func(domai
 	}
 	if ctx.Err() == nil && hasProtocol(target.Protocols, domain.PresetICMP) {
 		announce("icmp", domain.StepICMP)
-		add(l.runICMP(ctx, target, systemAnswers))
+		add(l.runICMP(ctx, target, primary))
 	}
 	if ctx.Err() == nil {
 		announce("trace", domain.StepTrace)
-		add(l.runTrace(ctx, target))
+		add(l.runTrace(ctx, target, primary))
 	}
 
 	return steps
 }
 
-func (l Ladder) runTrace(ctx context.Context, target LadderTarget) domain.StepResult {
+func (l Ladder) runTrace(ctx context.Context, target LadderTarget, address string) domain.StepResult {
 	if l.trace == nil {
 		return l.step(ctx, domain.StepTrace, "trace", target.Host, func(context.Context) (domain.Status, []domain.Measurement, string, string) {
 			return domain.StatusSkipped, nil, "traceroute method arrives with REQ-005", ""
 		})
 	}
-	return l.trace(ctx, target)
+	return l.trace(ctx, target, address)
 }
 
 func (l Ladder) runDNS(ctx context.Context, target LadderTarget) (domain.StepResult, []string) {
@@ -309,8 +320,8 @@ func (l Ladder) runDNS(ctx context.Context, target LadderTarget) (domain.StepRes
 	return step, systemAnswers
 }
 
-func (l Ladder) runTCP(ctx context.Context, target LadderTarget, port int) domain.StepResult {
-	address := net.JoinHostPort(target.Host, strconv.Itoa(port))
+func (l Ladder) runTCP(ctx context.Context, target LadderTarget, port int, dialHost string) domain.StepResult {
+	address := net.JoinHostPort(dialHost, strconv.Itoa(port))
 	id := fmt.Sprintf("tcp.%d", port)
 	return l.step(ctx, domain.StepTCP, id, address, func(stepCtx context.Context) (domain.Status, []domain.Measurement, string, string) {
 		start := l.now()
@@ -343,8 +354,8 @@ func (l Ladder) runTCP(ctx context.Context, target LadderTarget, port int) domai
 	})
 }
 
-func (l Ladder) runTLS(ctx context.Context, target LadderTarget, port int, variant, sni string) domain.StepResult {
-	address := net.JoinHostPort(target.Host, strconv.Itoa(port))
+func (l Ladder) runTLS(ctx context.Context, target LadderTarget, port int, dialHost, variant, sni string) domain.StepResult {
+	address := net.JoinHostPort(dialHost, strconv.Itoa(port))
 	id := "tls." + variant
 	sniLabel := sni
 	if sniLabel == "" {
@@ -414,12 +425,12 @@ func (l Ladder) runHTTP(ctx context.Context, target LadderTarget, port int) doma
 	})
 }
 
-func (l Ladder) runICMP(ctx context.Context, target LadderTarget, answers []string) domain.StepResult {
+func (l Ladder) runICMP(ctx context.Context, target LadderTarget, primary string) domain.StepResult {
 	var ip net.IP
-	if parsed := net.ParseIP(target.Host); parsed != nil {
+	if parsed := net.ParseIP(primary); parsed != nil {
 		ip = parsed
-	} else if len(answers) > 0 {
-		ip = net.ParseIP(answers[0])
+	} else if parsed := net.ParseIP(target.Host); parsed != nil {
+		ip = parsed
 	}
 	if ip == nil {
 		return l.step(ctx, domain.StepICMP, "icmp", target.Host, func(context.Context) (domain.Status, []domain.Measurement, string, string) {
@@ -517,4 +528,18 @@ func compareAnswers(system, doh []string) string {
 		return "match"
 	}
 	return "differ"
+}
+
+// preferredAnswer picks an IPv4 address first so the ladder keeps one address
+// across DNS, TCP, TLS, ICMP and the trace.
+func preferredAnswer(answers []string) string {
+	for _, answer := range answers {
+		if ip := net.ParseIP(answer); ip != nil && ip.To4() != nil {
+			return answer
+		}
+	}
+	if len(answers) > 0 {
+		return answers[0]
+	}
+	return ""
 }

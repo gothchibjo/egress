@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 	"sort"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/net/icmp"
@@ -22,12 +24,32 @@ const (
 	defaultHopProbes   = 3
 	defaultProbeWindow = 500 * time.Millisecond
 	tracePortBase      = 33434
+	// tracePortBands separates concurrent ICMP traces by their echo sequence.
+	tracePortBands = 60
 )
+
+// udpTraceMu serializes UDP traces. All probes of one trace share the standard
+// traceroute destination port range, so only one trace may use it at a time;
+// otherwise an ICMP error could be attributed to the wrong target.
+var udpTraceMu sync.Mutex
+
+// traceSequence hands out a distinct band and echo id to every trace.
+var traceSequence atomic.Uint32
+
+// nextTraceBand separates concurrent traces so their ICMP errors cannot be
+// attributed to another target.
+func nextTraceBand() (int, uint16) {
+	sequence := traceSequence.Add(1)
+	return int(sequence % tracePortBands), uint16(os.Getpid()&0xffff) ^ uint16(sequence)
+}
 
 // Tracer discovers the path to a host.
 type Tracer interface {
 	Method() string
 	Trace(ctx context.Context, host string) ([]domain.Hop, error)
+	// TraceIP traces a host that has already been resolved, so every ladder step
+	// probes the same address.
+	TraceIP(ctx context.Context, target net.IP) ([]domain.Hop, error)
 }
 
 // TracerInfo describes the selected tracing method for the session.
@@ -37,9 +59,9 @@ type TracerInfo struct {
 	Reason string
 }
 
-// NewTracer selects ICMP tracing for an elevated session and UDP tracing
-// otherwise. If a raw socket cannot be opened, it falls back to UDP with a
-// stated reason instead of failing the run.
+// NewTracer selects UDP tracing for an unprivileged session and raw ICMP echo
+// tracing for an elevated one. ICMP is only added with privileges; when the raw
+// socket is unavailable the session stays limited and uses UDP.
 func NewTracer(elevated bool) (Tracer, TracerInfo) {
 	if !elevated {
 		return UDPTracer{}, TracerInfo{
@@ -87,7 +109,6 @@ func (t UDPTracer) normalized() UDPTracer {
 }
 
 func (t UDPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error) {
-	t = t.normalized()
 	addresses, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 	if err != nil {
 		return nil, fmt.Errorf("resolve %q: %w", host, err)
@@ -95,7 +116,17 @@ func (t UDPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error)
 	if len(addresses) == 0 {
 		return nil, fmt.Errorf("resolve %q: no addresses", host)
 	}
-	target := preferredAddress(addresses)
+	return t.TraceIP(ctx, preferredAddress(addresses))
+}
+
+func (t UDPTracer) TraceIP(ctx context.Context, target net.IP) ([]domain.Hop, error) {
+	t = t.normalized()
+	if target == nil {
+		return nil, errors.New("no address to trace")
+	}
+
+	udpTraceMu.Lock()
+	defer udpTraceMu.Unlock()
 
 	network, protocol := "udp4", 1
 	if target.To4() == nil {
@@ -110,7 +141,8 @@ func (t UDPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error)
 
 	hops := make([]domain.Hop, 0, t.MaxHops)
 	for ttl := 1; ttl <= t.MaxHops; ttl++ {
-		hop := domain.Hop{TTL: ttl}
+		hop := domain.Hop{TTL: ttl, Addresses: []string{}}
+		seen := make(map[string]bool, t.Probes)
 		type probe struct {
 			port  int
 			start time.Time
@@ -119,7 +151,7 @@ func (t UDPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error)
 		sockets := make([]*net.UDPConn, 0, t.Probes)
 
 		for index := 0; index < t.Probes; index++ {
-			port := t.PortBase + ttl*10 + index
+			port := probePort(t.PortBase, ttl, t.Probes, index)
 			udp, dialErr := net.DialUDP(network, nil, &net.UDPAddr{IP: target, Port: port})
 			if dialErr != nil {
 				hop.Sent++
@@ -159,6 +191,10 @@ func (t UDPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error)
 			}
 			hop.Received++
 			rtts = append(rtts, time.Since(start).Milliseconds())
+			if !seen[peer] {
+				seen[peer] = true
+				hop.Addresses = append(hop.Addresses, peer)
+			}
 			if hop.Address == "" {
 				hop.Address = peer
 			}
@@ -177,6 +213,14 @@ func (t UDPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error)
 		}
 	}
 	return hops, nil
+}
+
+// probePort maps a hop and probe index onto the classic traceroute port range:
+// 33434 for the first probe of the first hop, three ports per hop after that.
+// Targets commonly answer only inside this range, so the layout is part of the
+// observable behaviour.
+func probePort(base, ttl, probes, index int) int {
+	return base + (ttl-1)*probes + index
 }
 
 // preferredAddress picks an IPv4 address when the host has one: IPv6 ping
@@ -321,10 +365,9 @@ func rttStats(values []int64) (min, median, max int64) {
 	return sorted[0], sorted[len(sorted)/2], sorted[len(sorted)-1]
 }
 
-// ICMPTracer sends ICMP echo probes with growing TTL values. It needs a raw
-// socket, so it is only available to an elevated session.
+// ICMPTracer sends ICMP echo probes with growing TTL values over a raw socket,
+// so it is only available to an elevated session.
 type ICMPTracer struct {
-	conn    *icmp.PacketConn
 	MaxHops int
 	Probes  int
 	Window  time.Duration
@@ -349,7 +392,13 @@ func (t ICMPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error
 	if len(addresses) == 0 {
 		return nil, fmt.Errorf("resolve %q: no addresses", host)
 	}
-	target := addresses[0].IP
+	return t.TraceIP(ctx, preferredAddress(addresses))
+}
+
+func (t ICMPTracer) TraceIP(ctx context.Context, target net.IP) ([]domain.Hop, error) {
+	if target == nil {
+		return nil, errors.New("no address to trace")
+	}
 	if target.To4() == nil {
 		return nil, errors.New("ICMP tracing supports IPv4 targets in v1")
 	}
@@ -371,45 +420,67 @@ func (t ICMPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error
 	if window <= 0 {
 		window = defaultProbeWindow
 	}
-	id := uint16(os.Getpid() & 0xffff)
+	band, id := nextTraceBand()
+	// The sequence space is split into one block per concurrent trace so a
+	// quoted probe can never be attributed to another target.
+	seqBase := band * 1024
 
 	hops := make([]domain.Hop, 0, maxHops)
 	for ttl := 1; ttl <= maxHops; ttl++ {
-		hop := domain.Hop{TTL: ttl}
-		rtts := make([]int64, 0, probes)
-		reached := false
+		if ctx.Err() != nil {
+			return hops, ctx.Err()
+		}
+		hop := domain.Hop{TTL: ttl, Addresses: []string{}}
+		seen := make(map[string]bool, probes)
+		if err := packetConn.SetTTL(ttl); err != nil {
+			hop.Sent = probes
+			hops = append(hops, hop)
+			continue
+		}
 
+		started := make(map[int]time.Time, probes)
 		for probe := 0; probe < probes; probe++ {
-			if ctx.Err() != nil {
-				return hops, ctx.Err()
-			}
-			seq := ttl*10 + probe
+			seq := seqBase + (ttl-1)*probes + probe
 			message := icmp.Message{
 				Type: ipv4.ICMPTypeEcho,
 				Code: 0,
 				Body: &icmp.Echo{ID: int(id), Seq: seq, Data: []byte("egress")},
 			}
 			payload, marshalErr := message.Marshal(nil)
+			hop.Sent++
 			if marshalErr != nil {
-				hop.Sent++
 				continue
 			}
 			start := time.Now()
-			hop.Sent++
-			if _, writeErr := packetConn.WriteTo(payload, &ipv4.ControlMessage{TTL: ttl}, &net.IPAddr{IP: target}); writeErr != nil {
+			if _, writeErr := packetConn.WriteTo(payload, nil, &net.IPAddr{IP: target}); writeErr != nil {
 				continue
 			}
+			started[seq] = start
+		}
 
-			peer, targetReached, readErr := awaitEcho(ctx, conn, id, seq, time.Now().Add(window))
+		rtts := make([]int64, 0, probes)
+		reached := false
+		deadline := time.Now().Add(window)
+		for len(started) > 0 {
+			peer, seq, reply, readErr := awaitProbes(ctx, conn, started, deadline)
 			if readErr != nil {
+				break
+			}
+			start, waiting := started[seq]
+			if !waiting {
 				continue
 			}
-			rtts = append(rtts, time.Since(start).Milliseconds())
+			delete(started, seq)
 			hop.Received++
+			rtts = append(rtts, time.Since(start).Milliseconds())
+			if !seen[peer] {
+				seen[peer] = true
+				hop.Addresses = append(hop.Addresses, peer)
+			}
 			if hop.Address == "" {
 				hop.Address = peer
 			}
-			if targetReached {
+			if reply {
 				reached = true
 			}
 		}
@@ -423,31 +494,32 @@ func (t ICMPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error
 	return hops, nil
 }
 
-// awaitEcho waits for the echo reply or the ICMP error that quotes our probe.
-func awaitEcho(ctx context.Context, conn *icmp.PacketConn, id uint16, seq int, deadline time.Time) (string, bool, error) {
+// awaitProbes waits for an echo reply or the ICMP error that quotes one of the
+// probes sent for a hop.
+func awaitProbes(ctx context.Context, conn *icmp.PacketConn, waiting map[int]time.Time, deadline time.Time) (string, int, bool, error) {
 	if ctxDeadline, ok := ctx.Deadline(); ok && ctxDeadline.Before(deadline) {
 		deadline = ctxDeadline
 	}
 	if err := conn.SetReadDeadline(deadline); err != nil {
-		return "", false, err
+		return "", 0, false, err
 	}
 
 	buffer := make([]byte, 1500)
 	for {
 		if err := ctx.Err(); err != nil {
-			return "", false, err
+			return "", 0, false, err
 		}
 		n, peer, err := conn.ReadFrom(buffer)
 		if err != nil {
-			return "", false, err
+			return "", 0, false, err
 		}
 		message, err := icmp.ParseMessage(1, buffer[:n])
 		if err != nil {
 			continue
 		}
 		if reply, ok := message.Body.(*icmp.Echo); ok && message.Type == ipv4.ICMPTypeEchoReply {
-			if uint16(reply.ID) == id && reply.Seq == seq {
-				return addrString(peer), true, nil
+			if _, ok := waiting[reply.Seq]; ok {
+				return addrString(peer), reply.Seq, true, nil
 			}
 			continue
 		}
@@ -455,11 +527,14 @@ func awaitEcho(ctx context.Context, conn *icmp.PacketConn, id uint16, seq int, d
 		if !ok {
 			continue
 		}
-		quotedID, quotedSeq, ok := quotedICMPIdentity(data)
-		if !ok || quotedID != id || quotedSeq != seq {
+		_, seq, ok := quotedICMPIdentity(data)
+		if !ok {
 			continue
 		}
-		return addrString(peer), false, nil
+		if _, ok := waiting[seq]; !ok {
+			continue
+		}
+		return addrString(peer), seq, false, nil
 	}
 }
 

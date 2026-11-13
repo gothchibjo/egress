@@ -33,10 +33,10 @@ failure.
 
 ### Tracing methods
 
-| Session                  | Method                                                              | Requirement                                                                               |
-| :----------------------- | :------------------------------------------------------------------ | :---------------------------------------------------------------------------------------- |
-| `limited` (unprivileged) | UDP probes with growing TTL, ICMP errors read through a ping socket | works without root                                                                        |
-| `elevated`               | ICMP echo probes with growing TTL over a raw socket                 | needs a raw socket; falls back to UDP with a stated reason when the socket is unavailable |
+| Session                  | Method                                                              | Requirement                                                                              |
+| :----------------------- | :------------------------------------------------------------------ | :--------------------------------------------------------------------------------------- |
+| `limited` (unprivileged) | UDP probes with growing TTL, ICMP errors read through a ping socket | works without root; uses the standard traceroute port layout so the target keeps its TTL |
+| `elevated`               | ICMP echo probes with growing TTL over a raw socket                 | needs a raw socket; falls back to UDP with a stated reason when unavailable              |
 
 ## Timing
 
@@ -52,9 +52,33 @@ the HTTP and ICMP steps run.
 ## Scheduling
 
 A session probes at most four targets concurrently, and each target's ladder
-steps run sequentially. `CancelTarget` stops one target; `CancelAll` stops the
-session. A cancelled target keeps the steps it collected before the
-cancellation, so partial evidence stays exportable.
+steps run sequentially. UDP traces are serialized: the standard traceroute port
+range is small, so concurrent traces would otherwise read each other's ICMP
+errors. `CancelTarget` stops one target; `CancelAll` stops the session. A
+cancelled target keeps the steps it collected before the cancellation, so
+partial evidence stays exportable.
+
+## Reading the hop table
+
+- `TTL` is the hop number, `ADDRESS` every router that answered the probes at
+  that TTL (joined with commas), `LOSS` the share of probes without a reply and
+  `RTT` their median round trip. This is the traceroute layout.
+- A leading marker flags what deserves attention: `→` is the hop that answered
+  as the target, `!` is a hop with partial loss and `x` is the silent hop where
+  the replies stop. A blank marker is a normal hop.
+- `*` means no reply arrived for that TTL; the router may rate-limit or filter
+  the probe. It does not prove the hop is down.
+- A path through a tunnel (for example a VPN `utun` interface) often produces no
+  ICMP errors at all: the gateway is reachable, but the probes are encapsulated.
+- When no hop answers, the pane states that no probe reply arrived and whether
+  the target answered a transport step, instead of drawing every TTL as a broken
+  hop.
+- Trailing silent hops are trimmed. One row is kept when the target was not
+  reached, to show where the replies stop; when a transport step reached the
+  target, no trailing star is drawn and the summary explains that the remaining
+  TTLs returned no ICMP.
+- The pane title shows the tracing method and the address that was traced.
+- Reverse DNS names are not resolved in v1; the table lists addresses only.
 
 ## Localization
 
@@ -63,8 +87,8 @@ The hop table feeds `domain.LocalizePath`, which yields one of three findings:
 - `path complete at hop N` when the target answered;
 - `drop after hop N` when the replies stop and the ladder did not reach the
   target;
-- `inconclusive between hops N and M` when the trace was truncated or the target
-  answered the ladder, so the silence is likely ICMP filtering.
+- `inconclusive between hops N and M` when the trace was truncated, or when the
+  target answered a transport step but the hops returned no probe reply.
 
 Every finding lists the alternative explanations; a silent hop alone is never
 presented as proof of blocking. The localization is cross-checked with the

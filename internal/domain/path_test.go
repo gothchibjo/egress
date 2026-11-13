@@ -65,7 +65,7 @@ func TestLocalizePathLadderReachableIsInconclusive(t *testing.T) {
 	if localization.Kind != PathInconclusive {
 		t.Fatalf("kind = %q", localization.Kind)
 	}
-	if !strings.Contains(localization.Summary, "answered the ladder") {
+	if !strings.Contains(localization.Summary, "answered a transport step") {
 		t.Fatalf("summary = %q", localization.Summary)
 	}
 }
@@ -109,5 +109,17 @@ func TestHopLossPercent(t *testing.T) {
 	}
 	if got := (Hop{}).LossPercent(); got != 0 {
 		t.Fatalf("empty hop loss = %d", got)
+	}
+}
+
+func TestLocalizePathFindsTargetAmongAddresses(t *testing.T) {
+	hops := []Hop{
+		respondingHop(1, "192.0.2.1"),
+		{TTL: 2, Address: "198.51.100.1", Addresses: []string{"198.51.100.1", "203.0.113.10"}, Sent: 3, Received: 3},
+	}
+	localization := LocalizePath(hops, PathOptions{TargetIP: "203.0.113.10"})
+
+	if localization.Kind != PathComplete || localization.AfterTTL != 2 {
+		t.Fatalf("localization = %+v", localization)
 	}
 }

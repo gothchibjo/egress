@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"net"
 	"os"
 	"strings"
 	"testing"
@@ -108,11 +109,15 @@ func (f fakeTracer) Trace(context.Context, string) ([]domain.Hop, error) {
 	return f.hops, f.err
 }
 
+func (f fakeTracer) TraceIP(context.Context, net.IP) ([]domain.Hop, error) {
+	return f.hops, f.err
+}
+
 func TestTraceStepReportsHops(t *testing.T) {
 	step := TraceStep(fakeTracer{hops: []domain.Hop{
 		{TTL: 1, Address: "192.0.2.1", Sent: 3, Received: 3},
 		{TTL: 2, Address: "198.51.100.1", Sent: 3, Received: 3},
-	}})(context.Background(), LadderTarget{Host: "example.net"})
+	}})(context.Background(), LadderTarget{Host: "example.net"}, "203.0.113.10")
 
 	if step.Status != domain.StatusPass {
 		t.Fatalf("status = %q", step.Status)
@@ -131,7 +136,7 @@ func TestTraceStepKeepsPartialPath(t *testing.T) {
 	step := TraceStep(fakeTracer{
 		hops: []domain.Hop{{TTL: 1, Address: "192.0.2.1", Sent: 3, Received: 3}},
 		err:  context.DeadlineExceeded,
-	})(context.Background(), LadderTarget{Host: "example.net"})
+	})(context.Background(), LadderTarget{Host: "example.net"}, "203.0.113.10")
 
 	if step.Status != domain.StatusWarn {
 		t.Fatalf("status = %q, want warn", step.Status)
@@ -145,7 +150,7 @@ func TestTraceStepKeepsPartialPath(t *testing.T) {
 }
 
 func TestTraceStepWithoutResponsesWarns(t *testing.T) {
-	step := TraceStep(fakeTracer{hops: []domain.Hop{{TTL: 1, Sent: 3}}})(context.Background(), LadderTarget{Host: "example.net"})
+	step := TraceStep(fakeTracer{hops: []domain.Hop{{TTL: 1, Sent: 3}}})(context.Background(), LadderTarget{Host: "example.net"}, "203.0.113.10")
 	if step.Status != domain.StatusWarn {
 		t.Fatalf("status = %q, want warn", step.Status)
 	}
@@ -155,7 +160,7 @@ func TestTraceStepWithoutResponsesWarns(t *testing.T) {
 }
 
 func TestTraceStepReportsFailure(t *testing.T) {
-	step := TraceStep(fakeTracer{err: errors.New("network unreachable")})(context.Background(), LadderTarget{Host: "example.net"})
+	step := TraceStep(fakeTracer{err: errors.New("network unreachable")})(context.Background(), LadderTarget{Host: "example.net"}, "203.0.113.10")
 	if step.Status != domain.StatusFail || step.Error == "" {
 		t.Fatalf("step = %+v", step)
 	}
@@ -196,4 +201,61 @@ func TestUDPTracerIntegration(t *testing.T) {
 	// ICMP errors are rate-limited and the target may answer only some probes;
 	// an unreached trace is still valid evidence as long as hops responded.
 	_ = reached
+}
+
+func TestTraceBandsAreDistinct(t *testing.T) {
+	firstBand, firstID := nextTraceBand()
+	secondBand, secondID := nextTraceBand()
+	if firstBand == secondBand {
+		t.Fatalf("consecutive traces share band %d", firstBand)
+	}
+	if firstID == secondID {
+		t.Fatalf("consecutive traces share echo id %d", firstID)
+	}
+}
+
+func TestUDPTracerReachesTheTarget(t *testing.T) {
+	if os.Getenv("EGRESS_INTEGRATION") == "" {
+		t.Skip("set EGRESS_INTEGRATION=1 to run the live traceroute")
+	}
+	tracer, info := NewTracer(false)
+	if tracer.Method() != "udp" {
+		t.Fatalf("tracer = %q, want UDP", tracer.Method())
+	}
+	hops, err := tracer.TraceIP(context.Background(), net.ParseIP("1.1.1.1"))
+	if err != nil {
+		t.Fatalf("trace: %v", err)
+	}
+	if len(hops) < 2 {
+		t.Fatalf("trace returned %d hops", len(hops))
+	}
+	responded := 0
+	for _, hop := range hops {
+		if hop.Received > 0 {
+			responded++
+		}
+	}
+	if responded == 0 {
+		t.Fatalf("no hop answered (%+v, mode %s)", info, info.Mode)
+	}
+	t.Logf("method=%s hops=%d responded=%d", tracer.Method(), len(hops), responded)
+}
+
+func TestUDPTracePortsUseTheStandardLayout(t *testing.T) {
+	if first := probePort(tracePortBase, 1, 3, 0); first != 33434 {
+		t.Fatalf("first port = %d, want 33434", first)
+	}
+	if last := probePort(tracePortBase, 30, 3, 2); last != 33523 {
+		t.Fatalf("last port = %d, want 33523", last)
+	}
+	seen := make(map[int]bool)
+	for ttl := 1; ttl <= 30; ttl++ {
+		for index := 0; index < 3; index++ {
+			port := probePort(tracePortBase, ttl, 3, index)
+			if seen[port] {
+				t.Fatalf("port %d is reused", port)
+			}
+			seen[port] = true
+		}
+	}
 }
