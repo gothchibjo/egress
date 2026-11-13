@@ -600,3 +600,65 @@ func TestPickerSkipsResolutionForIPLiterals(t *testing.T) {
 		t.Fatalf("IP literal is marked as resolving:\n%s", view)
 	}
 }
+
+func TestPickerSelectAllTogglesVisible(t *testing.T) {
+	model := pickerModel(t, nil)
+	model, _ = pressKey(t, model, "t")
+
+	model, _ = pressKey(t, model, "a")
+	if !strings.Contains(model.View(), "11 selected") {
+		t.Fatalf("a did not select every preset:\n%s", model.View())
+	}
+	model, _ = pressKey(t, model, "a")
+	if !strings.Contains(model.View(), "0 selected") {
+		t.Fatalf("second a did not clear the selection:\n%s", model.View())
+	}
+}
+
+func TestPickerSelectAllRespectsFilter(t *testing.T) {
+	model := pickerModel(t, nil)
+	model, _ = pressKey(t, model, "t")
+	model, _ = pressKey(t, model, " ") // YouTube
+
+	model, _ = pressKey(t, model, "/")
+	for _, key := range []string{"g", "i", "t"} {
+		model, _ = pressKey(t, model, key)
+	}
+	model, _ = pressKey(t, model, "enter")
+
+	model, _ = pressKey(t, model, "a")
+	if !strings.Contains(model.View(), "2 selected") {
+		t.Fatalf("a touched hidden presets:\n%s", model.View())
+	}
+
+	model, _ = pressKey(t, model, "/")
+	model, _ = pressKey(t, model, "esc")
+	if !strings.Contains(model.View(), "2 selected") {
+		t.Fatalf("clearing the filter changed the count:\n%s", model.View())
+	}
+	if !strings.Contains(model.View(), "[x] YouTube") {
+		t.Fatalf("YouTube lost its selection:\n%s", model.View())
+	}
+}
+
+func TestPickerSelectAllLeavesCustomTargets(t *testing.T) {
+	model := pickerModel(t, nil)
+	model, _ = pressKey(t, model, "t")
+	model, _ = pressKey(t, model, "c")
+	for _, key := range []string{"a", ".", "t", "e", "s", "t"} {
+		model, _ = pressKey(t, model, key)
+	}
+	model, _ = pressKey(t, model, "enter")
+
+	model, _ = pressKey(t, model, "a")
+	if !strings.Contains(model.View(), "12 selected") {
+		t.Fatalf("a did not select the presets next to the custom target:\n%s", model.View())
+	}
+	model, _ = pressKey(t, model, "a")
+	if !strings.Contains(model.View(), "1 selected") {
+		t.Fatalf("a removed the custom target:\n%s", model.View())
+	}
+	if !strings.Contains(model.View(), "a.test") {
+		t.Fatalf("custom target disappeared:\n%s", model.View())
+	}
+}

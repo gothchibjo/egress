@@ -292,7 +292,10 @@ func (m Model) footerHints() string {
 	case viewDestinations, viewContext:
 		return "j/k scroll" + sep + "esc back" + sep + "? help" + sep + "q quit"
 	case viewPicker:
-		return "space select" + sep + "/ filter" + sep + "c custom" + sep + "enter run" + sep + "esc back"
+		if m.Layout() == LayoutCompact {
+			return "space" + sep + "a all" + sep + "/ filter" + sep + "c custom" + sep + "enter" + sep + "esc"
+		}
+		return "space select" + sep + "a all" + sep + "/ filter" + sep + "c custom" + sep + "enter run" + sep + "esc back"
 	case viewRun:
 		if m.Layout() == LayoutCompact {
 			return "h/l tgt" + sep + "1-3 view" + sep + "x/X cancel" + sep + "? help"

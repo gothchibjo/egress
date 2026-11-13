@@ -122,6 +122,8 @@ func (m Model) updatePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.picker.cursor = len(m.pickerEntries()) - 1
 	case " ":
 		m = m.togglePickerRow()
+	case "a":
+		m = m.toggleAllVisible()
 	case "/":
 		m.picker.filtering = true
 	case "c":
@@ -225,6 +227,36 @@ type customResolvedMsg struct {
 	Key       string
 	Addresses []string
 	Err       string
+}
+
+// toggleAllVisible selects every visible preset, or clears them when all are
+// already selected. Hidden presets and custom rows are left alone.
+func (m Model) toggleAllVisible() Model {
+	visible := make([]domain.Preset, 0, len(domain.PresetCatalog()))
+	for _, entry := range m.pickerEntries() {
+		if !entry.isCustom() {
+			visible = append(visible, entry.preset)
+		}
+	}
+	if len(visible) == 0 {
+		return m
+	}
+
+	allSelected := true
+	for _, preset := range visible {
+		if !m.picker.selected[preset.ID] {
+			allSelected = false
+			break
+		}
+	}
+	for _, preset := range visible {
+		if allSelected {
+			delete(m.picker.selected, preset.ID)
+			continue
+		}
+		m.picker.selected[preset.ID] = true
+	}
+	return m.normalizePicker()
 }
 
 // togglePickerRow selects a preset or removes a custom row.

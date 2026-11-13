@@ -334,3 +334,6 @@ implementation in the order above.
   cancelled states, ladder and hop panes side by side on wide terminals and
   switchable on narrow ones, the verdict with labelled evidence, rejections and
   caveat, live step progress, and x/X cancellation.
+- 2026-11-13 — REQ-002 picker: `a` selects every visible preset or clears them
+  when all are selected; the filter bounds the toggle and custom targets are
+  untouched.
