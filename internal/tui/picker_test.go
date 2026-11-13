@@ -358,3 +358,86 @@ func TestPickerRowFormat(t *testing.T) {
 		t.Fatalf("long names lost their host:\n%s", view)
 	}
 }
+
+func pickerCursorName(t *testing.T, model Model) string {
+	t.Helper()
+	entries := model.pickerEntries()
+	if model.picker.cursor < 0 || model.picker.cursor >= len(entries) {
+		t.Fatalf("cursor %d is outside %d entries", model.picker.cursor, len(entries))
+	}
+	return entries[model.picker.cursor].preset.DisplayName
+}
+
+func TestPickerArrowKeysMoveBetweenColumns(t *testing.T) {
+	model := fixtureModel(t, 120, 30, WithoutColor())
+	model, _ = pressKey(t, model, "t")
+	if name := pickerCursorName(t, model); name != "YouTube" {
+		t.Fatalf("picker starts on %q", name)
+	}
+
+	model, _ = pressKey(t, model, "right")
+	if name := pickerCursorName(t, model); name != "Cloudflare" {
+		t.Fatalf("right moved to %q, want the first entry of the next column", name)
+	}
+	model, _ = pressKey(t, model, "left")
+	if name := pickerCursorName(t, model); name != "YouTube" {
+		t.Fatalf("left moved to %q, want YouTube", name)
+	}
+}
+
+func TestPickerArrowKeysWalkThreeColumns(t *testing.T) {
+	model := fixtureModel(t, 160, 40, WithoutColor())
+	model, _ = pressKey(t, model, "t")
+
+	model, _ = pressKey(t, model, "right")
+	if name := pickerCursorName(t, model); name != "Google" {
+		t.Fatalf("first right moved to %q, want Google", name)
+	}
+	model, _ = pressKey(t, model, "right")
+	if name := pickerCursorName(t, model); name != "Wikipedia" {
+		t.Fatalf("second right moved to %q, want Wikipedia", name)
+	}
+}
+
+func TestPickerArrowKeysStopAtEdges(t *testing.T) {
+	model := fixtureModel(t, 120, 30, WithoutColor())
+	model, _ = pressKey(t, model, "t")
+
+	model, _ = pressKey(t, model, "left")
+	if name := pickerCursorName(t, model); name != "YouTube" {
+		t.Fatalf("left at the first column moved to %q", name)
+	}
+
+	model, _ = pressKey(t, model, "G")
+	last := pickerCursorName(t, model)
+	model, _ = pressKey(t, model, "right")
+	if name := pickerCursorName(t, model); name != last {
+		t.Fatalf("right at the last column moved to %q", name)
+	}
+}
+
+func TestPickerArrowKeysDoNothingInOneColumn(t *testing.T) {
+	model := fixtureModel(t, 80, 24, WithoutColor())
+	model, _ = pressKey(t, model, "t")
+
+	model, _ = pressKey(t, model, "right")
+	if name := pickerCursorName(t, model); name != "YouTube" {
+		t.Fatalf("right moved to %q in a single column", name)
+	}
+	model, _ = pressKey(t, model, "left")
+	if name := pickerCursorName(t, model); name != "YouTube" {
+		t.Fatalf("left moved to %q in a single column", name)
+	}
+}
+
+func TestPickerArrowKeysKeepCursorVisible(t *testing.T) {
+	model := fixtureModel(t, 100, 20, WithoutColor())
+	model, _ = pressKey(t, model, "t")
+	model, _ = pressKey(t, model, "right")
+
+	view := model.View()
+	assertBlockShape(t, view, 100, 20)
+	if !strings.Contains(view, pickerCursorName(t, model)) {
+		t.Fatalf("cursor entry is not on screen:\n%s", view)
+	}
+}

@@ -97,6 +97,10 @@ func (m Model) updatePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.picker.cursor--
 	case "down", "j":
 		m.picker.cursor++
+	case "left":
+		m = m.movePickerColumn(-1)
+	case "right":
+		m = m.movePickerColumn(1)
 	case "g":
 		m.picker.cursor = 0
 	case "G":
@@ -275,10 +279,7 @@ func (m Model) renderPicker() string {
 	}
 	footer = append(footer, m.renderHintFooter(m.footerHints())...)
 
-	bodyHeight := m.height - len(header) - len(footer)
-	if bodyHeight < 1 {
-		bodyHeight = 1
-	}
+	bodyHeight := m.pickerBodyHeight()
 	body := block(m.pickerLines(bodyHeight), m.width, bodyHeight)
 	lines := append(header, strings.Split(body, "\n")...)
 	lines = append(lines, footer...)
@@ -360,12 +361,22 @@ type pickerItem struct {
 	index   int
 }
 
-// pickerGrid balances the category blocks across the available columns and
-// pages by whole columns so the cursor stays visible.
-func (m Model) pickerGrid(entries []pickerEntry, columns, height int) []string {
+// pickerLayout is the rendered grid: item indices per column plus the position
+// of every item. Rendering and arrow-key navigation share it so they cannot
+// disagree.
+type pickerLayout struct {
+	items     []pickerItem
+	columns   [][]int
+	columnOf  []int
+	rowOf     []int
+	entryItem []int
+}
+
+func (m Model) pickerLayout(entries []pickerEntry, columns, height int) pickerLayout {
 	items, entryItem := m.pickerItems(entries)
+	layout := pickerLayout{items: items, entryItem: entryItem}
 	if len(items) == 0 || height < 1 {
-		return nil
+		return layout
 	}
 
 	blocks := pickerBlocks(items)
@@ -377,19 +388,18 @@ func (m Model) pickerGrid(entries []pickerEntry, columns, height int) []string {
 		target = height
 	}
 
-	grouped := make([][]int, 0, columns)
 	current := make([]int, 0, target)
 	flush := func() {
 		if len(current) == 0 {
 			return
 		}
-		grouped = append(grouped, current)
+		layout.columns = append(layout.columns, current)
 		current = make([]int, 0, target)
 	}
 
 	for _, block := range blocks {
 		for len(block) > 0 {
-			if len(current) > 0 && len(current)+len(block) > target && len(current) >= target/2 && len(grouped) < columns-1 {
+			if len(current) > 0 && len(current)+len(block) > target && len(current) >= target/2 && len(layout.columns) < columns-1 {
 				flush()
 				continue
 			}
@@ -411,20 +421,31 @@ func (m Model) pickerGrid(entries []pickerEntry, columns, height int) []string {
 	}
 	flush()
 
-	columnOfItem := make([]int, len(items))
-	for c, column := range grouped {
-		for _, index := range column {
-			columnOfItem[index] = c
+	layout.columnOf = make([]int, len(items))
+	layout.rowOf = make([]int, len(items))
+	for c, column := range layout.columns {
+		for row, index := range column {
+			layout.columnOf[index] = c
+			layout.rowOf[index] = row
 		}
+	}
+	return layout
+}
+
+// pickerGrid renders the balanced columns for the current page.
+func (m Model) pickerGrid(entries []pickerEntry, columns, height int) []string {
+	layout := m.pickerLayout(entries, columns, height)
+	if len(layout.items) == 0 || len(layout.columns) == 0 {
+		return nil
 	}
 
 	cursor := m.picker.cursor
-	if cursor < 0 || cursor >= len(entryItem) {
+	if cursor < 0 || cursor >= len(layout.entryItem) {
 		cursor = 0
 	}
-	cursorColumn := columnOfItem[entryItem[cursor]]
+	cursorColumn := layout.columnOf[layout.entryItem[cursor]]
 	start := (cursorColumn / columns) * columns
-	if start >= len(grouped) {
+	if start >= len(layout.columns) {
 		start = 0
 	}
 
@@ -434,14 +455,74 @@ func (m Model) pickerGrid(entries []pickerEntry, columns, height int) []string {
 	}
 
 	rendered := make([]string, 0, columns)
-	for c := start; c < start+columns && c < len(grouped); c++ {
-		lines := make([]string, 0, len(grouped[c]))
-		for _, index := range grouped[c] {
-			lines = append(lines, m.pickerItemLine(items[index]))
+	for c := start; c < start+columns && c < len(layout.columns); c++ {
+		lines := make([]string, 0, len(layout.columns[c]))
+		for _, index := range layout.columns[c] {
+			lines = append(lines, m.pickerItemLine(layout.items[index]))
 		}
 		rendered = append(rendered, block(lines, columnWidth, height))
 	}
 	return strings.Split(lipgloss.JoinHorizontal(lipgloss.Top, rendered...), "\n")
+}
+
+// movePickerColumn moves the cursor to the nearest entry in the adjacent
+// column. Edges and the single-column layout do not move.
+func (m Model) movePickerColumn(delta int) Model {
+	columns := m.pickerColumns()
+	if columns <= 1 {
+		return m
+	}
+	layout := m.pickerLayout(m.pickerEntries(), columns, m.pickerBodyHeight())
+	if len(layout.columns) <= 1 {
+		return m
+	}
+	cursor := m.picker.cursor
+	if cursor < 0 || cursor >= len(layout.entryItem) {
+		return m
+	}
+	item := layout.entryItem[cursor]
+	column := layout.columnOf[item]
+	target := column + delta
+	if target < 0 || target >= len(layout.columns) {
+		return m
+	}
+
+	row := layout.rowOf[item]
+	chosen, last := -1, -1
+	for _, index := range layout.columns[target] {
+		if layout.items[index].heading != "" {
+			continue
+		}
+		last = index
+		if chosen == -1 && layout.rowOf[index] >= row {
+			chosen = index
+		}
+	}
+	if chosen == -1 {
+		chosen = last
+	}
+	if chosen == -1 {
+		return m
+	}
+	m.picker.cursor = layout.items[chosen].index
+	return m.normalizePicker()
+}
+
+// pickerBodyHeight is the number of rows available to the picker body.
+func (m Model) pickerBodyHeight() int {
+	header := m.renderPageHeader("TARGETS", "")
+	footer := 2 // rule and hint line
+	if m.picker.filtering || m.picker.customActive {
+		footer++
+	}
+	if m.notice != "" {
+		footer++
+	}
+	height := m.height - len(header) - footer
+	if height < 1 {
+		height = 1
+	}
+	return height
 }
 
 // pickerBlocks groups the flat item list into heading-plus-entries blocks.

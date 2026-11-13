@@ -286,3 +286,6 @@ implementation in the order above.
 - 2026-11-13 — REQ-002 picker layout: one column below 100 columns, two from 100
   and three from 160; category blocks are balanced across the available columns
   and paged by whole columns so the cursor stays visible.
+- 2026-11-13 — REQ-002 picker polish: rows render as `Name (host)`, and `←`/`→`
+  move the cursor to the nearest entry in the adjacent column using the same
+  layout the renderer uses; edges and the single-column layout do not move.

@@ -37,6 +37,7 @@ implemented. The requirement is defined by [REQ-021].
 | Picker                | `↑`, `k`        | move the cursor up                         |
 | Picker                | `↓`, `j`        | move the cursor down                       |
 | Picker                | `g`, `G`        | jump to the first or last row              |
+| Picker                | `←`, `→`        | move to the previous or next column        |
 | Picker                | `space`         | select a preset or remove a custom         |
 | Picker                | `/`             | filter presets                             |
 | Picker filter         | `enter`, `esc`  | apply or clear the filter                  |
