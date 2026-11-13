@@ -1,7 +1,7 @@
 ---
 pcr: PCR-0002
 title: Interactive host probing and blockage localization
-status: plan_approved
+status: implementing
 basis: 03-technical.yaml (frozen)
 revised: 2026-11-13
 approved_by: gothchibjo
@@ -257,3 +257,17 @@ it.
 
 Approved by gothchibjo. Revision 1 is the working plan; the 16 REQs are open for
 implementation in the order above.
+
+# Guard Log
+
+| Date       | REQ     | Guard                                                     | Check                                                                                                                                            | Result |
+| :--------- | :------ | :-------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- | :----- |
+| 2026-11-13 | REQ-001 | The catalog stays static and built into the binary in v1. | No catalog file, environment override or remote fetch exists or is planned; the catalog will be a constant slice in `internal/domain/target.go`. | pass   |
+| 2026-11-13 | REQ-001 | Catalog entries require no remote update mechanism.       | No update client, URL or dependency is introduced; the catalog accessor takes no parameters and performs no I/O.                                 | pass   |
+
+# Implementation Log
+
+- 2026-11-13 — REQ-001 ships the eleven-entry static catalog and the version
+  constant in `internal/domain/target.go`, with content, copy and determinism
+  tests and `docs/target-catalog.md`. The requirement stays open until the
+  session export (REQ-011) reports the catalog version.

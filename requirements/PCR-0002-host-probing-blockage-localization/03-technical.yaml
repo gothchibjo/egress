@@ -8,7 +8,7 @@ pipeline_gates:
   requirement_freeze: { required: true, passed: true }
   plan_approval: { required: true, passed: true }
   verification_evidence: { required: true, passed: false }
-  guard_conditions: { required: true, passed: false }
+  guard_conditions: { required: true, passed: true }
 requirements:
   - id: REQ-001
     traces_to: [BR-07]
