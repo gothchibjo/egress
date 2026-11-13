@@ -25,14 +25,17 @@ terminal matrix.
 
 ## Behaviour
 
-| Behaviour                        | Verification                                                 |
-| :------------------------------- | :----------------------------------------------------------- |
-| tabs show running/done/cancelled | `TestRunViewShowsTargetTabs`, `TestRunViewShowsLiveProgress` |
-| target switching keeps the view  | `TestRunViewSwitchesTargets`                                 |
-| scrolling follows the selection  | `TestRunViewScrolling`                                       |
-| help returns to the run view     | `TestRunViewHelpReturns`                                     |
-| `esc` never cancels              | `TestRunViewEscNeverCancels`                                 |
-| `x`/`X` cancel one or all        | `TestRunViewCancelsTargets`                                  |
+| Behaviour                                | Verification                                                 |
+| :--------------------------------------- | :----------------------------------------------------------- |
+| tabs show running/done/cancelled         | `TestRunViewShowsTargetTabs`, `TestRunViewShowsLiveProgress` |
+| target column keeps every target visible | `TestRunViewTargetColumnAtCompact`                           |
+| running target shows its current step    | `TestRunViewShowsPlannedAndRunningSteps`                     |
+| queued and finished steps are visible    | `TestRunViewShowsPlannedAndRunningSteps`                     |
+| target switching keeps the view          | `TestRunViewSwitchesTargets`                                 |
+| scrolling follows the selection          | `TestRunViewScrolling`                                       |
+| help returns to the run view             | `TestRunViewHelpReturns`                                     |
+| `esc` never cancels                      | `TestRunViewEscNeverCancels`                                 |
+| `x`/`X` cancel one or all                | `TestRunViewCancelsTargets`                                  |
 
 ## Evidence artifacts
 

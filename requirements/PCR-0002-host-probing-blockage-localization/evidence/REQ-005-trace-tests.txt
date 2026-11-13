@@ -22,4 +22,4 @@
     trace_test.go:169: set EGRESS_INTEGRATION=1 to run the live traceroute
 --- SKIP: TestUDPTracerIntegration (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/probe	0.264s
+ok  	github.com/gothchibjo/egress/internal/probe	0.305s

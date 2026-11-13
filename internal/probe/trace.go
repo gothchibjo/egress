@@ -20,7 +20,7 @@ import (
 const (
 	defaultMaxHops     = 30
 	defaultHopProbes   = 3
-	defaultProbeWindow = time.Second
+	defaultProbeWindow = 500 * time.Millisecond
 	tracePortBase      = 33434
 )
 
@@ -95,7 +95,7 @@ func (t UDPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error)
 	if len(addresses) == 0 {
 		return nil, fmt.Errorf("resolve %q: no addresses", host)
 	}
-	target := addresses[0].IP
+	target := preferredAddress(addresses)
 
 	network, protocol := "udp4", 1
 	if target.To4() == nil {
@@ -106,19 +106,20 @@ func (t UDPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error)
 		return nil, fmt.Errorf("open ICMP socket: %w", err)
 	}
 	defer ping.Close()
+	local := localAddresses()
 
 	hops := make([]domain.Hop, 0, t.MaxHops)
 	for ttl := 1; ttl <= t.MaxHops; ttl++ {
 		hop := domain.Hop{TTL: ttl}
-		rtts := make([]int64, 0, t.Probes)
-		reached := false
+		type probe struct {
+			port  int
+			start time.Time
+		}
+		sent := make([]probe, 0, t.Probes)
+		sockets := make([]*net.UDPConn, 0, t.Probes)
 
-		for probe := 0; probe < t.Probes; probe++ {
-			if ctx.Err() != nil {
-				return hops, ctx.Err()
-			}
-			port := t.PortBase + ttl*10 + probe
-			probeStart := time.Now()
+		for index := 0; index < t.Probes; index++ {
+			port := t.PortBase + ttl*10 + index
 			udp, dialErr := net.DialUDP(network, nil, &net.UDPAddr{IP: target, Port: port})
 			if dialErr != nil {
 				hop.Sent++
@@ -130,21 +131,43 @@ func (t UDPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error)
 				_ = ipv4.NewConn(udp).SetTTL(ttl)
 			}
 			hop.Sent++
+			start := time.Now()
 			_, _ = udp.Write([]byte("egress-trace"))
-
-			peer, targetReached, readErr := awaitICMP(ctx, ping, protocol, port, time.Now().Add(t.Window), target)
-			_ = udp.Close()
+			sent = append(sent, probe{port: port, start: start})
+			sockets = append(sockets, udp)
+		}
+		pending := make(map[int]time.Time, len(sent))
+		for _, item := range sent {
+			pending[item.port] = item.start
+		}
+		deadline := time.Now().Add(t.Window)
+		reached := false
+		rtts := make([]int64, 0, t.Probes)
+		for len(pending) > 0 {
+			peer, port, arrived, readErr := awaitAny(ctx, ping, protocol, pending, deadline, target)
 			if readErr != nil {
+				break
+			}
+			start, waiting := pending[port]
+			if !waiting {
 				continue
 			}
-			rtts = append(rtts, time.Since(probeStart).Milliseconds())
+			delete(pending, port)
+			if local[peer] {
+				// A locally generated ICMP error is not a hop.
+				continue
+			}
 			hop.Received++
+			rtts = append(rtts, time.Since(start).Milliseconds())
 			if hop.Address == "" {
 				hop.Address = peer
 			}
-			if targetReached {
+			if arrived {
 				reached = true
 			}
+		}
+		for _, socket := range sockets {
+			_ = socket.Close()
 		}
 
 		hop.RTTMinMS, hop.RTTMedianMS, hop.RTTMaxMS = rttStats(rtts)
@@ -156,23 +179,50 @@ func (t UDPTracer) Trace(ctx context.Context, host string) ([]domain.Hop, error)
 	return hops, nil
 }
 
-// awaitICMP waits for the ICMP error that quotes the probe port.
-func awaitICMP(ctx context.Context, conn *icmp.PacketConn, protocol, port int, deadline time.Time, target net.IP) (string, bool, error) {
+// preferredAddress picks an IPv4 address when the host has one: IPv6 ping
+// sockets do not report every router error on all platforms.
+func preferredAddress(addresses []net.IPAddr) net.IP {
+	for _, address := range addresses {
+		if address.IP.To4() != nil {
+			return address.IP
+		}
+	}
+	return addresses[0].IP
+}
+
+// localAddresses lists the host addresses so locally generated ICMP errors are
+// not reported as path hops.
+func localAddresses() map[string]bool {
+	values := make(map[string]bool)
+	addresses, err := net.InterfaceAddrs()
+	if err != nil {
+		return values
+	}
+	for _, address := range addresses {
+		if network, ok := address.(*net.IPNet); ok {
+			values[network.IP.String()] = true
+		}
+	}
+	return values
+}
+
+// awaitAny waits for an ICMP error that quotes any pending probe port.
+func awaitAny(ctx context.Context, conn *icmp.PacketConn, protocol int, ports map[int]time.Time, deadline time.Time, target net.IP) (string, int, bool, error) {
 	if ctxDeadline, ok := ctx.Deadline(); ok && ctxDeadline.Before(deadline) {
 		deadline = ctxDeadline
 	}
 	if err := conn.SetReadDeadline(deadline); err != nil {
-		return "", false, err
+		return "", 0, false, err
 	}
 
 	buffer := make([]byte, 1500)
 	for {
 		if err := ctx.Err(); err != nil {
-			return "", false, err
+			return "", 0, false, err
 		}
 		n, peer, err := conn.ReadFrom(buffer)
 		if err != nil {
-			return "", false, err
+			return "", 0, false, err
 		}
 		message, err := icmp.ParseMessage(protocol, buffer[:n])
 		if err != nil {
@@ -183,17 +233,18 @@ func awaitICMP(ctx context.Context, conn *icmp.PacketConn, protocol, port int, d
 			continue
 		}
 		quoted, ok := quotedUDPPort(data, protocol)
-		if !ok || quoted != port {
+		if !ok {
+			continue
+		}
+		if _, waiting := ports[quoted]; !waiting {
 			continue
 		}
 		address := addrString(peer)
 		reached := message.Code == portUnreachableCode(protocol)
 		if peerIP := net.ParseIP(address); peerIP != nil && peerIP.Equal(target) {
-			// Any ICMP message from the target means the path reached it; the
-			// port-unreachable reply is often rate-limited.
 			reached = true
 		}
-		return address, reached, nil
+		return address, quoted, reached, nil
 	}
 }
 

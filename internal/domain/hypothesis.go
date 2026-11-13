@@ -56,10 +56,13 @@ type RejectedAlternative struct {
 	Reason string       `json:"reason"`
 }
 
-// Hypothesis is the ranked blockage finding for one target.
+// Hypothesis is the ranked blockage finding for one target. NoBlockage marks a
+// target whose ladder passed; the taxonomy type stays unknown because it only
+// describes blockage types.
 type Hypothesis struct {
 	Type       BlockageType          `json:"type"`
 	Confidence Confidence            `json:"confidence"`
+	NoBlockage bool                  `json:"no_blockage,omitempty"`
 	Summary    string                `json:"summary"`
 	Evidence   []EvidenceLine        `json:"evidence"`
 	Rejected   []RejectedAlternative `json:"rejected"`
@@ -185,9 +188,11 @@ func ClassifyTarget(steps []StepResult, path Localization) Hypothesis {
 			"the path does not answer above the last responding hop", evidence, summary)
 
 	case summary.allPassed():
-		return newHypothesis(BlockUnknown, ConfidenceLow,
-			"no blockage detected: every ladder step passed",
+		hypothesis := newHypothesis(BlockUnknown, ConfidenceLow,
+			"every ladder step passed",
 			[]EvidenceLine{active("all ladder steps passed")}, summary)
+		hypothesis.NoBlockage = true
+		return hypothesis
 	}
 
 	anomalies := make([]EvidenceLine, 0, len(steps))

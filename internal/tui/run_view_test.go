@@ -30,7 +30,7 @@ func runStep(id string, kind domain.StepKind, status domain.Status, durationMS i
 }
 
 func alphaSteps() []domain.StepResult {
-	trace := runStep("trace", domain.StepTrace, domain.StatusPass, 900)
+	trace := runStep("trace", domain.StepTrace, domain.StatusPass, 900, domain.Measurement{Name: "method", Value: "udp"})
 	trace.Hops = []domain.Hop{
 		{TTL: 1, Address: "192.0.2.1", Sent: 3, Received: 3, RTTMedianMS: 12},
 		{TTL: 2, Address: "203.0.113.10", Sent: 3, Received: 3, RTTMedianMS: 35},
@@ -63,7 +63,7 @@ func TestRunViewShowsTargetTabs(t *testing.T) {
 
 	view := model.View()
 	assertBlockShape(t, view, 100, 30)
-	for _, want := range []string{"RUN", "1/2 targets", "Alpha", "Beta", "ok", "x"} {
+	for _, want := range []string{"RUN", "1/2 targets", "TARGETS", "Alpha", "Beta", "✓", "x"} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("run view is missing %q:\n%s", want, view)
 		}
@@ -74,7 +74,7 @@ func TestRunViewWideShowsLadderAndHops(t *testing.T) {
 	model := completeRun(t, runModel(t, 120, 40))
 	view := model.View()
 
-	for _, want := range []string{"LADDER", "HOPS", "TTL", "203.0.113.10", "dns", "tcp.443"} {
+	for _, want := range []string{"LADDER", "HOPS (udp)", "TTL", "203.0.113.10", "path complete at hop 2", "dns", "tcp.443"} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("wide run view is missing %q:\n%s", want, view)
 		}
@@ -97,7 +97,7 @@ func TestRunViewCompactSwitchesPanes(t *testing.T) {
 		t.Fatalf("2 did not switch to hops:\n%s", view)
 	}
 	model, _ = pressKey(t, model, "3")
-	if view := model.View(); !strings.Contains(view, "unknown") {
+	if view := model.View(); !strings.Contains(view, "no blockage detected") {
 		t.Fatalf("3 did not switch to the verdict:\n%s", view)
 	}
 }
@@ -194,7 +194,7 @@ func TestRunViewShowsLiveProgress(t *testing.T) {
 	if !strings.Contains(view, "dns") {
 		t.Fatalf("live step is not shown:\n%s", view)
 	}
-	if !strings.Contains(view, "...") {
+	if !strings.Contains(view, "…") {
 		t.Fatalf("running target marker is missing:\n%s", view)
 	}
 }
@@ -211,6 +211,7 @@ func TestRunViewScrolling(t *testing.T) {
 		{Target: targets[1], State: app.TargetDone},
 	}}})
 
+	model, _ = pressKey(t, model, "enter")
 	model, _ = pressKey(t, model, "G")
 	if !strings.Contains(model.View(), "step-39") {
 		t.Fatalf("G did not scroll to the last step:\n%s", model.View())
@@ -231,4 +232,271 @@ func TestRunViewResizeKeepsState(t *testing.T) {
 		t.Fatalf("resize lost the target or pane:\n%s", view)
 	}
 	assertBlockShape(t, model.View(), 60, 20)
+}
+
+func TestRunViewShowsPlannedAndRunningSteps(t *testing.T) {
+	model := runModel(t, 120, 40)
+	plan := []domain.StepPlan{
+		{ID: "dns", Kind: domain.StepDNS},
+		{ID: "tcp.443", Kind: domain.StepTCP},
+		{ID: "trace", Kind: domain.StepTrace},
+	}
+	model = applyMessage(t, model, ProbeProgressMsg{Progress: app.ProbeProgress{TargetID: "alpha", Index: 0, Total: 2, Plan: plan}})
+	model = applyMessage(t, model, ProbeStepMsg{TargetID: "alpha", Step: runStep("dns", domain.StepDNS, domain.StatusPass, 12)})
+	model = applyMessage(t, model, ProbeStepStartMsg{TargetID: "alpha", Plan: plan[2]})
+
+	view := model.View()
+	if !strings.Contains(view, "TARGETS") {
+		t.Fatalf("target column is missing:\n%s", view)
+	}
+	if !strings.Contains(view, "… trace") {
+		t.Fatalf("running step is not next to the target:\n%s", view)
+	}
+	if !strings.Contains(view, "trace") || !strings.Contains(view, "running") {
+		t.Fatalf("ladder does not show the running step:\n%s", view)
+	}
+	if !strings.Contains(view, "tcp.443") {
+		t.Fatalf("ladder does not show the queued step:\n%s", view)
+	}
+}
+
+func TestRunViewMarksTargetOutcomes(t *testing.T) {
+	targets := runTargets()
+	failed := []domain.StepResult{
+		runStep("dns", domain.StepDNS, domain.StatusPass, 10),
+		runStep("tcp.443", domain.StepTCP, domain.StatusFail, 20, domain.Measurement{Name: "outcome", Value: "timeout"}),
+	}
+	model := runModel(t, 120, 40)
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetDone, Steps: failed},
+		{Target: targets[1], State: app.TargetDone, Steps: alphaSteps()},
+	}}})
+
+	view := model.View()
+	if !strings.Contains(view, "✗ Alpha") {
+		t.Fatalf("failed target lacks a failure marker:\n%s", view)
+	}
+	if !strings.Contains(view, "✓ Beta") && !strings.Contains(view, "✓ Alpha") {
+		t.Fatalf("passing target lacks a pass marker:\n%s", view)
+	}
+}
+
+func TestRunViewTargetColumnAtCompact(t *testing.T) {
+	model := completeRun(t, runModel(t, 60, 20))
+	view := model.View()
+	assertBlockShape(t, view, 60, 20)
+	if !strings.Contains(view, "TARGETS") || !strings.Contains(view, "Alpha") {
+		t.Fatalf("compact view lost the target column:\n%s", view)
+	}
+}
+
+func TestRunViewArrowsSwitchTargets(t *testing.T) {
+	model := completeRun(t, runModel(t, 100, 30))
+
+	model, _ = pressKey(t, model, "j")
+	if view := model.View(); !strings.Contains(view, "2/2 targets") {
+		t.Fatalf("j did not move to the next target:\n%s", view)
+	}
+	model, _ = pressKey(t, model, "k")
+	if view := model.View(); !strings.Contains(view, "1/2 targets") {
+		t.Fatalf("k did not move back:\n%s", view)
+	}
+}
+
+func TestRunViewFocusMode(t *testing.T) {
+	model := completeRun(t, runModel(t, 100, 30))
+
+	model, _ = pressKey(t, model, "enter")
+	if !strings.Contains(model.View(), "[scroll]") {
+		t.Fatalf("enter did not focus the pane:\n%s", model.View())
+	}
+	model, _ = pressKey(t, model, "j")
+	if view := model.View(); !strings.Contains(view, "1/2 targets") {
+		t.Fatalf("scrolling changed the target:\n%s", view)
+	}
+
+	model, _ = pressKey(t, model, "esc")
+	if strings.Contains(model.View(), "[scroll]") {
+		t.Fatal("esc did not leave the focus")
+	}
+	if strings.Contains(model.View(), "RUN") == false {
+		t.Fatal("esc left the run view while focus was active")
+	}
+	model, _ = pressKey(t, model, "esc")
+	if strings.Contains(model.View(), "RUN") {
+		t.Fatal("second esc did not leave the run view")
+	}
+}
+
+func TestRunViewTargetSwitchInsideFocus(t *testing.T) {
+	model := completeRun(t, runModel(t, 100, 30))
+	model, _ = pressKey(t, model, "enter")
+	model, _ = pressKey(t, model, "l")
+	if view := model.View(); !strings.Contains(view, "2/2 targets") {
+		t.Fatalf("l did not switch target inside focus:\n%s", view)
+	}
+	if !strings.Contains(model.View(), "[scroll]") {
+		t.Fatal("switching target dropped the focus")
+	}
+}
+
+func TestRunViewAutoScrollsToTheRunningStep(t *testing.T) {
+	plan := make([]domain.StepPlan, 0, 30)
+	for i := 0; i < 30; i++ {
+		plan = append(plan, domain.StepPlan{ID: fmt.Sprintf("step-%02d", i), Kind: domain.StepTCP})
+	}
+	model := runModel(t, 100, 30)
+	model = applyMessage(t, model, ProbeProgressMsg{Progress: app.ProbeProgress{TargetID: "alpha", Index: 0, Total: 2, Plan: plan}})
+	model = applyMessage(t, model, ProbeStepStartMsg{TargetID: "alpha", Plan: plan[25]})
+
+	if view := model.View(); !strings.Contains(view, "step-25") {
+		t.Fatalf("the running step is outside the window:\n%s", view)
+	}
+}
+
+func TestRunViewMarksATargetDoneBeforeTheSessionEnds(t *testing.T) {
+	model := runModel(t, 120, 40)
+	model = applyMessage(t, model, ProbeProgressMsg{Progress: app.ProbeProgress{TargetID: "alpha", Index: 0, Total: 2}})
+	model = applyMessage(t, model, ProbeProgressMsg{Progress: app.ProbeProgress{TargetID: "beta", Index: 1, Total: 2}})
+	model = applyMessage(t, model, ProbeTargetDoneMsg{TargetID: "alpha", State: app.TargetDone, Steps: alphaSteps()})
+
+	view := model.View()
+	if !strings.Contains(view, "✓ Alpha") {
+		t.Fatalf("finished target lacks its outcome marker:\n%s", view)
+	}
+	if !strings.Contains(view, "… Beta") {
+		t.Fatalf("running target lost its running marker:\n%s", view)
+	}
+}
+
+func TestRunViewGGJumpsTargets(t *testing.T) {
+	model := completeRun(t, runModel(t, 100, 30))
+
+	model, _ = pressKey(t, model, "G")
+	if view := model.View(); !strings.Contains(view, "2/2 targets") {
+		t.Fatalf("G did not jump to the last target:\n%s", view)
+	}
+	model, _ = pressKey(t, model, "g")
+	if view := model.View(); !strings.Contains(view, "1/2 targets") {
+		t.Fatalf("g did not jump to the first target:\n%s", view)
+	}
+	if strings.Contains(model.View(), "[scroll]") {
+		t.Fatal("g/G should not focus a pane")
+	}
+}
+
+func TestRunViewProblemJumps(t *testing.T) {
+	targets := runTargets()
+	failed := []domain.StepResult{
+		runStep("dns", domain.StepDNS, domain.StatusPass, 10),
+		runStep("tcp.443", domain.StepTCP, domain.StatusFail, 20, domain.Measurement{Name: "outcome", Value: "timeout"}),
+	}
+	warned := []domain.StepResult{
+		runStep("dns", domain.StepDNS, domain.StatusWarn, 10, domain.Measurement{Name: "comparison", Value: "differ"}),
+	}
+	model := runModel(t, 100, 30)
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetDone, Steps: failed},
+		{Target: targets[1], State: app.TargetDone, Steps: warned},
+	}}})
+
+	model, _ = pressKey(t, model, "n")
+	if view := model.View(); !strings.Contains(view, "2/2 targets") {
+		t.Fatalf("n did not move to the next problem target:\n%s", view)
+	}
+	model, _ = pressKey(t, model, "n")
+	if view := model.View(); !strings.Contains(view, "1/2 targets") {
+		t.Fatalf("n did not wrap to the first problem target:\n%s", view)
+	}
+	model, _ = pressKey(t, model, "p")
+	if view := model.View(); !strings.Contains(view, "2/2 targets") {
+		t.Fatalf("p did not move back to the last problem target:\n%s", view)
+	}
+}
+
+func TestRunViewProblemJumpWithoutProblems(t *testing.T) {
+	model := completeRun(t, runModel(t, 100, 30))
+	model, _ = pressKey(t, model, "n")
+	if !strings.Contains(model.View(), "no failed or warning targets") {
+		t.Fatalf("empty problem jump is not explained:\n%s", model.View())
+	}
+}
+
+func TestRunViewWrapsLongStepDiagnostics(t *testing.T) {
+	long := strings.Repeat("path discovery truncated because the trace budget expired; ", 3) + "end-of-diagnostic"
+	steps := []domain.StepResult{
+		runStep("trace", domain.StepTrace, domain.StatusWarn, 20000,
+			domain.Measurement{Name: "method", Value: "udp"}),
+	}
+	steps[0].Diagnostic = long
+	targets := runTargets()
+	model := runModel(t, 100, 30)
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetDone, Steps: steps},
+		{Target: targets[1], State: app.TargetDone},
+	}}})
+
+	if view := model.View(); !strings.Contains(view, "end-of-diagnostic") {
+		t.Fatalf("long diagnostic is clipped:\n%s", view)
+	}
+}
+
+func TestRunViewWrapsLongVerdictLines(t *testing.T) {
+	long := strings.Repeat("the resolver answered with a differing record; ", 4) + "verdict-tail"
+	steps := []domain.StepResult{
+		runStep("dns", domain.StepDNS, domain.StatusWarn, 10,
+			domain.Measurement{Name: "comparison", Value: "differ"},
+			domain.Measurement{Name: "system.answers", Value: "203.0.113.10"},
+			domain.Measurement{Name: "doh.answers", Value: "203.0.113.10"}),
+	}
+	steps[0].Diagnostic = long
+	targets := runTargets()
+	model := runModel(t, 100, 30)
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetDone, Steps: steps},
+		{Target: targets[1], State: app.TargetDone},
+	}}})
+
+	model, _ = pressKey(t, model, "3")
+	model, _ = pressKey(t, model, "enter")
+	model, _ = pressKey(t, model, "G")
+	if view := model.View(); !strings.Contains(view, "verdict-tail") {
+		t.Fatalf("long verdict evidence is clipped:\n%s", view)
+	}
+}
+
+func TestRunViewWrapsLongHopAddresses(t *testing.T) {
+	address := "2a00:1450:400f:805::200e:1234:5678:9abc"
+	steps := []domain.StepResult{
+		runStep("dns", domain.StepDNS, domain.StatusPass, 10, domain.Measurement{Name: "system.answers", Value: "203.0.113.10"}),
+	}
+	trace := runStep("trace", domain.StepTrace, domain.StatusPass, 500, domain.Measurement{Name: "method", Value: "udp"})
+	trace.Hops = []domain.Hop{{TTL: 1, Address: address, Sent: 3, Received: 3, RTTMedianMS: 20}}
+	steps = append(steps, trace)
+	targets := runTargets()
+	model := runModel(t, 60, 20)
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetDone, Steps: steps},
+		{Target: targets[1], State: app.TargetDone},
+	}}})
+	model, _ = pressKey(t, model, "2")
+
+	joined := strings.ReplaceAll(strings.Join(strings.Fields(model.View()), ""), "│", "")
+	want := strings.ReplaceAll(address, " ", "")
+	if !strings.Contains(joined, want) {
+		t.Fatalf("long hop address is clipped:\n%s", model.View())
+	}
+}
+
+func TestRunViewHidesUnknownForCleanTargets(t *testing.T) {
+	model := completeRun(t, runModel(t, 100, 30))
+	model, _ = pressKey(t, model, "3")
+	view := model.View()
+
+	if strings.Contains(view, "unknown  (low)") {
+		t.Fatalf("clean target is labelled unknown:\n%s", view)
+	}
+	if !strings.Contains(view, "no blockage detected") {
+		t.Fatalf("clean target has no explicit outcome:\n%s", view)
+	}
 }

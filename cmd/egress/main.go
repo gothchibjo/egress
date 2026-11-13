@@ -207,6 +207,12 @@ func runTUI(stdout *os.File, stderr io.Writer, session baselineRunner, mode stri
 		session.OnStep = func(targetID string, step domain.StepResult) {
 			program.Send(tui.ProbeStepMsg{TargetID: targetID, Step: step})
 		}
+		session.OnStepStart = func(targetID string, plan domain.StepPlan) {
+			program.Send(tui.ProbeStepStartMsg{TargetID: targetID, Plan: plan})
+		}
+		session.OnTargetDone = func(targetID string, finished app.TargetRun) {
+			program.Send(tui.ProbeTargetDoneMsg{TargetID: targetID, State: finished.State, Steps: finished.Steps})
+		}
 		probeMu.Lock()
 		probeSession = session
 		probeMu.Unlock()

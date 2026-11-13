@@ -24,8 +24,79 @@
 --- PASS: TestRunViewScrolling (0.00s)
 === RUN   TestRunViewResizeKeepsState
 --- PASS: TestRunViewResizeKeepsState (0.00s)
+=== RUN   TestRunViewShowsPlannedAndRunningSteps
+--- PASS: TestRunViewShowsPlannedAndRunningSteps (0.00s)
+=== RUN   TestRunViewMarksTargetOutcomes
+--- PASS: TestRunViewMarksTargetOutcomes (0.00s)
+=== RUN   TestRunViewTargetColumnAtCompact
+--- PASS: TestRunViewTargetColumnAtCompact (0.00s)
+=== RUN   TestRunViewArrowsSwitchTargets
+--- PASS: TestRunViewArrowsSwitchTargets (0.00s)
+=== RUN   TestRunViewFocusMode
+--- PASS: TestRunViewFocusMode (0.00s)
+=== RUN   TestRunViewTargetSwitchInsideFocus
+--- PASS: TestRunViewTargetSwitchInsideFocus (0.00s)
+=== RUN   TestRunViewAutoScrollsToTheRunningStep
+--- PASS: TestRunViewAutoScrollsToTheRunningStep (0.00s)
+=== RUN   TestRunViewMarksATargetDoneBeforeTheSessionEnds
+--- PASS: TestRunViewMarksATargetDoneBeforeTheSessionEnds (0.00s)
+=== RUN   TestRunViewGGJumpsTargets
+--- PASS: TestRunViewGGJumpsTargets (0.00s)
+=== RUN   TestRunViewProblemJumps
+--- PASS: TestRunViewProblemJumps (0.00s)
+=== RUN   TestRunViewProblemJumpWithoutProblems
+--- PASS: TestRunViewProblemJumpWithoutProblems (0.00s)
+=== RUN   TestRunViewWrapsLongStepDiagnostics
+--- PASS: TestRunViewWrapsLongStepDiagnostics (0.00s)
+=== RUN   TestRunViewWrapsLongVerdictLines
+--- PASS: TestRunViewWrapsLongVerdictLines (0.00s)
+=== RUN   TestRunViewWrapsLongHopAddresses
+--- PASS: TestRunViewWrapsLongHopAddresses (0.00s)
+=== RUN   TestRunViewHidesUnknownForCleanTargets
+--- PASS: TestRunViewHidesUnknownForCleanTargets (0.00s)
 === RUN   TestRunViewTranscript
     run_view_transcript_test.go:13: set EGRESS_TRANSCRIPT=1 to print the run view transcript
 --- SKIP: TestRunViewTranscript (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/tui	0.235s
+ok  	github.com/gothchibjo/egress/internal/tui	0.251s
+=== RUN   TestProbeSessionCapsConcurrency
+--- PASS: TestProbeSessionCapsConcurrency (0.02s)
+=== RUN   TestProbeSessionCancelsOneTarget
+--- PASS: TestProbeSessionCancelsOneTarget (0.00s)
+=== RUN   TestProbeSessionCancelsAll
+--- PASS: TestProbeSessionCancelsAll (0.00s)
+=== RUN   TestProbeSessionBoundedByTimeout
+--- PASS: TestProbeSessionBoundedByTimeout (0.20s)
+=== RUN   TestProbeSessionRejectsConcurrentRun
+--- PASS: TestProbeSessionRejectsConcurrentRun (0.00s)
+=== RUN   TestProbeSessionProgress
+--- PASS: TestProbeSessionProgress (0.00s)
+=== RUN   TestProbeSessionReportsStepEvents
+--- PASS: TestProbeSessionReportsStepEvents (0.00s)
+=== RUN   TestProbeSessionReportsFinishedTargets
+--- PASS: TestProbeSessionReportsFinishedTargets (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/app	(cached)
+=== RUN   TestLadderIncludesTheTraceStep
+--- PASS: TestLadderIncludesTheTraceStep (0.00s)
+=== RUN   TestLadderPlanMatchesStartEvents
+--- PASS: TestLadderPlanMatchesStartEvents (0.00s)
+=== RUN   TestNewTracerSelectsTheMethod
+--- PASS: TestNewTracerSelectsTheMethod (0.00s)
+=== RUN   TestNewTracerElevatedFallsBackWithoutRaw
+--- PASS: TestNewTracerElevatedFallsBackWithoutRaw (0.00s)
+=== RUN   TestICMPTracerRequiresPrivileges
+--- PASS: TestICMPTracerRequiresPrivileges (0.00s)
+=== RUN   TestTraceStepReportsHops
+--- PASS: TestTraceStepReportsHops (0.00s)
+=== RUN   TestTraceStepKeepsPartialPath
+--- PASS: TestTraceStepKeepsPartialPath (0.00s)
+=== RUN   TestTraceStepWithoutResponsesWarns
+--- PASS: TestTraceStepWithoutResponsesWarns (0.00s)
+=== RUN   TestTraceStepReportsFailure
+--- PASS: TestTraceStepReportsFailure (0.00s)
+=== RUN   TestUDPTracerIntegration
+    trace_test.go:169: set EGRESS_INTEGRATION=1 to run the live traceroute
+--- SKIP: TestUDPTracerIntegration (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	(cached)

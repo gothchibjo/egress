@@ -19,9 +19,11 @@ type ProbeLadder interface {
 	Run(ctx context.Context, target domain.ProbeTarget) []domain.StepResult
 }
 
-// StepReporter is an optional ladder that reports each finished step.
+// StepReporter is an optional ladder that reports its plan and every started
+// and finished step.
 type StepReporter interface {
-	RunWithProgress(ctx context.Context, target domain.ProbeTarget, onStep func(domain.StepResult)) []domain.StepResult
+	Plan(target domain.ProbeTarget) []domain.StepPlan
+	RunWithProgress(ctx context.Context, target domain.ProbeTarget, onStart func(domain.StepPlan), onStep func(domain.StepResult)) []domain.StepResult
 }
 
 // TargetState is the lifecycle of one target inside a session.
@@ -52,6 +54,7 @@ type ProbeProgress struct {
 	TargetID string
 	Index    int
 	Total    int
+	Plan     []domain.StepPlan
 }
 
 // ProbeSession schedules target ladders with a bounded worker pool.
@@ -61,6 +64,10 @@ type ProbeSession struct {
 
 	// OnStep receives every finished step when the ladder reports them.
 	OnStep func(targetID string, step domain.StepResult)
+	// OnStepStart receives every started step when the ladder reports them.
+	OnStepStart func(targetID string, plan domain.StepPlan)
+	// OnTargetDone receives each target as soon as its ladder finishes.
+	OnTargetDone func(targetID string, run TargetRun)
 
 	mu            sync.Mutex
 	running       bool
@@ -146,19 +153,33 @@ func (s *ProbeSession) Run(ctx context.Context, targets []domain.ProbeTarget, pr
 				s.targetCancels[target.ID] = targetCancel
 				s.mu.Unlock()
 
+				var plan []domain.StepPlan
+				reporter, reportsSteps := s.ladder.(StepReporter)
+				if reportsSteps {
+					plan = reporter.Plan(target)
+				}
+
 				resultMu.Lock()
 				run.Targets[index].State = TargetRunning
 				resultMu.Unlock()
 
 				if progress != nil {
-					progress(ProbeProgress{TargetID: target.ID, Index: index, Total: len(targets)})
+					progress(ProbeProgress{TargetID: target.ID, Index: index, Total: len(targets), Plan: plan})
 				}
 
 				var steps []domain.StepResult
-				if reporter, ok := s.ladder.(StepReporter); ok && s.OnStep != nil {
-					steps = reporter.RunWithProgress(targetCtx, target, func(step domain.StepResult) {
-						s.OnStep(target.ID, step)
-					})
+				if reportsSteps && s.OnStep != nil {
+					steps = reporter.RunWithProgress(targetCtx, target,
+						func(started domain.StepPlan) {
+							if s.OnStepStart != nil {
+								s.OnStepStart(target.ID, started)
+							}
+						},
+						func(step domain.StepResult) {
+							s.OnStep(target.ID, step)
+						})
+				} else if reportsSteps {
+					steps = reporter.RunWithProgress(targetCtx, target, nil, nil)
 				} else {
 					steps = s.ladder.Run(targetCtx, target)
 				}
@@ -175,6 +196,10 @@ func (s *ProbeSession) Run(ctx context.Context, targets []domain.ProbeTarget, pr
 					run.Cancelled = true
 				}
 				resultMu.Unlock()
+
+				if done := s.OnTargetDone; done != nil {
+					done(target.ID, TargetRun{Target: target, State: state, Steps: steps})
+				}
 
 				s.mu.Lock()
 				delete(s.targetCancels, target.ID)

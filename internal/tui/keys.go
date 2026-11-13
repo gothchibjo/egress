@@ -297,10 +297,13 @@ func (m Model) footerHints() string {
 		}
 		return "space select" + sep + "a all" + sep + "/ filter" + sep + "c custom" + sep + "enter run" + sep + "esc back"
 	case viewRun:
-		if m.Layout() == LayoutCompact {
-			return "h/l tgt" + sep + "1-3 view" + sep + "x/X cancel" + sep + "? help"
+		if m.run.focus {
+			return "↑/k ↓/j scroll" + sep + "g/G top/end" + sep + "h/l target" + sep + "esc back"
 		}
-		return "h/l target" + sep + "1/2/3 view" + sep + "j/k scroll" + sep + "x/X cancel" + sep + "? help"
+		if m.Layout() == LayoutCompact {
+			return "↑↓ target" + sep + "1-3 pane" + sep + "enter" + sep + "x/X" + sep + "? help"
+		}
+		return "↑/k ↓/j target" + sep + "1/2/3 pane" + sep + "enter scroll" + sep + "x/X cancel" + sep + "? help"
 	case viewHelp:
 		return "j/k scroll" + sep + "? close" + sep + "esc back"
 	default:
@@ -319,7 +322,7 @@ func helpLines() []string {
 		" NAVIGATION",
 		"   ↑/k ↓/j    move or scroll",
 		"   g / G      first / last",
-		"   h/l [ ]    previous / next check",
+		"   h/l [ ]    previous / next check or target",
 		"   n / p      next / previous problem",
 		"   PgUp/PgDn  scroll one page",
 		"   enter      open · esc back",

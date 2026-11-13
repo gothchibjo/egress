@@ -321,3 +321,23 @@ func TestLadderStopsWhenCancelled(t *testing.T) {
 		t.Fatalf("steps after cancellation = %d, want only dns: %+v", len(steps), steps)
 	}
 }
+
+func TestLadderPlanMatchesStartEvents(t *testing.T) {
+	ladder := testLadder()
+	target := presetTarget(t, "youtube")
+	plan := ladder.Plan(target)
+
+	started := make([]string, 0, len(plan))
+	ladder.RunWithProgress(context.Background(), target, func(step domain.StepPlan) {
+		started = append(started, step.ID)
+	}, nil)
+
+	if len(started) != len(plan) {
+		t.Fatalf("start events = %d, plan = %d", len(started), len(plan))
+	}
+	for i := range plan {
+		if started[i] != plan[i].ID {
+			t.Fatalf("start %d = %q, plan = %q", i, started[i], plan[i].ID)
+		}
+	}
+}

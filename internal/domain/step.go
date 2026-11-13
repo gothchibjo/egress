@@ -18,6 +18,12 @@ const (
 	StepTrace StepKind = "trace"
 )
 
+// StepPlan describes one step before it runs.
+type StepPlan struct {
+	ID   string   `json:"id"`
+	Kind StepKind `json:"kind"`
+}
+
 // StepResult is one independent probe of the ladder.
 type StepResult struct {
 	ID           string        `json:"id"`

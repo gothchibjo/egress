@@ -253,3 +253,86 @@ func TestProbeSessionProgress(t *testing.T) {
 		}
 	}
 }
+
+type fakeReporter struct{}
+
+func (f fakeReporter) Run(ctx context.Context, target domain.ProbeTarget) []domain.StepResult {
+	return f.RunWithProgress(ctx, target, nil, nil)
+}
+
+func (fakeReporter) Plan(target domain.ProbeTarget) []domain.StepPlan {
+	return []domain.StepPlan{{ID: "dns", Kind: domain.StepDNS}, {ID: "trace", Kind: domain.StepTrace}}
+}
+
+func (fakeReporter) RunWithProgress(ctx context.Context, target domain.ProbeTarget, onStart func(domain.StepPlan), onStep func(domain.StepResult)) []domain.StepResult {
+	steps := make([]domain.StepResult, 0, 2)
+	for _, plan := range (fakeReporter{}).Plan(target) {
+		if onStart != nil {
+			onStart(plan)
+		}
+		step := probeStep(target)
+		step.ID = plan.ID
+		if onStep != nil {
+			onStep(step)
+		}
+		steps = append(steps, step)
+	}
+	return steps
+}
+
+func TestProbeSessionReportsStepEvents(t *testing.T) {
+	var started, finished []string
+	session := NewProbeSession(fakeReporter{})
+	session.OnStepStart = func(targetID string, plan domain.StepPlan) {
+		started = append(started, targetID+":"+plan.ID)
+	}
+	session.OnStep = func(targetID string, step domain.StepResult) {
+		finished = append(finished, targetID+":"+step.ID)
+	}
+
+	var plan []domain.StepPlan
+	_, err := session.Run(context.Background(), probeTargets(1), func(progress ProbeProgress) {
+		plan = progress.Plan
+	})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if len(plan) != 2 {
+		t.Fatalf("progress plan = %+v", plan)
+	}
+	if len(started) != 2 || len(finished) != 2 {
+		t.Fatalf("started = %v, finished = %v", started, finished)
+	}
+	for i := range started {
+		if started[i] != finished[i] {
+			t.Fatalf("event order differs: started %v, finished %v", started, finished)
+		}
+	}
+}
+
+func TestProbeSessionReportsFinishedTargets(t *testing.T) {
+	ladder := fakeLadder{run: func(ctx context.Context, target domain.ProbeTarget) []domain.StepResult {
+		return []domain.StepResult{probeStep(target)}
+	}}
+
+	finished := make(chan string, 3)
+	session := NewProbeSession(ladder)
+	session.OnTargetDone = func(targetID string, run TargetRun) {
+		finished <- targetID
+	}
+
+	if _, err := session.Run(context.Background(), probeTargets(3), nil); err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	close(finished)
+
+	seen := make(map[string]bool, 3)
+	for id := range finished {
+		seen[id] = true
+	}
+	for _, target := range probeTargets(3) {
+		if !seen[target.ID] {
+			t.Fatalf("no completion event for %q", target.ID)
+		}
+	}
+}

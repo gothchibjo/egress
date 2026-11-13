@@ -264,6 +264,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.finishRun(msg.Run), nil
 	case ProbeProgressMsg:
 		return m.markProbeTarget(msg.Progress), nil
+	case ProbeTargetDoneMsg:
+		return m.finishTarget(msg), nil
+	case ProbeStepStartMsg:
+		return m.markProbeStep(msg.TargetID, msg.Plan), nil
 	case ProbeStepMsg:
 		return m.appendProbeStep(msg.TargetID, msg.Step), nil
 	case ProbeCompleteMsg:

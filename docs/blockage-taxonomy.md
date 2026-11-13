@@ -10,6 +10,7 @@ date: 2026-11-13
 - [Ranking](#ranking)
 - [Active and passive evidence](#active-and-passive-evidence)
 - [Confidence](#confidence)
+- [Clean targets](#clean-targets)
 - [Caveats](#caveats)
 
 ## Members
@@ -72,6 +73,13 @@ Consequences:
 | `low`    | a single weak signal, such as timeouts alone, or a passing target                 |
 
 A timeout-only case is never reported with high confidence.
+
+## Clean targets
+
+A target whose ladder passed is reported as `no blockage detected`. The taxonomy
+type stays `unknown` because the taxonomy only describes blockage types; a
+separate `no_blockage` flag marks the clean outcome, and the UI shows the human
+wording instead of `unknown`.
 
 ## Caveats
 

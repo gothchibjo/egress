@@ -337,3 +337,25 @@ implementation in the order above.
 - 2026-11-13 — REQ-002 picker: `a` selects every visible preset or clears them
   when all are selected; the filter bounds the toggle and custom targets are
   untouched.
+- 2026-11-13 — REQ-002/REQ-010 refinement: `a` selects all visible presets; the
+  run view shows targets as a left column with running and outcome markers, the
+  current step next to each target, and the ladder as planned, running and
+  finished steps fed by step-start events.
+- 2026-11-13 — REQ-010 navigation: arrows and `j`/`k` switch targets, `enter`
+  focuses the selected pane for scrolling, the ladder has no cursor and follows
+  the running step automatically.
+- 2026-11-13 — REQ-010 fixes: `g`/`G` focus the selected pane and jump; a
+  finished target updates immediately through a per-target event; the target
+  column keeps one line per target; HOPS names the tracing method and the
+  localization summary. The UDP tracer prefers IPv4, ignores locally generated
+  ICMP errors, probes each TTL concurrently and uses a 30 s trace budget.
+- 2026-11-13 — REQ-010: `g`/`G` jump to the first/last target and `n`/`p` cycle
+  failed or warning targets; pane scrolling stays behind `enter`; run-view
+  notices now render in the footer.
+- 2026-11-13 — REQ-010: panes wrap long lines instead of clipping them; the
+  ladder, hops (two-line rows on narrow panes), verdict evidence and the
+  localization summary stay fully readable, and target labels are ellipsized in
+  the index column.
+- 2026-11-13 — REQ-007/REQ-010: a clean target is reported as
+  `no blockage detected` instead of `unknown (low)`; the taxonomy type stays
+  `unknown` and a `no_blockage` flag carries the distinction.

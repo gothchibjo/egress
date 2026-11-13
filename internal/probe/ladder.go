@@ -19,7 +19,7 @@ import (
 
 const (
 	defaultLadderTimeout = 2 * time.Second
-	traceStepBudget      = 20 * time.Second
+	traceStepBudget      = 30 * time.Second
 	decoySNI             = "example.org"
 )
 
@@ -159,20 +159,48 @@ func TraceStep(tracer Tracer) TraceFunc {
 	}
 }
 
+// Plan lists the steps the ladder will attempt for one target.
+func (l Ladder) Plan(target LadderTarget) []domain.StepPlan {
+	plan := []domain.StepPlan{{ID: "dns", Kind: domain.StepDNS}}
+	if hasProtocol(target.Protocols, domain.PresetTCP) {
+		for _, port := range target.Ports {
+			plan = append(plan, domain.StepPlan{ID: fmt.Sprintf("tcp.%d", port), Kind: domain.StepTCP})
+		}
+	}
+	if hasProtocol(target.Protocols, domain.PresetTLS) && len(target.Ports) > 0 {
+		for _, variant := range []string{"real", "decoy", "absent"} {
+			plan = append(plan, domain.StepPlan{ID: "tls." + variant, Kind: domain.StepTLS})
+		}
+	}
+	if hasProtocol(target.Protocols, domain.PresetHTTP) && len(target.Ports) > 0 {
+		plan = append(plan, domain.StepPlan{ID: "http", Kind: domain.StepHTTP})
+	}
+	if hasProtocol(target.Protocols, domain.PresetICMP) {
+		plan = append(plan, domain.StepPlan{ID: "icmp", Kind: domain.StepICMP})
+	}
+	plan = append(plan, domain.StepPlan{ID: "trace", Kind: domain.StepTrace})
+	return plan
+}
+
 // Run executes the ladder and returns every step in order.
 func (l Ladder) Run(ctx context.Context, target LadderTarget) []domain.StepResult {
-	return l.run(ctx, target, nil)
+	return l.run(ctx, target, nil, nil)
 }
 
-// RunWithProgress executes the ladder and reports every finished step to
-// onStep so the UI can show live progress.
-func (l Ladder) RunWithProgress(ctx context.Context, target LadderTarget, onStep func(domain.StepResult)) []domain.StepResult {
-	return l.run(ctx, target, onStep)
+// RunWithProgress executes the ladder and reports every started and finished
+// step so the UI can show live progress.
+func (l Ladder) RunWithProgress(ctx context.Context, target LadderTarget, onStart func(domain.StepPlan), onStep func(domain.StepResult)) []domain.StepResult {
+	return l.run(ctx, target, onStart, onStep)
 }
 
-func (l Ladder) run(ctx context.Context, target LadderTarget, onStep func(domain.StepResult)) []domain.StepResult {
+func (l Ladder) run(ctx context.Context, target LadderTarget, onStart func(domain.StepPlan), onStep func(domain.StepResult)) []domain.StepResult {
 	steps := make([]domain.StepResult, 0, 9)
 	order := 0
+	announce := func(id string, kind domain.StepKind) {
+		if onStart != nil {
+			onStart(domain.StepPlan{ID: id, Kind: kind})
+		}
+	}
 	add := func(step domain.StepResult) {
 		order++
 		step.Order = order
@@ -185,6 +213,7 @@ func (l Ladder) run(ctx context.Context, target LadderTarget, onStep func(domain
 		}
 	}
 
+	announce("dns", domain.StepDNS)
 	dnsStep, systemAnswers := l.runDNS(ctx, target)
 	add(dnsStep)
 
@@ -193,6 +222,7 @@ func (l Ladder) run(ctx context.Context, target LadderTarget, onStep func(domain
 			if ctx.Err() != nil {
 				return steps
 			}
+			announce(fmt.Sprintf("tcp.%d", port), domain.StepTCP)
 			add(l.runTCP(ctx, target, port))
 		}
 	}
@@ -209,16 +239,20 @@ func (l Ladder) run(ctx context.Context, target LadderTarget, onStep func(domain
 			if ctx.Err() != nil {
 				return steps
 			}
+			announce("tls."+variant.id, domain.StepTLS)
 			add(l.runTLS(ctx, target, port, variant.id, variant.sni))
 		}
 	}
 	if ctx.Err() == nil && hasProtocol(target.Protocols, domain.PresetHTTP) && len(target.Ports) > 0 {
+		announce("http", domain.StepHTTP)
 		add(l.runHTTP(ctx, target, target.Ports[0]))
 	}
 	if ctx.Err() == nil && hasProtocol(target.Protocols, domain.PresetICMP) {
+		announce("icmp", domain.StepICMP)
 		add(l.runICMP(ctx, target, systemAnswers))
 	}
 	if ctx.Err() == nil {
+		announce("trace", domain.StepTrace)
 		add(l.runTrace(ctx, target))
 	}
 

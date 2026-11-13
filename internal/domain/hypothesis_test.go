@@ -131,7 +131,7 @@ func TestClassifyTargetScenarios(t *testing.T) {
 			},
 			wantType:   BlockUnknown,
 			wantConf:   ConfidenceLow,
-			wantPhrase: "no blockage detected",
+			wantPhrase: "every ladder step passed",
 		},
 		{
 			name:       "no data",
@@ -311,5 +311,29 @@ func TestHypothesisRejectsUnlabelledEvidence(t *testing.T) {
 	}
 	if err := hypothesis.Validate(); err == nil {
 		t.Fatal("accepted evidence without a mode")
+	}
+}
+
+func TestPassingTargetIsNotReportedAsUnknown(t *testing.T) {
+	steps := []StepResult{
+		evidenceStep("dns", StepDNS, StatusPass, measure("comparison", "match")),
+		evidenceStep("tcp.443", StepTCP, StatusPass, measure("outcome", "connected")),
+	}
+	hypothesis := ClassifyTarget(steps, Localization{})
+	if !hypothesis.NoBlockage {
+		t.Fatalf("passing target is not marked as no blockage: %+v", hypothesis)
+	}
+	if hypothesis.Type != BlockUnknown {
+		t.Fatalf("taxonomy type = %q, want unknown", hypothesis.Type)
+	}
+	if err := hypothesis.Validate(); err != nil {
+		t.Fatalf("hypothesis is invalid: %v", err)
+	}
+}
+
+func TestNoDataIsStillUnknown(t *testing.T) {
+	hypothesis := ClassifyTarget(nil, Localization{})
+	if hypothesis.NoBlockage {
+		t.Fatalf("empty evidence was marked as no blockage: %+v", hypothesis)
 	}
 }
