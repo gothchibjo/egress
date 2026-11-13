@@ -47,7 +47,7 @@ func TestClassifyTargetScenarios(t *testing.T) {
 		{
 			name: "dns divergence",
 			steps: []StepResult{
-				evidenceStep("dns", StepDNS, StatusWarn, measure("comparison", "differ"), measure("doh.answers", "203.0.113.10")),
+				evidenceStep("dns", StepDNS, StatusWarn, measure("comparison", "differ"), measure("system.answers", "203.0.113.10, 203.0.113.11"), measure("doh.answers", "203.0.113.10")),
 				evidenceStep("tcp.443", StepTCP, StatusPass, measure("outcome", "connected")),
 				evidenceStep("tls.real", StepTLS, StatusPass),
 				evidenceStep("http", StepHTTP, StatusPass),
@@ -151,7 +151,11 @@ func TestClassifyTargetScenarios(t *testing.T) {
 			if hypothesis.Confidence != test.wantConf {
 				t.Fatalf("confidence = %q, want %q", hypothesis.Confidence, test.wantConf)
 			}
-			if test.wantPhrase != "" && !strings.Contains(strings.ToLower(hypothesis.Summary+" "+strings.Join(hypothesis.Evidence, " ")), strings.ToLower(test.wantPhrase)) {
+			texts := make([]string, 0, len(hypothesis.Evidence))
+			for _, line := range hypothesis.Evidence {
+				texts = append(texts, line.Text)
+			}
+			if test.wantPhrase != "" && !strings.Contains(strings.ToLower(hypothesis.Summary+" "+strings.Join(texts, " ")), strings.ToLower(test.wantPhrase)) {
 				t.Fatalf("hypothesis does not mention %q: %+v", test.wantPhrase, hypothesis)
 			}
 			if err := hypothesis.Validate(); err != nil {
@@ -180,7 +184,7 @@ func TestHypothesisRejectsUnknownTaxonomy(t *testing.T) {
 		Type:       "censorship",
 		Confidence: ConfidenceHigh,
 		Summary:    "x",
-		Evidence:   []string{"x"},
+		Evidence:   []EvidenceLine{active("x")},
 		Caveat:     SingleVantageCaveat,
 	}
 	if err := hypothesis.Validate(); err == nil {
@@ -197,5 +201,115 @@ func TestHypothesisRequiresEvidence(t *testing.T) {
 	}
 	if err := hypothesis.Validate(); err == nil {
 		t.Fatal("accepted a hypothesis without evidence")
+	}
+}
+
+func evidenceTexts(hypothesis Hypothesis) string {
+	texts := make([]string, 0, len(hypothesis.Evidence))
+	for _, line := range hypothesis.Evidence {
+		texts = append(texts, line.Text)
+	}
+	return strings.ToLower(strings.Join(texts, " "))
+}
+
+func TestTimeoutOnlyEvidenceIsPassive(t *testing.T) {
+	steps := []StepResult{
+		evidenceStep("dns", StepDNS, StatusPass, measure("comparison", "match")),
+		evidenceStep("tcp.443", StepTCP, StatusFail, measure("outcome", "timeout")),
+		evidenceStep("icmp", StepICMP, StatusFail, measure("outcome", "no_reply")),
+	}
+	hypothesis := ClassifyTarget(steps, Localization{})
+
+	if hypothesis.Confidence == ConfidenceHigh {
+		t.Fatalf("timeout-only case got high confidence: %+v", hypothesis)
+	}
+	for _, line := range hypothesis.Evidence {
+		if line.Mode != ObservedPassive {
+			t.Fatalf("timeout evidence is labelled %q: %q", line.Mode, line.Text)
+		}
+	}
+	if !strings.Contains(evidenceTexts(hypothesis), "rate-limited") {
+		t.Fatalf("ICMP rate limiting is not named: %+v", hypothesis.Evidence)
+	}
+}
+
+func TestResetEvidenceIsActive(t *testing.T) {
+	steps := []StepResult{
+		evidenceStep("dns", StepDNS, StatusPass, measure("comparison", "match")),
+		evidenceStep("tcp.443", StepTCP, StatusFail, measure("outcome", "reset")),
+	}
+	hypothesis := ClassifyTarget(steps, Localization{})
+	if hypothesis.Type != BlockTCPRST {
+		t.Fatalf("type = %q", hypothesis.Type)
+	}
+	if len(hypothesis.Evidence) == 0 || hypothesis.Evidence[0].Mode != ObservedActive {
+		t.Fatalf("reset is not labelled active: %+v", hypothesis.Evidence)
+	}
+}
+
+func TestSNIEvidenceIncludesAnActiveSignal(t *testing.T) {
+	steps := []StepResult{
+		evidenceStep("dns", StepDNS, StatusPass, measure("comparison", "match")),
+		evidenceStep("tcp.443", StepTCP, StatusPass, measure("outcome", "connected")),
+		evidenceStep("tls.real", StepTLS, StatusFail, measure("outcome", "timeout")),
+		evidenceStep("tls.decoy", StepTLS, StatusPass, measure("outcome", "handshake_complete")),
+	}
+	hypothesis := ClassifyTarget(steps, Localization{})
+	if hypothesis.Confidence != ConfidenceHigh {
+		t.Fatalf("confidence = %q, want high", hypothesis.Confidence)
+	}
+	hasActive := false
+	for _, line := range hypothesis.Evidence {
+		if line.Mode == ObservedActive {
+			hasActive = true
+		}
+	}
+	if !hasActive {
+		t.Fatalf("high confidence without an active observation: %+v", hypothesis.Evidence)
+	}
+}
+
+func TestDNSEvidenceNamesTheCDNCaveat(t *testing.T) {
+	steps := []StepResult{
+		evidenceStep("dns", StepDNS, StatusWarn,
+			measure("comparison", "differ"),
+			measure("system.answers", "203.0.113.10, 203.0.113.11"),
+			measure("doh.answers", "203.0.113.10"),
+		),
+	}
+	hypothesis := ClassifyTarget(steps, Localization{})
+	if hypothesis.Type != BlockDNS {
+		t.Fatalf("type = %q", hypothesis.Type)
+	}
+	text := evidenceTexts(hypothesis)
+	if !strings.Contains(text, "cdn") || !strings.Contains(text, "geo") {
+		t.Fatalf("CDN/geo caveat is missing: %s", text)
+	}
+	if !strings.Contains(text, "system answers") || !strings.Contains(text, "doh answers") {
+		t.Fatalf("DNS verdict does not show both answer sets: %s", text)
+	}
+	if hypothesis.Confidence != ConfidenceMedium {
+		t.Fatalf("confidence = %q, want medium", hypothesis.Confidence)
+	}
+}
+
+func TestHighConfidenceNeedsAnActiveLine(t *testing.T) {
+	hypothesis := newHypothesis(BlockIPDrop, ConfidenceHigh, "x",
+		[]EvidenceLine{passive("timeouts only")}, evidenceSummary{})
+	if hypothesis.Confidence != ConfidenceMedium {
+		t.Fatalf("confidence = %q, want the downgrade to medium", hypothesis.Confidence)
+	}
+}
+
+func TestHypothesisRejectsUnlabelledEvidence(t *testing.T) {
+	hypothesis := Hypothesis{
+		Type:       BlockDNS,
+		Confidence: ConfidenceMedium,
+		Summary:    "x",
+		Evidence:   []EvidenceLine{{Text: "missing mode"}},
+		Caveat:     SingleVantageCaveat,
+	}
+	if err := hypothesis.Validate(); err == nil {
+		t.Fatal("accepted evidence without a mode")
 	}
 }

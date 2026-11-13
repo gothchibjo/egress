@@ -281,6 +281,8 @@ implementation in the order above.
 | 2026-11-13 | REQ-006 | No packet capture is used in v1.                                    | Path discovery uses TTL-limited probes and ICMP errors only; no capture API or pcap dependency exists.                                                           | pass   |
 | 2026-11-13 | REQ-007 | A verdict is never produced without evidence.                       | `Hypothesis.Validate` rejects an empty evidence list; every classifier branch builds at least one evidence line.                                                 | pass   |
 | 2026-11-13 | REQ-007 | The taxonomy is not extended without a new PCR.                     | `BlockageType.valid()` enumerates exactly the eight frozen members; an unknown type fails validation and a test rejects it.                                      | pass   |
+| 2026-11-13 | REQ-008 | Silence is never presented as proof of censorship.                  | Passive evidence is labelled, high confidence requires an active observation, and every hypothesis keeps the vantage caveat.                                     | pass   |
+| 2026-11-13 | REQ-008 | CDN and geo-DNS differences are not reported as tampering.          | The DNS branch is capped at medium and explicitly names CDN/geo answers as a legitimate cause of divergence.                                                     | pass   |
 
 # Implementation Log
 
@@ -317,3 +319,7 @@ implementation in the order above.
   `Hypothesis` with evidence, rejected alternatives, confidence and the
   single-vantage caveat; ten scenarios cover the members and the unknown
   outcome.
+- 2026-11-13 — REQ-008 labels every evidence line active or passive, forbids
+  high confidence without an active observation, names ICMP rate limiting, shows
+  both DNS answer sets with the CDN/geo caveat and keeps reset and drop findings
+  distinct.

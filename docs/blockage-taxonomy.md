@@ -8,6 +8,7 @@ date: 2026-11-13
 
 - [Members](#members)
 - [Ranking](#ranking)
+- [Active and passive evidence](#active-and-passive-evidence)
 - [Confidence](#confidence)
 - [Caveats](#caveats)
 
@@ -42,6 +43,25 @@ The classifier evaluates the rules in this order and returns the first match:
 
 Specific evidence wins over generic timeouts: a real-SNI failure with a working
 decoy is stronger than a timeout, and a reset is stronger than a refused port.
+
+## Active and passive evidence
+
+Every evidence line carries a mode:
+
+| Mode      | Meaning                                                                                          |
+| :-------- | :----------------------------------------------------------------------------------------------- |
+| `active`  | the peer answered, rejected or reset: a reset, a refusal, an HTTP status, a differing DNS answer |
+| `passive` | a timeout or silence: no reply, no ICMP, a silent hop                                            |
+
+Consequences:
+
+- high confidence requires at least one active observation; a timeout-only case
+  is capped at medium and normally reported as low;
+- ICMP absence is labelled passive and names rate limiting as the likely cause;
+- DNS divergence lists the system and DoH answer sets and adds the CDN/geo
+  caveat, and never exceeds medium;
+- a reset (active) and a drop (passive) are different types and are never
+  presented as the same finding.
 
 ## Confidence
 

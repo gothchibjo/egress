@@ -1,0 +1,40 @@
+=== RUN   TestClassifyTargetScenarios
+=== RUN   TestClassifyTargetScenarios/sni_filtering
+=== RUN   TestClassifyTargetScenarios/dns_divergence
+=== RUN   TestClassifyTargetScenarios/system_resolver_fails_while_doh_answers
+=== RUN   TestClassifyTargetScenarios/tcp_reset
+=== RUN   TestClassifyTargetScenarios/port_divergence
+=== RUN   TestClassifyTargetScenarios/http_block
+=== RUN   TestClassifyTargetScenarios/ip_drop_with_path_corroboration
+=== RUN   TestClassifyTargetScenarios/timeout_only_stays_low
+=== RUN   TestClassifyTargetScenarios/everything_passes
+=== RUN   TestClassifyTargetScenarios/no_data
+--- PASS: TestClassifyTargetScenarios (0.00s)
+    --- PASS: TestClassifyTargetScenarios/sni_filtering (0.00s)
+    --- PASS: TestClassifyTargetScenarios/dns_divergence (0.00s)
+    --- PASS: TestClassifyTargetScenarios/system_resolver_fails_while_doh_answers (0.00s)
+    --- PASS: TestClassifyTargetScenarios/tcp_reset (0.00s)
+    --- PASS: TestClassifyTargetScenarios/port_divergence (0.00s)
+    --- PASS: TestClassifyTargetScenarios/http_block (0.00s)
+    --- PASS: TestClassifyTargetScenarios/ip_drop_with_path_corroboration (0.00s)
+    --- PASS: TestClassifyTargetScenarios/timeout_only_stays_low (0.00s)
+    --- PASS: TestClassifyTargetScenarios/everything_passes (0.00s)
+    --- PASS: TestClassifyTargetScenarios/no_data (0.00s)
+=== RUN   TestHypothesisRejectsUnknownTaxonomy
+--- PASS: TestHypothesisRejectsUnknownTaxonomy (0.00s)
+=== RUN   TestHypothesisRequiresEvidence
+--- PASS: TestHypothesisRequiresEvidence (0.00s)
+=== RUN   TestTimeoutOnlyEvidenceIsPassive
+--- PASS: TestTimeoutOnlyEvidenceIsPassive (0.00s)
+=== RUN   TestResetEvidenceIsActive
+--- PASS: TestResetEvidenceIsActive (0.00s)
+=== RUN   TestSNIEvidenceIncludesAnActiveSignal
+--- PASS: TestSNIEvidenceIncludesAnActiveSignal (0.00s)
+=== RUN   TestDNSEvidenceNamesTheCDNCaveat
+--- PASS: TestDNSEvidenceNamesTheCDNCaveat (0.00s)
+=== RUN   TestHighConfidenceNeedsAnActiveLine
+--- PASS: TestHighConfidenceNeedsAnActiveLine (0.00s)
+=== RUN   TestHypothesisRejectsUnlabelledEvidence
+--- PASS: TestHypothesisRejectsUnlabelledEvidence (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/domain	0.239s

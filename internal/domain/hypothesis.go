@@ -29,6 +29,24 @@ const (
 	ConfidenceHigh   Confidence = "high"
 )
 
+// ObservationMode labels an evidence line as an active rejection or passive
+// silence.
+type ObservationMode string
+
+const (
+	ObservedActive  ObservationMode = "active"
+	ObservedPassive ObservationMode = "passive"
+)
+
+// EvidenceLine is one labelled observation behind a hypothesis.
+type EvidenceLine struct {
+	Mode ObservationMode `json:"mode"`
+	Text string          `json:"text"`
+}
+
+func active(text string) EvidenceLine  { return EvidenceLine{Mode: ObservedActive, Text: text} }
+func passive(text string) EvidenceLine { return EvidenceLine{Mode: ObservedPassive, Text: text} }
+
 // ErrInvalidHypothesis marks a hypothesis that cannot explain itself.
 var ErrInvalidHypothesis = errors.New("invalid hypothesis")
 
@@ -43,7 +61,7 @@ type Hypothesis struct {
 	Type       BlockageType          `json:"type"`
 	Confidence Confidence            `json:"confidence"`
 	Summary    string                `json:"summary"`
-	Evidence   []string              `json:"evidence"`
+	Evidence   []EvidenceLine        `json:"evidence"`
 	Rejected   []RejectedAlternative `json:"rejected"`
 	Caveat     string                `json:"caveat"`
 }
@@ -66,6 +84,14 @@ func (h Hypothesis) Validate() error {
 	}
 	if len(h.Evidence) == 0 {
 		return fmt.Errorf("%w: %q has no evidence", ErrInvalidHypothesis, h.Type)
+	}
+	for _, line := range h.Evidence {
+		if line.Mode != ObservedActive && line.Mode != ObservedPassive {
+			return fmt.Errorf("%w: evidence line %q has mode %q", ErrInvalidHypothesis, line.Text, line.Mode)
+		}
+		if strings.TrimSpace(line.Text) == "" {
+			return fmt.Errorf("%w: evidence line has no text", ErrInvalidHypothesis)
+		}
 	}
 	if strings.TrimSpace(h.Caveat) == "" {
 		return fmt.Errorf("%w: missing caveat", ErrInvalidHypothesis)
@@ -93,63 +119,88 @@ func ClassifyTarget(steps []StepResult, path Localization) Hypothesis {
 
 	switch {
 	case summary.tlsDiverged():
-		evidence := []string{
-			"the real SNI failed while the decoy SNI completed the handshake",
-			describeStep(summary.tlsReal),
+		evidence := []EvidenceLine{
+			stepObservation(summary.tlsReal),
+			active("the decoy SNI completed the handshake"),
 		}
 		if summary.tlsAbsent != nil && summary.tlsAbsent.Status == StatusPass {
-			evidence = append(evidence, "the same host with no SNI completed the handshake")
+			evidence = append(evidence, active("the same host with no SNI completed the handshake"))
 		}
-		confidence := ConfidenceMedium
-		if summary.tlsReal.Status == StatusFail {
-			confidence = ConfidenceHigh
-		}
-		return newHypothesis(BlockSNIFilter, confidence,
+		// The decoy handshake is an active observation, so the two signals
+		// together justify high confidence.
+		return newHypothesis(BlockSNIFilter, ConfidenceHigh,
 			"TLS fails with the real server name but succeeds with a decoy", evidence, summary)
 
 	case summary.dnsDiffer || summary.dnsFailedWhileDoHAnswered():
-		evidence := []string{describeStep(summary.dns)}
+		evidence := []EvidenceLine{stepObservation(summary.dns)}
 		if summary.dnsDiffer {
-			evidence = append(evidence, "the system resolver and the DoH answers differ")
+			if system := stepMeasurement(*summary.dns, "system.answers"); system != "" {
+				evidence = append(evidence, active("system answers: "+system))
+			}
+			if doh := stepMeasurement(*summary.dns, "doh.answers"); doh != "" {
+				evidence = append(evidence, active("DoH answers: "+doh))
+			}
+			evidence = append(evidence,
+				active("the system resolver and the DoH answers differ"),
+				active("CDN and geo-DNS answers can differ legitimately"),
+			)
 		} else {
-			evidence = append(evidence, "the system resolver failed while DoH answered")
+			evidence = append(evidence,
+				passive("the system resolver did not answer"),
+				active("DoH answered the same query"),
+			)
 		}
 		return newHypothesis(BlockDNS, ConfidenceMedium,
 			"name resolution looks altered", evidence, summary)
 
 	case summary.reset:
 		return newHypothesis(BlockTCPRST, ConfidenceMedium,
-			"a TCP reset was observed", []string{"a TCP connect was reset by the peer"}, summary)
+			"a TCP reset was observed",
+			[]EvidenceLine{active("a TCP connect was reset by the peer")}, summary)
 
 	case summary.connected > 0 && summary.timedOut > 0:
 		return newHypothesis(BlockPortBlock, ConfidenceMedium,
 			"some ports connect while others time out",
-			[]string{fmt.Sprintf("%d port(s) connected, %d timed out", summary.connected, summary.timedOut)}, summary)
+			[]EvidenceLine{
+				active(fmt.Sprintf("%d port(s) connected", summary.connected)),
+				passive(fmt.Sprintf("%d port(s) timed out", summary.timedOut)),
+			}, summary)
 
 	case summary.httpFailed():
 		return newHypothesis(BlockHTTP, ConfidenceLow,
-			"the HTTP step failed while transport worked", []string{describeStep(summary.http)}, summary)
+			"the HTTP step failed while transport worked",
+			[]EvidenceLine{stepObservation(summary.http)}, summary)
 
 	case summary.connected == 0 && summary.timedOut > 0:
 		confidence := ConfidenceLow
-		evidence := []string{"every TCP probe timed out"}
+		evidence := []EvidenceLine{passive("every TCP probe timed out")}
 		if path.Kind == PathDrop {
 			confidence = ConfidenceMedium
-			evidence = append(evidence, path.Summary)
+			evidence = append(evidence, passive(path.Summary))
 		}
 		if summary.icmp == nil || summary.icmp.Status != StatusPass {
-			evidence = append(evidence, "ICMP did not answer either")
+			evidence = append(evidence, passive("no ICMP reply; ICMP may be rate-limited or blocked"))
 		}
 		return newHypothesis(BlockIPDrop, confidence,
 			"the path does not answer above the last responding hop", evidence, summary)
 
 	case summary.allPassed():
 		return newHypothesis(BlockUnknown, ConfidenceLow,
-			"no blockage detected: every ladder step passed", []string{"all ladder steps passed"}, summary)
+			"no blockage detected: every ladder step passed",
+			[]EvidenceLine{active("all ladder steps passed")}, summary)
 	}
 
+	anomalies := make([]EvidenceLine, 0, len(steps))
+	for i := range steps {
+		if steps[i].Status == StatusFail || steps[i].Status == StatusWarn {
+			anomalies = append(anomalies, stepObservation(&steps[i]))
+		}
+	}
+	if len(anomalies) == 0 {
+		anomalies = append(anomalies, passive("no ladder step produced a usable signal"))
+	}
 	return newHypothesis(BlockUnknown, ConfidenceLow,
-		"insufficient evidence for a specific blockage type", summary.anomalies(), summary)
+		"insufficient evidence for a specific blockage type", anomalies, summary)
 }
 
 // evidenceSummary extracts the facts the rules rely on.
@@ -243,19 +294,6 @@ func (s evidenceSummary) allPassed() bool {
 	return true
 }
 
-func (s evidenceSummary) anomalies() []string {
-	values := make([]string, 0, 4)
-	for _, step := range s.steps {
-		if step.Status == StatusFail || step.Status == StatusWarn {
-			values = append(values, describeStep(&step))
-		}
-	}
-	if len(values) == 0 {
-		values = append(values, "no ladder step produced a usable signal")
-	}
-	return values
-}
-
 func stepMeasurement(step StepResult, name string) string {
 	for _, measurement := range step.Measurements {
 		if measurement.Name == name {
@@ -279,8 +317,44 @@ func describeStep(step *StepResult) string {
 	return text
 }
 
-// newHypothesis builds a hypothesis with the standard caveat and rejections.
-func newHypothesis(kind BlockageType, confidence Confidence, summary string, evidence []string, facts evidenceSummary) Hypothesis {
+// observationMode labels a step as active rejection or passive silence.
+func observationMode(step *StepResult) ObservationMode {
+	if step == nil {
+		return ObservedPassive
+	}
+	outcome := stepMeasurement(*step, "outcome")
+	switch outcome {
+	case "timeout", "no_reply":
+		return ObservedPassive
+	}
+	if step.Kind == StepICMP && step.Status != StatusPass {
+		return ObservedPassive
+	}
+	if step.Kind == StepHTTP && step.Status != StatusPass && stepMeasurement(*step, "status") == "" {
+		return ObservedPassive
+	}
+	return ObservedActive
+}
+
+func stepObservation(step *StepResult) EvidenceLine {
+	return EvidenceLine{Mode: observationMode(step), Text: describeStep(step)}
+}
+
+// newHypothesis builds a hypothesis with the standard caveat and rejections. A
+// high confidence needs at least one active observation.
+func newHypothesis(kind BlockageType, confidence Confidence, summary string, evidence []EvidenceLine, facts evidenceSummary) Hypothesis {
+	if confidence == ConfidenceHigh {
+		hasActive := false
+		for _, line := range evidence {
+			if line.Mode == ObservedActive {
+				hasActive = true
+				break
+			}
+		}
+		if !hasActive {
+			confidence = ConfidenceMedium
+		}
+	}
 	return Hypothesis{
 		Type:       kind,
 		Confidence: confidence,
