@@ -1,0 +1,36 @@
+=== RUN   TestExportIncludesNetworkContext
+--- PASS: TestExportIncludesNetworkContext (0.00s)
+=== RUN   TestExportWithoutContextOmitsIt
+--- PASS: TestExportWithoutContextOmitsIt (0.00s)
+=== RUN   TestExportDefaultWritesTimestampedFile
+--- PASS: TestExportDefaultWritesTimestampedFile (0.00s)
+=== RUN   TestExportRefusesToOverwriteWithoutConfirmation
+--- PASS: TestExportRefusesToOverwriteWithoutConfirmation (0.00s)
+=== RUN   TestExportOverwriteConfirmationWritesFile
+--- PASS: TestExportOverwriteConfirmationWritesFile (0.00s)
+=== RUN   TestExportPromptAcceptsAPath
+--- PASS: TestExportPromptAcceptsAPath (0.00s)
+=== RUN   TestExportPromptCancelDoesNotWrite
+--- PASS: TestExportPromptCancelDoesNotWrite (0.00s)
+=== RUN   TestExportPromptSwallowsDashboardKeys
+--- PASS: TestExportPromptSwallowsDashboardKeys (0.00s)
+=== RUN   TestExportWithoutResults
+--- PASS: TestExportWithoutResults (0.00s)
+=== RUN   TestExportWorksForCancelledRuns
+--- PASS: TestExportWorksForCancelledRuns (0.00s)
+=== RUN   TestExportFailureIsReported
+--- PASS: TestExportFailureIsReported (0.00s)
+=== RUN   TestExportKeepsTerminalHeight
+--- PASS: TestExportKeepsTerminalHeight (0.00s)
+=== RUN   TestRunViewExportsTheSession
+--- PASS: TestRunViewExportsTheSession (0.00s)
+=== RUN   TestRunViewSessionExportPathPrompt
+--- PASS: TestRunViewSessionExportPathPrompt (0.00s)
+=== RUN   TestRunViewSessionExportConfirmsOverwrite
+--- PASS: TestRunViewSessionExportConfirmsOverwrite (0.00s)
+=== RUN   TestRunViewRefusesToExportWhileRunning
+--- PASS: TestRunViewRefusesToExportWhileRunning (0.00s)
+=== RUN   TestRunViewExportsCancelledSessionWithPartialSteps
+--- PASS: TestRunViewExportsCancelledSessionWithPartialSteps (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.354s

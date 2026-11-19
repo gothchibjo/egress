@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -35,12 +36,15 @@ type runTarget struct {
 }
 
 type runState struct {
-	targets []runTarget
-	active  int
-	view    runViewMode
-	focus   bool
-	running bool
-	err     string
+	targets    []runTarget
+	active     int
+	view       runViewMode
+	focus      bool
+	running    bool
+	cancelled  bool
+	startedAt  time.Time
+	finishedAt time.Time
+	err        string
 }
 
 // ProbeProgressMsg marks a target as running.
@@ -75,7 +79,7 @@ type ProbeCompleteMsg struct {
 
 // startRun switches to the run view with the selected targets pending.
 func (m Model) startRun(targets []domain.ProbeTarget) Model {
-	m.run = runState{targets: make([]runTarget, len(targets)), running: true}
+	m.run = runState{targets: make([]runTarget, len(targets)), running: true, startedAt: m.opts.now()}
 	for i, target := range targets {
 		m.run.targets[i] = runTarget{target: target, state: app.TargetPending, steps: []domain.StepResult{}}
 	}
@@ -113,6 +117,10 @@ func (m Model) updateRunKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.jumpProblemTarget(-1)
 	case "r":
 		return m.rerunProbes()
+	case "e":
+		return m.exportRunCurrent()
+	case "E":
+		return m.promptRunExport()
 	case "enter":
 		m.run.focus = true
 	case "x":
@@ -165,6 +173,10 @@ func (m Model) updateRunPaneKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.jumpProblemTarget(-1)
 	case "r":
 		return m.rerunProbes()
+	case "e":
+		return m.exportRunCurrent()
+	case "E":
+		return m.promptRunExport()
 	case "1":
 		m.run.view = runViewLadder
 	case "2":
@@ -304,6 +316,8 @@ func (m Model) activeRunTarget() (runTarget, bool) {
 // finishProbe replaces the pending state with the session result.
 func (m Model) finishProbe(run app.ProbeRun, err error) Model {
 	m.run.running = false
+	m.run.finishedAt = m.opts.now()
+	m.run.cancelled = run.Cancelled
 	if err != nil {
 		m.run.err = err.Error()
 		return m

@@ -51,6 +51,7 @@ type options struct {
 	destinations   []domain.Destination
 	destinationErr string
 	writeExport    ExportFunc
+	sessionExport  SessionExportFunc
 	now            func() time.Time
 	networkContext *platform.NetworkContext
 	contextErr     string
@@ -64,9 +65,14 @@ type options struct {
 	cancelAll      func()
 }
 
-// ExportFunc writes one JSON export. When replace is false, an existing file
-// must be reported as report.ErrExportExists instead of overwritten.
+// ExportFunc writes one baseline JSON export. When replace is false, an
+// existing file must be reported as report.ErrExportExists instead of
+// overwritten.
 type ExportFunc func(path string, envelope report.Envelope, replace bool) error
+
+// SessionExportFunc writes one probing-session JSON export with the same
+// overwrite contract as ExportFunc.
+type SessionExportFunc func(path string, envelope report.SessionEnvelope, replace bool) error
 
 // Option configures the dashboard rendering.
 type Option func(*options)
@@ -161,9 +167,14 @@ func WithRerun(rerun func()) Option {
 	return func(o *options) { o.rerun = rerun }
 }
 
-// WithExporter overrides how the dashboard writes JSON exports.
+// WithExporter overrides how the dashboard writes baseline JSON exports.
 func WithExporter(write ExportFunc) Option {
 	return func(o *options) { o.writeExport = write }
+}
+
+// WithSessionExporter overrides how the run view writes session JSON exports.
+func WithSessionExporter(write SessionExportFunc) Option {
+	return func(o *options) { o.sessionExport = write }
 }
 
 // Model is the dashboard. It renders a completed run, keeps the selected check
@@ -197,6 +208,7 @@ type Model struct {
 	exportPrompt       bool
 	exportInput        string
 	exportOverwrite    string
+	exportSession      bool
 	opts               options
 }
 
@@ -221,6 +233,14 @@ func New(results []domain.Result, verdict domain.Verdict, opts ...Option) Model 
 				return report.WriteFileReplace(path, envelope)
 			}
 			return report.WriteFile(path, envelope)
+		}
+	}
+	if model.opts.sessionExport == nil {
+		model.opts.sessionExport = func(path string, envelope report.SessionEnvelope, replace bool) error {
+			if replace {
+				return report.WriteSessionFileReplace(path, envelope)
+			}
+			return report.WriteSessionFile(path, envelope)
 		}
 	}
 	if model.opts.now == nil {

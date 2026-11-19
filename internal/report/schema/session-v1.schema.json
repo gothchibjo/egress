@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gothchibjo/egress/schema/session-v1.json",
+  "title": "Egress probing session envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "started_at",
+    "finished_at",
+    "mode",
+    "catalog_version",
+    "targets"
+  ],
+  "properties": {
+    "schema_version": { "const": "session-v1" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "mode": { "enum": ["unprivileged", "elevated"] },
+    "catalog_version": { "type": "string", "minLength": 1 },
+    "cancelled": { "type": "boolean" },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/target" }
+    },
+    "destinations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/destination" }
+    },
+    "context": { "$ref": "#/$defs/context" }
+  },
+  "$defs": {
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "host", "state", "steps", "path", "hypothesis"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "host": { "type": "string", "minLength": 1 },
+        "ports": { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 65535 } },
+        "protocols": { "type": "array", "items": { "enum": ["icmp", "tcp", "tls", "http"] } },
+        "state": { "enum": ["pending", "running", "done", "cancelled"] },
+        "steps": { "type": "array", "items": { "$ref": "#/$defs/step" } },
+        "path": { "$ref": "#/$defs/path" },
+        "hypothesis": { "$ref": "#/$defs/hypothesis" }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "order", "target", "started_at", "duration_ms", "status", "measurements"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["dns", "tcp", "tls", "http", "icmp", "trace"] },
+        "order": { "type": "integer" },
+        "target": { "type": "string", "minLength": 1 },
+        "started_at": { "type": "string", "format": "date-time" },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "status": { "enum": ["pass", "warn", "fail", "skipped"] },
+        "summary": { "type": "string" },
+        "measurements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "value"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "value": { "type": "string", "minLength": 1 },
+              "unit": { "type": "string" }
+            }
+          }
+        },
+        "diagnostic": { "type": "string" },
+        "error": { "type": "string" },
+        "hops": { "type": "array", "items": { "$ref": "#/$defs/hop" } }
+      }
+    },
+    "hop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ttl", "sent", "received"],
+      "properties": {
+        "ttl": { "type": "integer", "minimum": 1 },
+        "address": { "type": "string" },
+        "addresses": { "type": "array", "items": { "type": "string" } },
+        "sent": { "type": "integer", "minimum": 0 },
+        "received": { "type": "integer", "minimum": 0 },
+        "rtt_min_ms": { "type": "integer", "minimum": 0 },
+        "rtt_median_ms": { "type": "integer", "minimum": 0 },
+        "rtt_max_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "path": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hops", "localization"],
+      "properties": {
+        "hops": { "type": "array", "items": { "$ref": "#/$defs/hop" } },
+        "localization": { "$ref": "#/$defs/localization" }
+      }
+    },
+    "localization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "summary"],
+      "properties": {
+        "kind": { "enum": ["complete", "drop", "inconclusive", "unknown"] },
+        "after_ttl": { "type": "integer", "minimum": 0 },
+        "from_ttl": { "type": "integer", "minimum": 0 },
+        "to_ttl": { "type": "integer", "minimum": 0 },
+        "summary": { "type": "string", "minLength": 1 },
+        "alternatives": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "hypothesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "confidence", "summary", "evidence", "rejected", "caveat"],
+      "properties": {
+        "type": {
+          "enum": [
+            "dns-tampering",
+            "tcp-rst-injection",
+            "ip-drop",
+            "port-block",
+            "sni-tls-filtering",
+            "http-block",
+            "throttling",
+            "unknown"
+          ]
+        },
+        "confidence": { "enum": ["low", "medium", "high"] },
+        "no_blockage": { "type": "boolean" },
+        "summary": { "type": "string", "minLength": 1 },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["mode", "text"],
+            "properties": {
+              "mode": { "enum": ["active", "passive"] },
+              "text": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "reason"],
+            "properties": {
+              "type": {
+                "enum": [
+                  "dns-tampering",
+                  "tcp-rst-injection",
+                  "ip-drop",
+                  "port-block",
+                  "sni-tls-filtering",
+                  "http-block",
+                  "throttling",
+                  "unknown"
+                ]
+              },
+              "reason": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "caveat": { "type": "string", "minLength": 1 }
+      }
+    },
+    "destination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "host", "transport", "purpose"],
+      "properties": {
+        "kind": { "enum": ["resolver", "doh", "anchor", "captive-portal", "path-mtu"] },
+        "host": { "type": "string", "minLength": 1 },
+        "port": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "transport": { "enum": ["udp+tcp", "tcp", "https", "http", "icmp", "icmp-df"] },
+        "purpose": { "type": "string", "minLength": 1 }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proxies", "vpn"],
+      "properties": {
+        "proxies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "source", "value"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "source": { "type": "string", "minLength": 1 },
+              "value": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "vpn": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "kind", "state", "addresses", "default_route", "source"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "kind": { "enum": ["tun", "tap", "wireguard", "ppp", "ipsec"] },
+              "state": { "enum": ["up", "down"] },
+              "addresses": { "type": "array", "items": { "type": "string" } },
+              "default_route": { "type": "boolean" },
+              "source": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

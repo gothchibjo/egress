@@ -76,9 +76,16 @@ func WriteFileReplace(path string, envelope Envelope) error {
 }
 
 func writeFile(path string, envelope Envelope, replace bool) error {
-	// Encode first so a validation failure never leaves a partial file behind.
+	return writeEncoded(path, func(w io.Writer) error {
+		return Encode(w, envelope)
+	}, replace)
+}
+
+// writeEncoded validates and encodes first so a failure never leaves a partial
+// file behind.
+func writeEncoded(path string, encode func(io.Writer) error, replace bool) error {
 	var buffer bytes.Buffer
-	if err := Encode(&buffer, envelope); err != nil {
+	if err := encode(&buffer); err != nil {
 		return err
 	}
 

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"testing"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/gothchibjo/egress/internal/app"
 	"github.com/gothchibjo/egress/internal/domain"
+	"github.com/gothchibjo/egress/internal/report"
 )
 
 func forceColor(t *testing.T) {
@@ -62,9 +64,11 @@ func runModel(t *testing.T, width, height int, opts ...Option) Model {
 func completeRun(t *testing.T, model Model) Model {
 	t.Helper()
 	targets := runTargets()
+	skipped := runStep("dns", domain.StepDNS, domain.StatusSkipped, 0)
+	skipped.Diagnostic = "target cancelled before resolution"
 	return applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
 		{Target: targets[0], State: app.TargetDone, Steps: alphaSteps()},
-		{Target: targets[1], State: app.TargetCancelled, Steps: []domain.StepResult{runStep("dns", domain.StepDNS, domain.StatusSkipped, 0)}},
+		{Target: targets[1], State: app.TargetCancelled, Steps: []domain.StepResult{skipped}},
 	}}})
 }
 
@@ -754,5 +758,124 @@ func TestRunViewColoursTheDropBoundary(t *testing.T) {
 
 	if view := model.View(); !strings.Contains(view, "\x1b[31mx") {
 		t.Fatalf("the drop boundary is not red:\n%q", view)
+	}
+}
+
+func TestRunViewExportsTheSession(t *testing.T) {
+	var (
+		got        report.SessionEnvelope
+		gotPath    string
+		gotReplace bool
+	)
+	model := completeRun(t, runModel(t, 120, 40, WithSessionExporter(func(path string, envelope report.SessionEnvelope, replace bool) error {
+		got, gotPath, gotReplace = envelope, path, replace
+		return nil
+	})))
+
+	model, _ = pressKey(t, model, "e")
+	if !strings.HasPrefix(gotPath, "egress-") || !strings.HasSuffix(gotPath, ".json") {
+		t.Fatalf("default session export name = %q", gotPath)
+	}
+	if gotReplace {
+		t.Fatal("a fresh session export replaced an existing file")
+	}
+	if len(got.Targets) != 2 {
+		t.Fatalf("session export has %d targets, want 2", len(got.Targets))
+	}
+	if got.Targets[1].State != "cancelled" {
+		t.Fatalf("partial target state = %q", got.Targets[1].State)
+	}
+	if got.CatalogVersion != domain.CatalogVersion || got.Mode != "unprivileged" {
+		t.Fatalf("session metadata = %+v", got)
+	}
+	if got.StartedAt.IsZero() || got.FinishedAt.IsZero() {
+		t.Fatalf("session timestamps = %v..%v", got.StartedAt, got.FinishedAt)
+	}
+	var buffer bytes.Buffer
+	if err := report.EncodeSession(&buffer, got); err != nil {
+		t.Fatalf("the TUI produced an invalid session export: %v", err)
+	}
+	if !strings.Contains(model.View(), "wrote "+gotPath) {
+		t.Fatalf("the export path is not shown:\n%s", model.View())
+	}
+}
+
+func TestRunViewSessionExportPathPrompt(t *testing.T) {
+	var gotPath string
+	model := completeRun(t, runModel(t, 120, 40, WithSessionExporter(func(path string, _ report.SessionEnvelope, _ bool) error {
+		gotPath = path
+		return nil
+	})))
+
+	model, _ = pressKey(t, model, "E")
+	if !model.exportPrompt {
+		t.Fatal("E did not open the path prompt")
+	}
+	model, _ = pressKey(t, model, "enter")
+	if gotPath == "" {
+		t.Fatal("the path prompt did not write the session export")
+	}
+}
+
+func TestRunViewSessionExportConfirmsOverwrite(t *testing.T) {
+	calls, replaced := 0, false
+	model := completeRun(t, runModel(t, 120, 40, WithSessionExporter(func(string, report.SessionEnvelope, bool) error {
+		calls++
+		if calls == 1 {
+			return report.ErrExportExists
+		}
+		replaced = true
+		return nil
+	})))
+
+	model, _ = pressKey(t, model, "e")
+	if !strings.Contains(model.View(), "overwrite? y/n") {
+		t.Fatalf("overwrite is not confirmed:\n%s", model.View())
+	}
+	model, _ = pressKey(t, model, "y")
+	if !replaced {
+		t.Fatal("y did not replace the existing session export")
+	}
+}
+
+func TestRunViewRefusesToExportWhileRunning(t *testing.T) {
+	called := false
+	model := runModel(t, 120, 40, WithSessionExporter(func(string, report.SessionEnvelope, bool) error {
+		called = true
+		return nil
+	}))
+
+	model, _ = pressKey(t, model, "e")
+	if called {
+		t.Fatal("export ran while the probe session was still active")
+	}
+	if !strings.Contains(model.View(), "wait for the probe session to finish") {
+		t.Fatalf("the refusal is not shown:\n%s", model.View())
+	}
+}
+
+func TestRunViewExportsCancelledSessionWithPartialSteps(t *testing.T) {
+	var got report.SessionEnvelope
+	model := runModel(t, 120, 40, WithSessionExporter(func(_ string, envelope report.SessionEnvelope, _ bool) error {
+		got = envelope
+		return nil
+	}))
+	targets := runTargets()
+	partial := runStep("dns", domain.StepDNS, domain.StatusPass, 5,
+		domain.Measurement{Name: "system.answers", Value: "203.0.113.10"})
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Cancelled: true, Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetCancelled, Steps: []domain.StepResult{partial}},
+		{Target: targets[1], State: app.TargetCancelled},
+	}}})
+
+	model, _ = pressKey(t, model, "e")
+	if !got.Cancelled {
+		t.Fatal("the cancelled flag is missing from the export")
+	}
+	if len(got.Targets[0].Steps) != 1 || got.Targets[0].State != "cancelled" {
+		t.Fatalf("partial target = %+v", got.Targets[0])
+	}
+	if err := report.EncodeSession(bytes.NewBuffer(nil), got); err != nil {
+		t.Fatalf("cancelled session is invalid: %v", err)
 	}
 }

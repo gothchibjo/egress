@@ -1,0 +1,17 @@
+Session export walkthrough
+Generated: 2026-11-19
+Flow: run view -> e writes session-v1; E opens the path prompt; y replaces after confirmation
+Schema: internal/report/schema/session-v1.schema.json
+Tests: internal/report/session_test.go, internal/tui/run_view_test.go
+Reviewer sign-off: pending
+
+=== RUN   TestRunViewExportsTheSession
+--- PASS: TestRunViewExportsTheSession (0.00s)
+=== RUN   TestRunViewSessionExportPathPrompt
+--- PASS: TestRunViewSessionExportPathPrompt (0.00s)
+=== RUN   TestRunViewSessionExportConfirmsOverwrite
+--- PASS: TestRunViewSessionExportConfirmsOverwrite (0.00s)
+=== RUN   TestRunViewExportsCancelledSessionWithPartialSteps
+--- PASS: TestRunViewExportsCancelledSessionWithPartialSteps (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.257s

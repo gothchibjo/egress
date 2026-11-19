@@ -61,6 +61,7 @@ func (m Model) exportCurrent() (Model, tea.Cmd) {
 	if len(m.results) == 0 {
 		return m.setNotice("nothing to export: the baseline produced no results")
 	}
+	m.exportSession = false
 	return m.writeExport(report.DefaultExportName(m.opts.now()), false)
 }
 
@@ -69,13 +70,18 @@ func (m Model) promptExport() (Model, tea.Cmd) {
 	if len(m.results) == 0 {
 		return m.setNotice("nothing to export: the baseline produced no results")
 	}
+	m.exportSession = false
 	m.exportPrompt = true
 	m.exportInput = report.DefaultExportName(m.opts.now())
 	return m, nil
 }
 
-// writeExport stores the finished run and reports the outcome in the footer.
+// writeExport stores the finished baseline or probing session and reports the
+// outcome in the footer.
 func (m Model) writeExport(path string, replace bool) (Model, tea.Cmd) {
+	if m.exportSession {
+		return m.writeSessionExport(path, replace)
+	}
 	envelope := report.BuildEnvelope(m.results, m.opts.mode, m.opts.destinations)
 	envelope.Cancelled = m.cancelled
 	if m.opts.networkContext != nil {
@@ -95,6 +101,89 @@ func (m Model) writeExport(path string, replace bool) (Model, tea.Cmd) {
 	}
 }
 
+// exportRunCurrent writes the default session export from the run view.
+func (m Model) exportRunCurrent() (Model, tea.Cmd) {
+	if m.run.running {
+		return m.setNotice("wait for the probe session to finish")
+	}
+	if m.run.err != "" {
+		return m.setNotice("nothing to export: the probe session failed")
+	}
+	if len(m.run.targets) == 0 {
+		return m.setNotice("nothing to export: no targets")
+	}
+	m.exportSession = true
+	return m.writeExport(report.DefaultExportName(m.opts.now()), false)
+}
+
+// promptRunExport opens the path prompt for the probing session.
+func (m Model) promptRunExport() (Model, tea.Cmd) {
+	if m.run.running {
+		return m.setNotice("wait for the probe session to finish")
+	}
+	if m.run.err != "" {
+		return m.setNotice("nothing to export: the probe session failed")
+	}
+	if len(m.run.targets) == 0 {
+		return m.setNotice("nothing to export: no targets")
+	}
+	m.exportSession = true
+	m.exportPrompt = true
+	m.exportInput = report.DefaultExportName(m.opts.now())
+	return m, nil
+}
+
+// writeSessionExport stores the current probe session.
+func (m Model) writeSessionExport(path string, replace bool) (Model, tea.Cmd) {
+	err := m.opts.sessionExport(path, m.sessionEnvelope(), replace)
+	switch {
+	case errors.Is(err, report.ErrExportExists):
+		m.exportOverwrite = path
+		return m.setNotice(path + " exists; overwrite? y/n")
+	case err != nil:
+		return m.setNotice("export failed: " + err.Error())
+	default:
+		m.exportOverwrite = ""
+		m.exportSession = false
+		return m.setNotice("wrote " + path)
+	}
+}
+
+// sessionEnvelope assembles the full session document from the run state.
+func (m Model) sessionEnvelope() report.SessionEnvelope {
+	targets := make([]report.SessionTarget, 0, len(m.run.targets))
+	for _, target := range m.run.targets {
+		path, hypothesis := target.path, target.hypothesis
+		if path.Localization.Kind == "" || hypothesis.Type == "" {
+			path, hypothesis = domain.BuildTargetReport(target.steps)
+		}
+		state := string(target.state)
+		if state == "" {
+			state = "done"
+		}
+		targets = append(targets, report.SessionTarget{
+			ID:         target.target.ID,
+			Label:      target.target.Label,
+			Host:       target.target.Host,
+			Ports:      target.target.Ports,
+			Protocols:  target.target.Protocols,
+			State:      state,
+			Steps:      target.steps,
+			Path:       path,
+			Hypothesis: hypothesis,
+		})
+	}
+	mode := m.opts.mode
+	if mode == "" {
+		mode = "unprivileged"
+	}
+	envelope := report.BuildSessionEnvelope(targets, m.run.startedAt, m.run.finishedAt, mode, m.run.cancelled, m.opts.destinations)
+	if m.opts.networkContext != nil {
+		envelope.Context = m.opts.networkContext
+	}
+	return envelope
+}
+
 // updateExportKey handles the path prompt and the overwrite confirmation. Every
 // key belongs to the modal, so typing a path cannot trigger dashboard actions.
 func (m Model) updateExportKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -106,6 +195,7 @@ func (m Model) updateExportKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m.writeExport(path, true)
 		case "n", "N", "esc", "ctrl+c":
 			m.exportOverwrite = ""
+			m.exportSession = false
 			return m.setNotice("export cancelled")
 		}
 		return m, nil
@@ -115,6 +205,7 @@ func (m Model) updateExportKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyEsc, tea.KeyCtrlC:
 		m.exportPrompt = false
 		m.exportInput = ""
+		m.exportSession = false
 	case tea.KeyEnter:
 		path := strings.TrimSpace(m.exportInput)
 		if path == "" {
