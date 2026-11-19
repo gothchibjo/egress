@@ -133,13 +133,20 @@ func TestHelpOverlayDocumentsEveryKey(t *testing.T) {
 			t.Fatalf("help does not document %q", key)
 		}
 	}
-	for _, section := range []string{"NAVIGATION", "ACTIONS", "VERDICT", "healthy", "degraded", "blocked"} {
+	for _, section := range []string{"NAVIGATION", "ACTIONS"} {
 		if !strings.Contains(view, section) {
 			t.Fatalf("help is missing %q", section)
 		}
 	}
 	if !strings.Contains(view, "? close") {
 		t.Fatal("help footer has no close hint")
+	}
+	model, _ = pressKey(t, model, "G")
+	view = model.View()
+	for _, section := range []string{"VERDICT", "healthy", "degraded", "blocked"} {
+		if !strings.Contains(view, section) {
+			t.Fatalf("help is missing %q after scrolling", section)
+		}
 	}
 
 	model, cmd = pressKey(t, model, "?")
@@ -236,5 +243,73 @@ func TestFooterHintsFollowContext(t *testing.T) {
 	model, _ = pressKey(t, model, "?")
 	if view := model.View(); !strings.Contains(view, "? close") {
 		t.Fatal("help footer hints are missing")
+	}
+}
+
+func TestHelpDocumentsPickerProbeAndTaxonomyTerms(t *testing.T) {
+	text := strings.Join(strings.Fields(strings.Join(helpLines(), "\n")), " ")
+	for _, want := range []string{
+		"PICKER", "space select", "a select", "/ filter", "custom target",
+		"RUN", "1/2/3", "tab", "focus the pane",
+		"LADDER", "dns", "tcp.<port>", "tls.real", "tls.decoy", "tls.absent", "http", "icmp", "trace",
+		"HOPS", "TTL", "ADDRESS", "LOSS", "RTT", "→ ! x", "complete · drop · inconclusive",
+		"TAXONOMY", "dns-tampering", "tcp-rst-injection", "ip-drop", "port-block",
+		"sni-tls-filtering", "http-block", "throttling", "unknown",
+		"CONFIDENCE", "low", "medium", "high", "absence of evidence",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("help is missing %q", want)
+		}
+	}
+}
+
+func TestHelpKeepsThePickerState(t *testing.T) {
+	model := fixtureModel(t, 100, 30, WithoutColor()).openPicker()
+	model.picker.selected["github"] = true
+	model.picker.cursor = 3
+
+	model, _ = pressKey(t, model, "?")
+	if !strings.Contains(model.View(), "PICKER") {
+		t.Fatalf("? did not open help from the picker:\n%s", model.View())
+	}
+	model, _ = pressKey(t, model, "esc")
+
+	if model.view != viewPicker {
+		t.Fatalf("help returned to view %v, want the picker", model.view)
+	}
+	if !model.picker.selected["github"] || model.picker.cursor != 3 {
+		t.Fatalf("picker state was reset: %+v", model.picker)
+	}
+}
+
+func TestHelpKeepsTheRunState(t *testing.T) {
+	model := completeRun(t, runModel(t, 120, 40))
+	model, _ = pressKey(t, model, "j")
+	model, _ = pressKey(t, model, "2")
+
+	model, _ = pressKey(t, model, "?")
+	if !strings.Contains(model.View(), "TAXONOMY") && !strings.Contains(model.View(), "NAVIGATION") {
+		t.Fatalf("? did not open help from the run:\n%s", model.View())
+	}
+	model, _ = pressKey(t, model, "esc")
+
+	if model.run.active != 1 || model.run.view != runViewHops {
+		t.Fatalf("run state was reset: active=%d view=%d", model.run.active, model.run.view)
+	}
+	if view := model.View(); !strings.Contains(view, "HOPS") {
+		t.Fatalf("help did not return to the hops pane:\n%s", view)
+	}
+}
+
+func TestHelpCoversEveryDocumentedKey(t *testing.T) {
+	text := strings.Join(strings.Fields(strings.Join(helpLines(), "\n")), " ")
+	for _, key := range []string{
+		"↑", "↓", "k", "j", "g", "G", "h", "l", "[", "]", "PgUp", "PgDn",
+		"enter", "esc", "q", "ctrl+c", "t", "c", "d", "e", "E", "x", "X",
+		"r", "1/2/3", "tab", "space", "a select", "/ filter", "n / p",
+	} {
+		if !strings.Contains(text, key) {
+			t.Fatalf("help does not document key %q", key)
+		}
 	}
 }

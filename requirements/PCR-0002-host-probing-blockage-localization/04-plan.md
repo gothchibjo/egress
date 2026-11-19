@@ -297,6 +297,8 @@ implementation in the order above.
 | 2026-11-19 | REQ-014 | No verdict claims proof of blocking.                                | The only `proof of blocking` occurrence is the disclosure that absence of evidence is not proof; classifier summaries stay observational.                         | pass   |
 | 2026-11-19 | REQ-015 | The document is written in English.                                 | `docs/tool-survey.md` is English and follows the repository document format.                                                                                      | pass   |
 | 2026-11-19 | REQ-015 | Only surveyed tools are named.                                      | The scope scan finds no tool outside ping, traceroute, mtr, tcptraceroute, nexttrace, trippy, dig/dog, curl, OONI Probe and RIPE Atlas.                           | pass   |
+| 2026-11-19 | REQ-016 | Help content matches the implemented key map.                       | `TestHelpCoversEveryDocumentedKey` and the key map review cover every handler key; picker `a` and run `c` were added to the table.                                | pass   |
+| 2026-11-19 | REQ-016 | Dismissing help never resets the run.                               | `TestHelpKeepsThePickerState` and `TestHelpKeepsTheRunState` close help with esc or `?` and verify the selection, target and pane survive.                        | pass   |
 
 # Implementation Log
 
@@ -424,3 +426,7 @@ implementation in the order above.
   survey of the ten named tools, adopted features linked to BR-01…BR-16, and
   deferred/rejected features with reasons. The document routes scope changes to
   a new PCR.
+- 2026-11-19 — REQ-016 expands the help overlay with picker keys, run keys,
+  every ladder step, hop-table reading, the eight taxonomy members, confidence
+  levels and the mandatory caveat. `?` works from the picker and the run, and
+  closing help preserves the selection, target and pane.

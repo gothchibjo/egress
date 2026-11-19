@@ -1,0 +1,184 @@
+REQ-016 TUI walkthrough
+Generated: 2026-11-19
+Help overlay at 100x30 and 60x20 (top and bottom), opened from the picker and from the run view.
+Reviewer sign-off: pending
+
+=== help 100x30 top ===
+ egress — HELP                                                                                      
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ HELP                                                                                               
+ NAVIGATION                                                                                         
+   ↑/k ↓/j    move or scroll                                                                        
+   g / G      first / last                                                                          
+   h/l [ ]    previous / next check or target                                                       
+   n / p      next / previous problem                                                               
+   PgUp/PgDn  scroll one page                                                                       
+   enter      open · esc back                                                                       
+   c          proxy and tunnel context                                                              
+   d          run destinations                                                                      
+   t          choose targets                                                                        
+ ACTIONS                                                                                            
+   r          run the baseline or probes again                                                      
+   e / E      export JSON (default / path)                                                          
+   x / X      cancel check / baseline                                                               
+   q/ctrl+c   quit, ctrl+c confirms                                                                 
+ PICKER                                                                                             
+   space      select or clear a preset                                                              
+   a          select or clear every visible preset                                                  
+   /          filter presets                                                                        
+   c          add a custom target                                                                   
+   enter      start the selected targets                                                            
+ RUN                                                                                                
+   1/2/3      ladder · hops · verdict panes                                                         
+   tab        cycle the panes                                                                       
+   enter      focus the pane for scrolling                                                          
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                     j/k scroll · ? close · esc back
+=== help 100x30 bottom ===
+ egress — HELP                                                                                      
+────────────────────────────────────────────────────────────────────────────────────────────────────
+   ADDRESS    every router that answered at the TTL                                                 
+   LOSS       share of probes without a reply                                                       
+   RTT        median round trip                                                                     
+   → ! x      target · partial loss · replies stop                                                  
+   complete · drop · inconclusive localization                                                      
+ TAXONOMY                                                                                           
+   dns-tampering      resolver and DoH answers differ                                               
+   tcp-rst-injection  a TCP connect was reset                                                       
+   ip-drop            no reply above the last hop                                                   
+   port-block         some ports connect, others time out                                           
+   sni-tls-filtering  real SNI fails, decoy succeeds                                                
+   http-block         HTTP fails while TCP/TLS work                                                 
+   throttling         latency or loss above a baseline                                              
+   unknown            evidence does not support a type                                              
+ CONFIDENCE                                                                                         
+   low                one observation or thin evidence                                              
+   medium             a consistent active signal                                                    
+   high               several independent active signals                                            
+   unknown            valid when evidence is insufficient                                           
+ CAVEAT                                                                                             
+   Every verdict keeps the vantage caveat: absence of                                               
+   evidence is not proof; re-run from another network.                                              
+ VERDICT                                                                                            
+   healthy    all passed or skipped                                                                 
+   degraded   warn, isolated anchor, no pass                                                        
+   blocked    core fail, all anchors fail                                                           
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                     j/k scroll · ? close · esc back
+=== help 60x20 top ===
+ egress — HELP                                              
+────────────────────────────────────────────────────────────
+ HELP                                                       
+ NAVIGATION                                                 
+   ↑/k ↓/j    move or scroll                                
+   g / G      first / last                                  
+   h/l [ ]    previous / next check or target               
+   n / p      next / previous problem                       
+   PgUp/PgDn  scroll one page                               
+   enter      open · esc back                               
+   c          proxy and tunnel context                      
+   d          run destinations                              
+   t          choose targets                                
+ ACTIONS                                                    
+   r          run the baseline or probes again              
+   e / E      export JSON (default / path)                  
+   x / X      cancel check / baseline                       
+   q/ctrl+c   quit, ctrl+c confirms                         
+────────────────────────────────────────────────────────────
+                             j/k scroll · ? close · esc back
+=== help 60x20 bottom ===
+ egress — HELP                                              
+────────────────────────────────────────────────────────────
+   sni-tls-filtering  real SNI fails, decoy succeeds        
+   http-block         HTTP fails while TCP/TLS work         
+   throttling         latency or loss above a baseline      
+   unknown            evidence does not support a type      
+ CONFIDENCE                                                 
+   low                one observation or thin evidence      
+   medium             a consistent active signal            
+   high               several independent active signals    
+   unknown            valid when evidence is insufficient   
+ CAVEAT                                                     
+   Every verdict keeps the vantage caveat: absence of       
+   evidence is not proof; re-run from another network.      
+ VERDICT                                                    
+   healthy    all passed or skipped                         
+   degraded   warn, isolated anchor, no pass                
+   blocked    core fail, all anchors fail                   
+────────────────────────────────────────────────────────────
+                             j/k scroll · ? close · esc back
+=== help from picker ===
+ egress — HELP                                                                                      
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ HELP                                                                                               
+ NAVIGATION                                                                                         
+   ↑/k ↓/j    move or scroll                                                                        
+   g / G      first / last                                                                          
+   h/l [ ]    previous / next check or target                                                       
+   n / p      next / previous problem                                                               
+   PgUp/PgDn  scroll one page                                                                       
+   enter      open · esc back                                                                       
+   c          proxy and tunnel context                                                              
+   d          run destinations                                                                      
+   t          choose targets                                                                        
+ ACTIONS                                                                                            
+   r          run the baseline or probes again                                                      
+   e / E      export JSON (default / path)                                                          
+   x / X      cancel check / baseline                                                               
+   q/ctrl+c   quit, ctrl+c confirms                                                                 
+ PICKER                                                                                             
+   space      select or clear a preset                                                              
+   a          select or clear every visible preset                                                  
+   /          filter presets                                                                        
+   c          add a custom target                                                                   
+   enter      start the selected targets                                                            
+ RUN                                                                                                
+   1/2/3      ladder · hops · verdict panes                                                         
+   tab        cycle the panes                                                                       
+   enter      focus the pane for scrolling                                                          
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                     j/k scroll · ? close · esc back
+=== help from run ===
+ egress — HELP                                                                                                          
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ HELP                                                                                                                   
+ NAVIGATION                                                                                                             
+   ↑/k ↓/j    move or scroll                                                                                            
+   g / G      first / last                                                                                              
+   h/l [ ]    previous / next check or target                                                                           
+   n / p      next / previous problem                                                                                   
+   PgUp/PgDn  scroll one page                                                                                           
+   enter      open · esc back                                                                                           
+   c          proxy and tunnel context                                                                                  
+   d          run destinations                                                                                          
+   t          choose targets                                                                                            
+ ACTIONS                                                                                                                
+   r          run the baseline or probes again                                                                          
+   e / E      export JSON (default / path)                                                                              
+   x / X      cancel check / baseline                                                                                   
+   q/ctrl+c   quit, ctrl+c confirms                                                                                     
+ PICKER                                                                                                                 
+   space      select or clear a preset                                                                                  
+   a          select or clear every visible preset                                                                      
+   /          filter presets                                                                                            
+   c          add a custom target                                                                                       
+   enter      start the selected targets                                                                                
+ RUN                                                                                                                    
+   1/2/3      ladder · hops · verdict panes                                                                             
+   tab        cycle the panes                                                                                           
+   enter      focus the pane for scrolling                                                                              
+   c / d      proxy context / run destinations                                                                          
+   e / E      export the session                                                                                        
+   r          re-run the selected targets                                                                               
+ LADDER                                                                                                                 
+   dns        system resolver and DoH comparison                                                                        
+   tcp.<port> TCP connect result                                                                                        
+   tls.real   ClientHello with the target name                                                                          
+   tls.decoy  ClientHello with a decoy name                                                                             
+   tls.absent ClientHello without SNI                                                                                   
+   http       HTTP GET on the primary port                                                                              
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                         j/k scroll · ? close · esc back
+--- PASS: TestDumpHelpEvidence (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.341s

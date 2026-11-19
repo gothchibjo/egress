@@ -19,56 +19,64 @@ implemented. The requirement is defined by [REQ-021].
 
 ## Keys
 
-| Context               | Key              | Action                                      |
-| :-------------------- | :--------------- | :------------------------------------------ |
-| Dashboard             | `↑`, `k`         | move selection up                           |
-| Dashboard             | `↓`, `j`         | move selection down                         |
-| Dashboard             | `g`, `G`         | select the first or last check              |
-| Dashboard             | `enter`          | open the selected check detail              |
-| Dashboard             | `e`              | write `egress-<timestamp>.json`             |
-| Dashboard             | `E`              | choose the export path                      |
-| Export prompt         | `enter`          | write the file                              |
-| Export prompt         | `esc`, `ctrl+c`  | close the prompt without writing            |
-| Overwrite prompt      | `y`              | replace the existing file                   |
-| Overwrite prompt      | `n`, `esc`       | keep the existing file                      |
-| Dashboard, detail     | `d`              | open the outbound destination list          |
-| Dashboard, detail     | `c`              | open the proxy and tunnel context           |
-| Dashboard             | `t`              | open the target picker                      |
-| Picker                | `↑`, `k`         | move the cursor up                          |
-| Picker                | `↓`, `j`         | move the cursor down                        |
-| Picker                | `g`, `G`         | jump to the first or last row               |
-| Picker                | `←`, `→`         | move to the previous or next column         |
-| Picker                | `space`          | select a preset or remove a custom          |
-| Picker                | `/`              | filter presets                              |
-| Picker filter         | `enter`, `esc`   | apply or clear the filter                   |
-| Picker                | `c`              | add a custom target                         |
-| Picker custom         | `enter`, `esc`   | add or cancel the custom target             |
-| Picker                | `enter`          | start when at least one target is selected  |
-| Picker                | `esc`            | return without running                      |
-| Run                   | `↑`/`k`, `↓`/`j` | previous or next target                     |
-| Run                   | `h`/`l`, `[`/`]` | previous or next target                     |
-| Run                   | `1`, `2`, `3`    | select the ladder, hops or verdict pane     |
-| Run                   | `tab`            | cycle the pane                              |
-| Run                   | `enter`          | focus the selected pane for scrolling       |
-| Run pane              | `↑`/`k`, `↓`/`j` | scroll one line                             |
-| Run pane              | `PgUp`, `PgDn`   | scroll one page                             |
-| Run pane              | `g`, `G`         | jump to the top or end                      |
-| Run pane              | `h`/`l`, `[`/`]` | previous or next target                     |
-| Run pane              | `esc`            | leave the pane, stay in the run             |
-| Run                   | `d`              | view the endpoints this run contacts        |
-| Run                   | `e`, `E`         | export the session to default or typed path |
-| Run                   | `r`              | run the current target selection again      |
-| Run                   | `x`, `X`         | cancel the current or every target          |
-| Run                   | `esc`            | back to the dashboard, never cancels        |
-| Running baseline      | `x`              | cancel the current check                    |
-| Running baseline      | `X`              | cancel the baseline, keep results           |
-| Detail, help, context | `esc`            | go back one page                            |
-| Dashboard, detail     | `?`              | open help                                   |
-| Help                  | `?`, `esc`       | close help and return                       |
-| Dashboard, detail     | `q`              | quit immediately                            |
-| Dashboard, detail     | `ctrl+c`         | ask for confirmation, then quit             |
-| Confirmation          | `y`              | quit                                        |
-| Confirmation          | `n`, `esc`       | cancel and stay                             |
+| Context                | Key              | Action                                      |
+| :--------------------- | :--------------- | :------------------------------------------ |
+| Dashboard              | `↑`, `k`         | move selection up                           |
+| Dashboard              | `↓`, `j`         | move selection down                         |
+| Dashboard              | `g`, `G`         | select the first or last check              |
+| Dashboard              | `enter`          | open the selected check detail              |
+| Dashboard              | `e`              | write `egress-<timestamp>.json`             |
+| Dashboard              | `E`              | choose the export path                      |
+| Export prompt          | `enter`          | write the file                              |
+| Export prompt          | `esc`, `ctrl+c`  | close the prompt without writing            |
+| Overwrite prompt       | `y`              | replace the existing file                   |
+| Overwrite prompt       | `n`, `esc`       | keep the existing file                      |
+| Dashboard, detail      | `d`              | open the outbound destination list          |
+| Dashboard, detail      | `c`              | open the proxy and tunnel context           |
+| Dashboard              | `t`              | open the target picker                      |
+| Picker                 | `↑`, `k`         | move the cursor up                          |
+| Picker                 | `↓`, `j`         | move the cursor down                        |
+| Picker                 | `g`, `G`         | jump to the first or last row               |
+| Picker                 | `←`, `→`         | move to the previous or next column         |
+| Picker                 | `space`          | select a preset or remove a custom          |
+| Picker                 | `a`              | select or clear every visible preset        |
+| Picker                 | `/`              | filter presets                              |
+| Picker filter          | `enter`, `esc`   | apply or clear the filter                   |
+| Picker                 | `c`              | add a custom target                         |
+| Picker custom          | `enter`, `esc`   | add or cancel the custom target             |
+| Picker                 | `enter`          | start when at least one target is selected  |
+| Picker                 | `esc`            | return without running                      |
+| Run                    | `↑`/`k`, `↓`/`j` | previous or next target                     |
+| Run                    | `h`/`l`, `[`/`]` | previous or next target                     |
+| Run                    | `1`, `2`, `3`    | select the ladder, hops or verdict pane     |
+| Run                    | `tab`            | cycle the pane                              |
+| Run                    | `enter`          | focus the selected pane for scrolling       |
+| Run pane               | `↑`/`k`, `↓`/`j` | scroll one line                             |
+| Run pane               | `PgUp`, `PgDn`   | scroll one page                             |
+| Run pane               | `g`, `G`         | jump to the top or end                      |
+| Run pane               | `h`/`l`, `[`/`]` | previous or next target                     |
+| Run pane               | `esc`            | leave the pane, stay in the run             |
+| Run                    | `c`              | view proxy and VPN context                  |
+| Run                    | `d`              | view the endpoints this run contacts        |
+| Run                    | `e`, `E`         | export the session to default or typed path |
+| Run                    | `r`              | run the current target selection again      |
+| Run                    | `x`, `X`         | cancel the current or every target          |
+| Run                    | `esc`            | back to the dashboard, never cancels        |
+| Running baseline       | `x`              | cancel the current check                    |
+| Running baseline       | `X`              | cancel the baseline, keep results           |
+| Detail, help, context  | `esc`            | go back one page                            |
+| Dashboard, picker, run | `?`              | open help                                   |
+| Help                   | `?`, `esc`       | close help and return                       |
+| Dashboard, detail      | `q`              | quit immediately                            |
+| Dashboard, detail      | `ctrl+c`         | ask for confirmation, then quit             |
+| Confirmation           | `y`              | quit                                        |
+| Confirmation           | `n`, `esc`       | cancel and stay                             |
+
+The help overlay is reachable from the dashboard, a check detail, the picker and
+the run view. It groups keys by context and covers target selection, every
+ladder step, hop-table reading, the blockage taxonomy and confidence levels.
+Closing help returns to the exact previous state, including the picker selection
+and the selected run target and pane.
 
 `esc` never quits, never cancels a check and never changes the selection; on the
 dashboard it does nothing. `ctrl+c` asks before quitting; `q` is the immediate
