@@ -427,7 +427,7 @@ func (m Model) renderRun() string {
 	}
 
 	header := m.renderPageHeader("RUN", m.runPosition())
-	contextLine := []string{m.runContextLine()}
+	contextLine := []string{m.runContextLine(), m.rule(m.width)}
 	footer := make([]string, 0, 3)
 	if m.notice != "" {
 		footer = append(footer, padLine(" "+m.notice, "", m.width))

@@ -1043,3 +1043,27 @@ func TestRunViewCompactVerdictShowsTheFullCaveat(t *testing.T) {
 		}
 	}
 }
+
+func TestRunViewClosesTheContextBandWithARule(t *testing.T) {
+	model := completeRun(t, runModel(t, 120, 40, WithContext(contextFixture(), nil)))
+	lines := strings.Split(model.View(), "\n")
+	contextLine := -1
+	for i, line := range lines {
+		if strings.Contains(line, "context:") {
+			contextLine = i
+			break
+		}
+	}
+	if contextLine < 0 {
+		t.Fatalf("context line is missing:\n%s", model.View())
+	}
+	if contextLine+2 >= len(lines) {
+		t.Fatalf("context band has no rule below it:\n%s", model.View())
+	}
+	if rule := strings.TrimSpace(lines[contextLine+1]); rule == "" || strings.Trim(rule, "─") != "" {
+		t.Fatalf("line below the context is not a rule: %q", lines[contextLine+1])
+	}
+	if !strings.Contains(lines[contextLine+2], "TARGETS") {
+		t.Fatalf("the body does not start after the context rule: %q", lines[contextLine+2])
+	}
+}

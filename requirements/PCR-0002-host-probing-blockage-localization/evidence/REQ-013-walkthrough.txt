@@ -1,19 +1,18 @@
 REQ-013 TUI walkthrough
 Generated: 2026-11-19
-Live context on this host, run view summary and context page; then the explicit absence state.
+Live context on this host, run view summary closed by a rule, context page, then the explicit absence state.
 Reviewer sign-off: pending
 
 --- run view summary ---
  egress — RUN                                                                           1/2 targets 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
  context: proxy NO_PROXY · vpn 7 interfaces · c details                                             
+────────────────────────────────────────────────────────────────────────────────────────────────────
  TARGETS               │  LADDER ·                                                                  
 > ✓ Alpha              │   ✓ dns           40ms                                                     
   x Beta               │   ✓ tcp.443       30ms                                                     
                        │   ✓ icmp          20ms                                                     
                        │   ✓ trace        900ms                                                     
-                       │                                                                            
-                       │                                                                            
                        │ ───────────────────────────────────────────────────────────────────────────
                        │  HOPS (udp) -> 203.0.113.10                                                
                        │   TTL  ADDRESS                                              LOSS     RTT   
@@ -23,17 +22,18 @@ Reviewer sign-off: pending
                        │  path complete at hop 2                                                    
                        │                                                                            
                        │                                                                            
-                       │                                                                            
-                       │                                                                            
-                       │                                                                            
                        │ ───────────────────────────────────────────────────────────────────────────
                        │  no blockage detected                                                      
                        │  every ladder step passed                                                  
                        │  evidence: [active] all ladder steps passed                                
-                       │  caveat: Single vantage point: one observation from one network; absence of
+                       │  caveat: Single vantage point: one observation from one network.           
+                       │    False-positive risks: DNS answers can differ by CDN or geo-DNS; TCP     
+                       │    resets can come from middleboxes; ICMP replies are often rate-limited or
+                       │    filtered. Absence of evidence is not proof of blocking. Re-run from     
+                       │    another network to validate.                                            
                        │  3 opens the full verdict                                                  
 ────────────────────────────────────────────────────────────────────────────────────────────────────
-                        ↑/k ↓/j target · 1/2/3 pane · enter scroll · e export · r rerun · x/X cancel
+       ↑/k ↓/j target · 1/2/3 pane · enter scroll · c ctx · d dest · e export · r rerun · x/X cancel
 --- context page ---
  egress — CONTEXT                                                                                   
 ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -69,13 +69,12 @@ Reviewer sign-off: pending
  egress — RUN                                                                           1/2 targets 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
  context: no proxy or VPN detected · c details                                                      
+────────────────────────────────────────────────────────────────────────────────────────────────────
  TARGETS               │  LADDER ·                                                                  
 > ✓ Alpha              │   ✓ dns           40ms                                                     
   x Beta               │   ✓ tcp.443       30ms                                                     
                        │   ✓ icmp          20ms                                                     
                        │   ✓ trace        900ms                                                     
-                       │                                                                            
-                       │                                                                            
                        │ ───────────────────────────────────────────────────────────────────────────
                        │  HOPS (udp) -> 203.0.113.10                                                
                        │   TTL  ADDRESS                                              LOSS     RTT   
@@ -85,17 +84,18 @@ Reviewer sign-off: pending
                        │  path complete at hop 2                                                    
                        │                                                                            
                        │                                                                            
-                       │                                                                            
-                       │                                                                            
-                       │                                                                            
                        │ ───────────────────────────────────────────────────────────────────────────
                        │  no blockage detected                                                      
                        │  every ladder step passed                                                  
                        │  evidence: [active] all ladder steps passed                                
-                       │  caveat: Single vantage point: one observation from one network; absence of
+                       │  caveat: Single vantage point: one observation from one network.           
+                       │    False-positive risks: DNS answers can differ by CDN or geo-DNS; TCP     
+                       │    resets can come from middleboxes; ICMP replies are often rate-limited or
+                       │    filtered. Absence of evidence is not proof of blocking. Re-run from     
+                       │    another network to validate.                                            
                        │  3 opens the full verdict                                                  
 ────────────────────────────────────────────────────────────────────────────────────────────────────
-                        ↑/k ↓/j target · 1/2/3 pane · enter scroll · e export · r rerun · x/X cancel
+       ↑/k ↓/j target · 1/2/3 pane · enter scroll · c ctx · d dest · e export · r rerun · x/X cancel
 --- PASS: TestDumpContextEvidence (0.01s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/tui	0.382s
+ok  	github.com/gothchibjo/egress/internal/tui	0.359s

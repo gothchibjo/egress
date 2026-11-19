@@ -415,3 +415,6 @@ implementation in the order above.
   proof, and a suggestion to re-run from another network. The run-view verdict
   band wraps it instead of clipping, the compact verdict shows it before the
   evidence, and `session-v1` exports the same text.
+- 2026-11-19 — REQ-013 refinement: the context line under the run header is
+  closed by a rule, as the classification band is on the dashboard, so it reads
+  as a separate band instead of the first row of the target list.
