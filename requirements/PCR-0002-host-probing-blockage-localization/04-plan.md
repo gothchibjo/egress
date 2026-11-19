@@ -295,6 +295,8 @@ implementation in the order above.
 | 2026-11-19 | REQ-013 | Proxy and VPN settings are never modified.                          | No `os.Setenv`, interface mutation or route change exists; the only environment reads are rendering and proxy detection.                                          | pass   |
 | 2026-11-19 | REQ-014 | The caveat cannot be hidden or collapsed away.                      | The verdict band wraps the full caveat at every width and the VERDICT pane places CAVEAT before EVIDENCE; no toggle or collapse control exists.                   | pass   |
 | 2026-11-19 | REQ-014 | No verdict claims proof of blocking.                                | The only `proof of blocking` occurrence is the disclosure that absence of evidence is not proof; classifier summaries stay observational.                         | pass   |
+| 2026-11-19 | REQ-015 | The document is written in English.                                 | `docs/tool-survey.md` is English and follows the repository document format.                                                                                      | pass   |
+| 2026-11-19 | REQ-015 | Only surveyed tools are named.                                      | The scope scan finds no tool outside ping, traceroute, mtr, tcptraceroute, nexttrace, trippy, dig/dog, curl, OONI Probe and RIPE Atlas.                           | pass   |
 
 # Implementation Log
 
@@ -418,3 +420,7 @@ implementation in the order above.
 - 2026-11-19 — REQ-013 refinement: the context line under the run header is
   closed by a rule, as the classification band is on the dashboard, so it reads
   as a separate band instead of the first row of the target list.
+- 2026-11-19 — REQ-015 adds `docs/tool-survey.md`: capability and privilege
+  survey of the ten named tools, adopted features linked to BR-01…BR-16, and
+  deferred/rejected features with reasons. The document routes scope changes to
+  a new PCR.
