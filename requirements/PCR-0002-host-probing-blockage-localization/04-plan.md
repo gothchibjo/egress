@@ -291,6 +291,8 @@ implementation in the order above.
 | 2026-11-19 | REQ-011 | Export contains only data from the current session.                 | `sessionEnvelope` reads only `m.run`, the session mode, catalog version, destinations and current network context; no previous run or global history is included. | pass   |
 | 2026-11-19 | REQ-012 | Only declared destinations receive traffic.                         | A session destination builder lists selected targets, configured resolvers and the DoH endpoint only; a live socket inventory shows no other remote address.      | pass   |
 | 2026-11-19 | REQ-012 | No telemetry or enrichment API is added.                            | The call-site scan finds only documented probes; no telemetry, upload or enrichment client exists, and the only environment reads are NO_COLOR and TERM.          | pass   |
+| 2026-11-19 | REQ-013 | Context is informational only.                                      | The run view summary and the context page read `m.opts.networkContext`; no probe decision, destination or classification reads it.                                | pass   |
+| 2026-11-19 | REQ-013 | Proxy and VPN settings are never modified.                          | No `os.Setenv`, interface mutation or route change exists; the only environment reads are rendering and proxy detection.                                          | pass   |
 
 # Implementation Log
 
@@ -402,3 +404,7 @@ implementation in the order above.
   run view shows it on `d`; `session-v1` carries it in `destinations`. The
   network inventory, call-site scan and guard tests live in the REQ-012 evidence
   files.
+- 2026-11-19 — REQ-013 keeps the proxy and VPN context visible: the run view
+  shows a one-line summary with detected names or the explicit absence, `c`
+  opens the read-only context page and returns to the same target, and
+  `session-v1` carries the context with its sources.

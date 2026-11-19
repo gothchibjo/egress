@@ -1,0 +1,101 @@
+REQ-013 TUI walkthrough
+Generated: 2026-11-19
+Live context on this host, run view summary and context page; then the explicit absence state.
+Reviewer sign-off: pending
+
+--- run view summary ---
+ egress — RUN                                                                           1/2 targets 
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ context: proxy NO_PROXY · vpn 7 interfaces · c details                                             
+ TARGETS               │  LADDER ·                                                                  
+> ✓ Alpha              │   ✓ dns           40ms                                                     
+  x Beta               │   ✓ tcp.443       30ms                                                     
+                       │   ✓ icmp          20ms                                                     
+                       │   ✓ trace        900ms                                                     
+                       │                                                                            
+                       │                                                                            
+                       │ ───────────────────────────────────────────────────────────────────────────
+                       │  HOPS (udp) -> 203.0.113.10                                                
+                       │   TTL  ADDRESS                                              LOSS     RTT   
+                       │     1  192.0.2.1                                              0%     12ms  
+                       │ →   2  203.0.113.10                                           0%     35ms  
+                       │                                                                            
+                       │  path complete at hop 2                                                    
+                       │                                                                            
+                       │                                                                            
+                       │                                                                            
+                       │                                                                            
+                       │                                                                            
+                       │ ───────────────────────────────────────────────────────────────────────────
+                       │  no blockage detected                                                      
+                       │  every ladder step passed                                                  
+                       │  evidence: [active] all ladder steps passed                                
+                       │  caveat: Single vantage point: one observation from one network; absence of
+                       │  3 opens the full verdict                                                  
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                        ↑/k ↓/j target · 1/2/3 pane · enter scroll · e export · r rerun · x/X cancel
+--- context page ---
+ egress — CONTEXT                                                                                   
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+ Read-only context. It never changes which probes run.                                              
+ Sources: proxy variables from the environment; tunnel interface names, with the default route      
+ marked when it applies.                                                                            
+                                                                                                    
+ PROXY                                                                                              
+   NO_PROXY  127.0.0.1,localhost,::1                                                                
+     source  environment (NO_PROXY)                                                                 
+   NO_PROXY  127.0.0.1,localhost,::1                                                                
+     source  environment (no_proxy)                                                                 
+                                                                                                    
+ VPN                                                                                                
+   utun0  tun  up                                                                                   
+     addresses  fe80::f9:b40:6e91:2cc6/64                                                           
+   utun1  tun  up                                                                                   
+     addresses  fe80::3b8:68ea:df3a:2b46/64                                                         
+   utun100  tun  up                                                                                 
+     addresses  100.115.3.197/8, fda8:33b5:3654:995f:3bdc:31f6:3643:e5fc/64, fe80::ae07:75ff:fe3a:2a
+   utun2  tun  up                                                                                   
+     addresses  fe80::66a5:a7a5:6cad:3184/64                                                        
+   utun3  tun  up                                                                                   
+     addresses  fe80::ce81:b1c:bd2c:69e/64                                                          
+   utun4  tun  up                                                                                   
+     addresses  fe80::c28f:f298:1525:6f83/64                                                        
+   utun5  tun  up                                                                                   
+     addresses  fe80::d4f4:db78:65ba:81be/64                                                        
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                             j/k scroll · esc back · ? help · q quit
+--- absent context ---
+ egress — RUN                                                                           1/2 targets 
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ context: no proxy or VPN detected · c details                                                      
+ TARGETS               │  LADDER ·                                                                  
+> ✓ Alpha              │   ✓ dns           40ms                                                     
+  x Beta               │   ✓ tcp.443       30ms                                                     
+                       │   ✓ icmp          20ms                                                     
+                       │   ✓ trace        900ms                                                     
+                       │                                                                            
+                       │                                                                            
+                       │ ───────────────────────────────────────────────────────────────────────────
+                       │  HOPS (udp) -> 203.0.113.10                                                
+                       │   TTL  ADDRESS                                              LOSS     RTT   
+                       │     1  192.0.2.1                                              0%     12ms  
+                       │ →   2  203.0.113.10                                           0%     35ms  
+                       │                                                                            
+                       │  path complete at hop 2                                                    
+                       │                                                                            
+                       │                                                                            
+                       │                                                                            
+                       │                                                                            
+                       │                                                                            
+                       │ ───────────────────────────────────────────────────────────────────────────
+                       │  no blockage detected                                                      
+                       │  every ladder step passed                                                  
+                       │  evidence: [active] all ladder steps passed                                
+                       │  caveat: Single vantage point: one observation from one network; absence of
+                       │  3 opens the full verdict                                                  
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                        ↑/k ↓/j target · 1/2/3 pane · enter scroll · e export · r rerun · x/X cancel
+--- PASS: TestDumpContextEvidence (0.01s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.382s

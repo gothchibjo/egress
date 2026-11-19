@@ -88,11 +88,13 @@ destination list]. The `c` page shows the proxy and tunnel context described in
 [the network context]. Both scroll with `j`/`k` and `g`/`G` and return to the
 page they were opened from.
 
-In the run view, `d` opens the per-run destination list: the selected targets
-with their resolved addresses, the configured resolvers and the DoH endpoint.
-`e` and `E` write the session export (`session-v1`) instead of the baseline
-export. `r` replaces the finished target results with a new run of the same
-selection; it is refused while a probe session is still active. On a narrow
+In the run view, `c` opens the proxy and VPN context; the same context is
+summarised in one line under the header, including the
+`no proxy or VPN detected` state. `d` opens the per-run destination list: the
+selected targets with their resolved addresses, the configured resolvers and the
+DoH endpoint. `e` and `E` write the session export (`session-v1`) instead of the
+baseline export. `r` replaces the finished target results with a new run of the
+same selection; it is refused while a probe session is still active. On a narrow
 terminal the ladder and the hops share the right column, stacked vertically,
 instead of being squeezed into three columns.
 

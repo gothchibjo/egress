@@ -18,9 +18,11 @@ read-only context, required by [REQ-023]. The context never changes which probes
 run, which destinations are contacted or how a result is classified. There is no
 proxy bypass and no direct-versus-proxied comparison in v1.
 
-The TUI shows it on the `c` page; the JSON envelope carries it in the `context`
-field. When nothing is detected, both state the absence explicitly instead of
-silently omitting the section.
+The TUI shows it on the `c` page; the run view also keeps a one-line summary
+under the header and opens the same page with `c`. The JSON envelope carries it
+in the `context` field; `session-v1` carries it for a probing session. When
+nothing is detected, both state the absence explicitly instead of silently
+omitting the section.
 
 The `c` page states the source rule once at the top: proxy values come from the
 environment, tunnel names from the interface list, and a tunnel that carries the

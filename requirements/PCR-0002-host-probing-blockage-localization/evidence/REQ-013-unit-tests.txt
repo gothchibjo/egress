@@ -1,0 +1,46 @@
+REQ-013 proxy and VPN context tests
+Generated: 2026-11-19
+
+$ go test ./internal/platform -run Context -v
+=== RUN   TestDetectNetworkContext
+--- PASS: TestDetectNetworkContext (0.00s)
+=== RUN   TestDetectNetworkContextStatesAbsence
+--- PASS: TestDetectNetworkContextStatesAbsence (0.00s)
+=== RUN   TestDetectNetworkContextKeepsProxiesWhenInterfacesFail
+--- PASS: TestDetectNetworkContextKeepsProxiesWhenInterfacesFail (0.00s)
+=== RUN   TestProxyValuesStayRedactedInContext
+--- PASS: TestProxyValuesStayRedactedInContext (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/platform	(cached)
+
+$ go test ./internal/tui -run "ContextPage|RunViewShowsNetworkContext|RunViewStatesContextAbsence|RunViewContextPageReturnsToRun|RunViewSessionExport" -v
+=== RUN   TestContextPageShowsSources
+--- PASS: TestContextPageShowsSources (0.00s)
+=== RUN   TestContextPageStatesAbsence
+--- PASS: TestContextPageStatesAbsence (0.00s)
+=== RUN   TestContextPageWithoutCollectedContext
+--- PASS: TestContextPageWithoutCollectedContext (0.00s)
+=== RUN   TestContextPageReportsInterfaceError
+--- PASS: TestContextPageReportsInterfaceError (0.00s)
+=== RUN   TestContextPageReturnsToItsOrigin
+--- PASS: TestContextPageReturnsToItsOrigin (0.00s)
+=== RUN   TestContextPageScrollsOnShortTerminals
+--- PASS: TestContextPageScrollsOnShortTerminals (0.00s)
+=== RUN   TestContextPageStatesTheSourceRuleOnceAtTheTop
+--- PASS: TestContextPageStatesTheSourceRuleOnceAtTheTop (0.00s)
+=== RUN   TestRunViewSessionExportPathPrompt
+--- PASS: TestRunViewSessionExportPathPrompt (0.00s)
+=== RUN   TestRunViewSessionExportConfirmsOverwrite
+--- PASS: TestRunViewSessionExportConfirmsOverwrite (0.00s)
+=== RUN   TestRunViewShowsNetworkContext
+--- PASS: TestRunViewShowsNetworkContext (0.00s)
+=== RUN   TestRunViewStatesContextAbsence
+--- PASS: TestRunViewStatesContextAbsence (0.00s)
+=== RUN   TestRunViewContextPageReturnsToRun
+--- PASS: TestRunViewContextPageReturnsToRun (0.00s)
+=== RUN   TestRunViewSessionExportCarriesTheContext
+--- PASS: TestRunViewSessionExportCarriesTheContext (0.00s)
+=== RUN   TestRunViewSessionExportStatesAbsentContext
+--- PASS: TestRunViewSessionExportStatesAbsentContext (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.272s

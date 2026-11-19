@@ -13,6 +13,7 @@ import (
 
 	"github.com/gothchibjo/egress/internal/app"
 	"github.com/gothchibjo/egress/internal/domain"
+	"github.com/gothchibjo/egress/internal/platform"
 	"github.com/gothchibjo/egress/internal/report"
 )
 
@@ -928,5 +929,82 @@ func TestRunViewDestinationsPageShowsResolverFailure(t *testing.T) {
 
 	if view := model.View(); !strings.Contains(view, "Resolver list unavailable: resolvers unavailable") {
 		t.Fatalf("resolver failure is not shown:\n%s", view)
+	}
+}
+
+func TestRunViewShowsNetworkContext(t *testing.T) {
+	model := completeRun(t, runModel(t, 120, 40, WithContext(contextFixture(), nil)))
+	view := model.View()
+
+	for _, want := range []string{"context:", "proxy HTTPS_PROXY", "vpn utun3, wg0", "c details"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("run view context is missing %q:\n%s", want, view)
+		}
+	}
+}
+
+func TestRunViewStatesContextAbsence(t *testing.T) {
+	model := completeRun(t, runModel(t, 120, 40, WithContext(platform.NetworkContext{}, nil)))
+	if view := model.View(); !strings.Contains(view, "no proxy or VPN detected") {
+		t.Fatalf("absence is not stated:\n%s", view)
+	}
+}
+
+func TestRunViewContextPageReturnsToRun(t *testing.T) {
+	model := completeRun(t, runModel(t, 120, 40, WithContext(contextFixture(), nil)))
+	model, _ = pressKey(t, model, "j")
+	model, _ = pressKey(t, model, "c")
+	if view := model.View(); !strings.Contains(view, "CONTEXT") || !strings.Contains(view, "HTTPS_PROXY") {
+		t.Fatalf("c did not open the context page:\n%s", view)
+	}
+	model, _ = pressKey(t, model, "esc")
+	if view := model.View(); !strings.Contains(view, "RUN") || strings.Contains(view, "CONTEXT") {
+		t.Fatalf("esc did not return to the run view:\n%s", view)
+	}
+	if model.run.active != 1 {
+		t.Fatalf("context returned to target %d, want 1", model.run.active)
+	}
+}
+
+func TestRunViewSessionExportCarriesTheContext(t *testing.T) {
+	var got report.SessionEnvelope
+	model := completeRun(t, runModel(t, 120, 40,
+		WithContext(contextFixture(), nil),
+		WithSessionExporter(func(_ string, envelope report.SessionEnvelope, _ bool) error {
+			got = envelope
+			return nil
+		})))
+	model, _ = pressKey(t, model, "e")
+
+	if got.Context == nil || len(got.Context.Proxies) != 1 || len(got.Context.VPN) != 2 {
+		t.Fatalf("session context = %+v", got.Context)
+	}
+	var buffer bytes.Buffer
+	if err := report.EncodeSession(&buffer, got); err != nil {
+		t.Fatalf("session with context is invalid: %v", err)
+	}
+	if !strings.Contains(buffer.String(), `"proxies":[{"name":"HTTPS_PROXY"`) {
+		t.Fatalf("context is missing from the export: %s", buffer.String())
+	}
+}
+
+func TestRunViewSessionExportStatesAbsentContext(t *testing.T) {
+	var got report.SessionEnvelope
+	model := completeRun(t, runModel(t, 120, 40,
+		WithContext(platform.NetworkContext{}, nil),
+		WithSessionExporter(func(_ string, envelope report.SessionEnvelope, _ bool) error {
+			got = envelope
+			return nil
+		})))
+	model, _ = pressKey(t, model, "e")
+
+	var buffer bytes.Buffer
+	if err := report.EncodeSession(&buffer, got); err != nil {
+		t.Fatalf("EncodeSession() error = %v", err)
+	}
+	for _, want := range []string{`"proxies":[]`, `"vpn":[]`} {
+		if !strings.Contains(buffer.String(), want) {
+			t.Fatalf("absent context is not explicit, missing %q", want)
+		}
 	}
 }

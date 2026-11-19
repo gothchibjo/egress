@@ -10,6 +10,7 @@ import (
 
 	"github.com/gothchibjo/egress/internal/app"
 	"github.com/gothchibjo/egress/internal/domain"
+	"github.com/gothchibjo/egress/internal/platform"
 )
 
 // runViewMode selects the visible pane in the compact layout.
@@ -121,6 +122,8 @@ func (m Model) updateRunKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.exportRunCurrent()
 	case "E":
 		return m.promptRunExport()
+	case "c":
+		return m.openContext(viewRun), nil
 	case "d":
 		m.runDestinationOffset = 0
 		m.view = viewRunDestinations
@@ -180,6 +183,8 @@ func (m Model) updateRunPaneKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.exportRunCurrent()
 	case "E":
 		return m.promptRunExport()
+	case "c":
+		return m.openContext(viewRun), nil
 	case "d":
 		m.runDestinationOffset = 0
 		m.view = viewRunDestinations
@@ -422,12 +427,13 @@ func (m Model) renderRun() string {
 	}
 
 	header := m.renderPageHeader("RUN", m.runPosition())
+	contextLine := []string{m.runContextLine()}
 	footer := make([]string, 0, 3)
 	if m.notice != "" {
 		footer = append(footer, padLine(" "+m.notice, "", m.width))
 	}
 	footer = append(footer, m.renderHintFooter(m.footerHints())...)
-	bodyHeight := m.height - len(header) - len(footer)
+	bodyHeight := m.height - len(header) - len(contextLine) - len(footer)
 	if bodyHeight < 1 {
 		bodyHeight = 1
 	}
@@ -491,9 +497,75 @@ func (m Model) renderRun() string {
 	}
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, column, separator, block(right, rightWidth, bodyHeight))
-	lines := append(header, strings.Split(body, "\n")...)
+	lines := append(header, contextLine...)
+	lines = append(lines, strings.Split(body, "\n")...)
 	lines = append(lines, footer...)
 	return strings.Join(lines, "\n")
+}
+
+// runContextLine keeps the proxy and VPN context visible without opening the
+// context page, and states its absence explicitly. Long lists collapse to a
+// count so the "c details" hint always survives the width.
+func (m Model) runContextLine() string {
+	detail := "not collected"
+	if context := m.opts.networkContext; context != nil {
+		parts := make([]string, 0, 2)
+		if proxies := uniqueNames(proxyNames(context.Proxies)); len(proxies) > 0 {
+			parts = append(parts, "proxy "+summarizeNames(proxies, 2, "settings"))
+		}
+		if tunnels := uniqueNames(vpnNames(context.VPN)); len(tunnels) > 0 {
+			parts = append(parts, "vpn "+summarizeNames(tunnels, 3, "interfaces"))
+		}
+		if len(parts) == 0 {
+			detail = "no proxy or VPN detected"
+		} else {
+			detail = strings.Join(parts, " · ")
+		}
+	}
+	if m.opts.contextErr != "" {
+		detail += " · interface list unavailable"
+	}
+	suffix := " · c details"
+	if limit := m.width - 2 - lipgloss.Width(suffix); limit > 4 && lipgloss.Width(detail) > limit {
+		detail = clip(detail, limit)
+	}
+	return padLine(" "+m.theme().muted.Render("context: "+detail+suffix), "", m.width)
+}
+
+func proxyNames(proxies []platform.ProxySetting) []string {
+	names := make([]string, 0, len(proxies))
+	for _, proxy := range proxies {
+		names = append(names, proxy.Name)
+	}
+	return names
+}
+
+func vpnNames(interfaces []platform.VPNInterface) []string {
+	names := make([]string, 0, len(interfaces))
+	for _, iface := range interfaces {
+		names = append(names, iface.Name)
+	}
+	return names
+}
+
+func uniqueNames(names []string) []string {
+	seen := make(map[string]bool, len(names))
+	out := make([]string, 0, len(names))
+	for _, name := range names {
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	return out
+}
+
+func summarizeNames(names []string, limit int, unit string) string {
+	if len(names) <= limit {
+		return strings.Join(names, ", ")
+	}
+	return fmt.Sprintf("%d %s", len(names), unit)
 }
 
 // runTargetLines renders the target column with state and outcome markers.

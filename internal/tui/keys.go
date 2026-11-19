@@ -336,7 +336,7 @@ func (m Model) footerHints() string {
 		if m.Layout() == LayoutCompact || m.width < 100 {
 			return "↑↓ target" + sep + "1-3 pane" + sep + "enter" + sep + "e export" + sep + "r rerun" + sep + "? help"
 		}
-		return "↑/k ↓/j target" + sep + "1/2/3 pane" + sep + "enter scroll" + sep + "e export" + sep + "r rerun" + sep + "x/X cancel"
+		return "↑/k ↓/j target" + sep + "1/2/3 pane" + sep + "enter scroll" + sep + "c ctx" + sep + "d dest" + sep + "e export" + sep + "r rerun" + sep + "x/X cancel"
 	case viewHelp:
 		return "j/k scroll" + sep + "? close" + sep + "esc back"
 	default:
