@@ -69,8 +69,42 @@ type Hypothesis struct {
 	Caveat     string                `json:"caveat"`
 }
 
-// SingleVantageCaveat accompanies every hypothesis.
+// SingleVantageCaveat is the fixed opening of every hypothesis caveat.
 const SingleVantageCaveat = "Single vantage point: one observation from one network; absence of evidence is not proof of blocking."
+
+// caveatFor builds the full disclosure: the vantage limitation, the
+// false-positive risks of the probes that actually ran, the absence-of-evidence
+// rule and the external-validation suggestion.
+func caveatFor(steps []StepResult) string {
+	risks := make([]string, 0, 5)
+	seen := make(map[string]bool, 5)
+	add := func(risk string) {
+		if !seen[risk] {
+			seen[risk] = true
+			risks = append(risks, risk)
+		}
+	}
+	for _, step := range steps {
+		switch {
+		case step.Kind == StepDNS:
+			add("DNS answers can differ by CDN or geo-DNS")
+		case step.Kind == StepTCP:
+			add("TCP resets can come from middleboxes")
+		case step.Kind == StepTLS:
+			add("TLS alerts can reflect policy or certificates")
+		case step.Kind == StepICMP || step.Kind == StepTrace:
+			add("ICMP replies are often rate-limited or filtered")
+		case step.Kind == StepHTTP:
+			add("HTTP errors can be application policy")
+		}
+	}
+	if len(risks) == 0 {
+		risks = append(risks, "probe replies can be rate-limited or filtered")
+	}
+	return "Single vantage point: one observation from one network. False-positive risks: " +
+		strings.Join(risks, "; ") +
+		". Absence of evidence is not proof of blocking. Re-run from another network to validate."
+}
 
 // Validate checks that the hypothesis can explain itself.
 func (h Hypothesis) Validate() error {
@@ -366,7 +400,7 @@ func newHypothesis(kind BlockageType, confidence Confidence, summary string, evi
 		Summary:    summary,
 		Evidence:   evidence,
 		Rejected:   rejections(kind, facts),
-		Caveat:     SingleVantageCaveat,
+		Caveat:     caveatFor(facts.steps),
 	}
 }
 

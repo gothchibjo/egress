@@ -451,7 +451,8 @@ func (m Model) renderRun() string {
 
 	var right []string
 	if m.Layout() == LayoutNormal && bodyHeight >= 14 && m.run.view != runViewVerdict {
-		band := 5
+		bandLines := m.runVerdictBand(rightWidth)
+		band := len(bandLines)
 		panes := bodyHeight - band - 1
 		if rightWidth >= 85 && panes >= 12 {
 			// Wide terminals keep three columns: targets, ladder and hops.
@@ -462,7 +463,7 @@ func (m Model) renderRun() string {
 			top := lipgloss.JoinHorizontal(lipgloss.Top, ladder, block(m.separatorLines(panes), 3, panes), hops)
 			right = strings.Split(top, "\n")
 			right = append(right, m.rule(rightWidth))
-			right = append(right, strings.Split(block(m.runVerdictBand(), rightWidth, band), "\n")...)
+			right = append(right, strings.Split(block(bandLines, rightWidth, band), "\n")...)
 		} else {
 			// Narrow terminals use two columns: the ladder and the hops stack in
 			// the right column, so neither pane wraps a wide table.
@@ -481,7 +482,7 @@ func (m Model) renderRun() string {
 			right = append(right, m.rule(rightWidth))
 			right = append(right, strings.Split(hops, "\n")...)
 			right = append(right, m.rule(rightWidth))
-			right = append(right, strings.Split(block(m.runVerdictBand(), rightWidth, band), "\n")...)
+			right = append(right, strings.Split(block(bandLines, rightWidth, band), "\n")...)
 		}
 	} else {
 		var lines []string
@@ -850,8 +851,9 @@ func (m Model) runHopsLines(width, height int) []string {
 	return lines
 }
 
-// runVerdictBand is the compact verdict strip under the wide layout.
-func (m Model) runVerdictBand() []string {
+// runVerdictBand is the always-visible verdict strip: the caveat is wrapped
+// instead of clipped, so it cannot be hidden by a narrow terminal.
+func (m Model) runVerdictBand(width int) []string {
 	target, ok := m.activeRunTarget()
 	if !ok || target.hypothesis.Type == "" {
 		return []string{" verdict appears when the target finishes"}
@@ -868,7 +870,10 @@ func (m Model) runVerdictBand() []string {
 	if len(hypothesis.Evidence) > 0 {
 		lines = append(lines, fmt.Sprintf(" evidence: [%s] %s", hypothesis.Evidence[0].Mode, hypothesis.Evidence[0].Text))
 	}
-	lines = append(lines, " caveat: "+hypothesis.Caveat, " 3 opens the full verdict")
+	lines = append(lines,
+		wrapPaneLine(" caveat: "+hypothesis.Caveat, width)...,
+	)
+	lines = append(lines, " 3 opens the full verdict")
 	return lines
 }
 
@@ -894,6 +899,8 @@ func (m Model) runVerdictLines(width, height int) []string {
 	lines := []string{
 		headline,
 		" " + hypothesis.Summary,
+		" CAVEAT",
+		"   " + hypothesis.Caveat,
 		" EVIDENCE",
 	}
 	for _, line := range hypothesis.Evidence {
@@ -905,7 +912,6 @@ func (m Model) runVerdictLines(width, height int) []string {
 			lines = append(lines, fmt.Sprintf("   %s: %s", rejected.Type, rejected.Reason))
 		}
 	}
-	lines = append(lines, " CAVEAT", "   "+hypothesis.Caveat)
 	lines = wrapPaneLines(lines, width)
 
 	offset := 0

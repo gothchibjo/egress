@@ -293,6 +293,8 @@ implementation in the order above.
 | 2026-11-19 | REQ-012 | No telemetry or enrichment API is added.                            | The call-site scan finds only documented probes; no telemetry, upload or enrichment client exists, and the only environment reads are NO_COLOR and TERM.          | pass   |
 | 2026-11-19 | REQ-013 | Context is informational only.                                      | The run view summary and the context page read `m.opts.networkContext`; no probe decision, destination or classification reads it.                                | pass   |
 | 2026-11-19 | REQ-013 | Proxy and VPN settings are never modified.                          | No `os.Setenv`, interface mutation or route change exists; the only environment reads are rendering and proxy detection.                                          | pass   |
+| 2026-11-19 | REQ-014 | The caveat cannot be hidden or collapsed away.                      | The verdict band wraps the full caveat at every width and the VERDICT pane places CAVEAT before EVIDENCE; no toggle or collapse control exists.                   | pass   |
+| 2026-11-19 | REQ-014 | No verdict claims proof of blocking.                                | The only `proof of blocking` occurrence is the disclosure that absence of evidence is not proof; classifier summaries stay observational.                         | pass   |
 
 # Implementation Log
 
@@ -408,3 +410,8 @@ implementation in the order above.
   shows a one-line summary with detected names or the explicit absence, `c`
   opens the read-only context page and returns to the same target, and
   `session-v1` carries the context with its sources.
+- 2026-11-19 — REQ-014 expands every target caveat: single vantage point,
+  false-positive risks naming the probes that ran, absence of evidence is not
+  proof, and a suggestion to re-run from another network. The run-view verdict
+  band wraps it instead of clipping, the compact verdict shows it before the
+  evidence, and `session-v1` exports the same text.

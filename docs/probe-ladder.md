@@ -91,6 +91,14 @@ The hop table feeds `domain.LocalizePath`, which yields one of three findings:
 - `inconclusive between hops N and M` when the trace was truncated, or when the
   target answered a transport step but the hops returned no probe reply.
 
+Every target verdict carries the full disclosure, both in the VERDICT pane and
+in the always-visible band under the panes: the single vantage point, the
+false-positive risks of the probes that actually ran (CDN/geo DNS differences,
+middlebox TCP resets, TLS policy or certificates, ICMP rate limiting, HTTP
+application policy), the rule that absence of evidence is not proof of blocking,
+and the suggestion to re-run from another network. The band wraps the caveat
+instead of clipping it, so a narrow terminal cannot hide it.
+
 A `trace` step is `warn`, not `pass`, when the trace returned hops but none of
 them is the target address; the diagnostic states
 `path did not reach the target`.

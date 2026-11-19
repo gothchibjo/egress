@@ -1,0 +1,97 @@
+REQ-014 TUI walkthrough
+Generated: 2026-11-19
+Live GitHub session at 120x40 and 82x24; compact 60x20 verdict; normalized caveat text.
+Reviewer sign-off: pending
+
+=== 120x40 ===
+ egress — RUN                                                                                               1/1 targets 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ context: not collected · c details                                                                                     
+ TARGETS               │  LADDER ·                              │  HOPS (udp) -> 140.82.121.4                           
+> ! GitHub             │   ! dns 282ms system resolver and      │   TTL  ADDRESS                                        
+                       │     DoH answers differ                 │         LOSS / RTT                                    
+                       │   ✓ tcp.443       47ms                 │     1  100.115.8.137                                  
+                       │   ✓ tls.real     104ms                 │         0% loss  184ms                                
+                       │   ✓ tls.decoy    135ms                 │     2  10.0.0.1                                       
+                       │   ✓ tls.absent   115ms                 │         0% loss  45ms                                 
+                       │   ✓ http         314ms                 │     3  100.66.66.66                                   
+                       │   ✓ icmp         145ms                 │         0% loss  47ms                                 
+                       │   ! trace 10673ms path did not reach   │     4  109.206.242.62                                 
+                       │     the target                         │         0% loss  46ms                                 
+                       │                                        │     5  109.206.242.60, 109.206.242.94                 
+                       │                                        │         0% loss  49ms                                 
+                       │                                        │     6  109.206.242.88, 109.206.242.39                 
+                       │                                        │         0% loss  50ms                                 
+                       │                                        │     7  109.206.242.34                                 
+                       │                                        │         0% loss  56ms                                 
+                       │                                        │     8  *                                              
+                       │                                        │         100% loss  0ms                                
+                       │                                        │     9  154.54.76.229                                  
+                       │                                        │         0% loss  45ms                                 
+                       │                                        │    10  130.117.15.34, 130.117.14.254                  
+                       │                                        │         0% loss  45ms                                 
+                       │                                        │ !  11  89.149.132.122, 89.149.132.106                 
+                       │                                        │         33% loss  59ms                                
+                       │ ───────────────────────────────────────────────────────────────────────────────────────────────
+                       │  dns-tampering  (medium)                                                                       
+                       │  name resolution looks altered                                                                 
+                       │  evidence: [active] dns warn: system resolver and DoH answers differ                           
+                       │  caveat: Single vantage point: one observation from one network. False-positive risks: DNS     
+                       │    answers can differ by CDN or geo-DNS; TCP resets can come from middleboxes; TLS alerts can  
+                       │    reflect policy or certificates; HTTP errors can be application policy; ICMP replies are     
+                       │    often rate-limited or filtered. Absence of evidence is not proof of blocking. Re-run from   
+                       │    another network to validate.                                                                
+                       │  3 opens the full verdict                                                                      
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                           ↑/k ↓/j target · 1/2/3 pane · enter scroll · c ctx · d dest · e export · r rerun · x/X cancel
+=== 82x24 ===
+ egress — RUN                                                         1/1 targets 
+──────────────────────────────────────────────────────────────────────────────────
+ context: not collected · c details                                               
+ TARGETS               │  LADDER ·                                                
+> ! GitHub             │ ─────────────────────────────────────────────────────────
+                       │  HOPS (udp) -> 140.82.121.4                              
+                       │   TTL  ADDRESS                            LOSS     RTT   
+                       │     1  100.115.8.137                        0%    184ms  
+                       │     2  10.0.0.1                             0%     45ms  
+                       │ ─────────────────────────────────────────────────────────
+                       │  dns-tampering  (medium)                                 
+                       │  name resolution looks altered                           
+                       │  evidence: [active] dns warn: system resolver and DoH ans
+                       │  caveat: Single vantage point: one observation from one  
+                       │    network. False-positive risks: DNS answers can differ 
+                       │    by CDN or geo-DNS; TCP resets can come from           
+                       │    middleboxes; TLS alerts can reflect policy or         
+                       │    certificates; HTTP errors can be application policy;  
+                       │    ICMP replies are often rate-limited or filtered.      
+                       │    Absence of evidence is not proof of blocking. Re-run  
+                       │    from another network to validate.                     
+                       │  3 opens the full verdict                                
+──────────────────────────────────────────────────────────────────────────────────
+                        ↑↓ target · 1-3 pane · enter · e export · r rerun · ? help
+=== 60x20 ===
+ egress — RUN                                   1/1 targets 
+────────────────────────────────────────────────────────────
+ context: not collected · c details                         
+ TARGETS         │  VERDICT ·                               
+> ! GitHub       │  dns-tampering  (medium)                 
+                 │  name resolution looks altered           
+                 │  CAVEAT                                  
+                 │    Single vantage point: one             
+                 │      observation from one network.       
+                 │      False-positive risks: DNS answers   
+                 │      can differ by CDN or geo-DNS; TCP   
+                 │      resets can come from middleboxes;   
+                 │      TLS alerts can reflect policy or    
+                 │      certificates; HTTP errors can be    
+                 │      application policy; ICMP replies are
+                 │      often rate-limited or filtered.     
+                 │      Absence of evidence is not proof of 
+                 │      blocking. Re-run from another       
+────────────────────────────────────────────────────────────
+  ↑↓ target · 1-3 pane · enter · e export · r rerun · ? help
+=== normalized caveat ===
+egress — RUN 1/2 targets ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── context: not collected · c details TARGETS LADDER · HOPS (udp) -> 203.0.113.10 > ✓ Alpha ✓ dns 40ms TTL ADDRESS x Beta ✓ tcp.443 30ms LOSS / RTT ✓ icmp 20ms 1 192.0.2.1 ✓ trace 900ms 0% loss 12ms → 2 203.0.113.10 0% loss 35ms path complete at hop 2 ─────────────────────────────────────────────────────────────────────────────────────────────── no blockage detected every ladder step passed evidence: [active] all ladder steps passed caveat: Single vantage point: one observation from one network. False-positive risks: DNS answers can differ by CDN or geo-DNS; TCP resets can come from middleboxes; ICMP replies are often rate-limited or filtered. Absence of evidence is not proof of blocking. Re-run from another network to validate. 3 opens the full verdict ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── ↑/k ↓/j target · 1/2/3 pane · enter scroll · c ctx · d dest · e export · r rerun · x/X cancel
+--- PASS: TestDumpLiveCaveat (11.82s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	12.177s

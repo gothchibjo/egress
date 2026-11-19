@@ -172,8 +172,10 @@ func TestClassifyTargetScenarios(t *testing.T) {
 					t.Fatalf("rejected %q has no reason", rejected.Type)
 				}
 			}
-			if hypothesis.Caveat != SingleVantageCaveat {
-				t.Fatalf("caveat = %q", hypothesis.Caveat)
+			for _, want := range []string{"Single vantage point", "False-positive risks", "Absence of evidence is not proof of blocking", "Re-run from another network"} {
+				if !strings.Contains(hypothesis.Caveat, want) {
+					t.Fatalf("caveat is missing %q: %q", want, hypothesis.Caveat)
+				}
 			}
 		})
 	}
@@ -335,5 +337,34 @@ func TestNoDataIsStillUnknown(t *testing.T) {
 	hypothesis := ClassifyTarget(nil, Localization{})
 	if hypothesis.NoBlockage {
 		t.Fatalf("empty evidence was marked as no blockage: %+v", hypothesis)
+	}
+}
+
+func TestCaveatNamesTheProbesThatRan(t *testing.T) {
+	steps := []StepResult{
+		{ID: "dns", Kind: StepDNS, Status: StatusPass, Measurements: []Measurement{{Name: "system.answers", Value: "203.0.113.10"}}},
+		{ID: "tcp.443", Kind: StepTCP, Status: StatusPass, Measurements: []Measurement{{Name: "outcome", Value: "timeout"}}},
+		{ID: "tls.real", Kind: StepTLS, Status: StatusWarn, Measurements: []Measurement{{Name: "alert", Value: "handshake_failure"}}},
+		{ID: "icmp", Kind: StepICMP, Status: StatusPass, Measurements: []Measurement{{Name: "address", Value: "203.0.113.10"}}},
+		{ID: "trace", Kind: StepTrace, Status: StatusWarn, Measurements: []Measurement{{Name: "method", Value: "udp"}}},
+		{ID: "http", Kind: StepHTTP, Status: StatusWarn, Measurements: []Measurement{{Name: "status", Value: "403"}}},
+	}
+	hypothesis := ClassifyTarget(steps, Localization{Kind: PathInconclusive, Summary: "no path"})
+
+	for _, want := range []string{
+		"CDN or geo-DNS",
+		"TCP resets can come from middleboxes",
+		"TLS alerts can reflect policy or certificates",
+		"ICMP replies are often rate-limited or filtered",
+		"HTTP errors can be application policy",
+		"Absence of evidence is not proof of blocking",
+		"Re-run from another network",
+	} {
+		if !strings.Contains(hypothesis.Caveat, want) {
+			t.Fatalf("caveat is missing %q: %q", want, hypothesis.Caveat)
+		}
+	}
+	if err := hypothesis.Validate(); err != nil {
+		t.Fatalf("hypothesis is invalid: %v", err)
 	}
 }

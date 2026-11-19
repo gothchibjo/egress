@@ -1008,3 +1008,38 @@ func TestRunViewSessionExportStatesAbsentContext(t *testing.T) {
 		}
 	}
 }
+
+func TestRunViewKeepsTheFullCaveatVisible(t *testing.T) {
+	model := completeRun(t, runModel(t, 120, 40))
+	view := strings.Join(strings.Fields(strings.ReplaceAll(model.View(), "│", " ")), " ")
+	for _, want := range []string{
+		"False-positive risks",
+		"Absence of evidence is not proof of blocking",
+		"Re-run from another network",
+	} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("run view is missing caveat text %q:\n%s", want, view)
+		}
+	}
+}
+
+func TestRunViewCaveatSurvivesTheNarrowBand(t *testing.T) {
+	model := completeRun(t, runModel(t, 82, 28))
+	view := strings.Join(strings.Fields(strings.ReplaceAll(model.View(), "│", " ")), " ")
+	for _, want := range []string{"False-positive risks", "Re-run from another network"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("narrow run view is missing caveat text %q:\n%s", want, view)
+		}
+	}
+}
+
+func TestRunViewCompactVerdictShowsTheFullCaveat(t *testing.T) {
+	model := completeRun(t, runModel(t, 60, 20))
+	model, _ = pressKey(t, model, "3")
+	view := strings.Join(strings.Fields(strings.ReplaceAll(model.View(), "│", " ")), " ")
+	for _, want := range []string{"CAVEAT", "False-positive risks", "Absence of evidence is not proof of blocking", "Re-run from another network"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("compact verdict is missing caveat text %q:\n%s", want, view)
+		}
+	}
+}
