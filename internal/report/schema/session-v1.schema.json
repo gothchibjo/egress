@@ -179,10 +179,11 @@
       "additionalProperties": false,
       "required": ["kind", "host", "transport", "purpose"],
       "properties": {
-        "kind": { "enum": ["resolver", "doh", "anchor", "captive-portal", "path-mtu"] },
+        "kind": { "enum": ["target", "resolver", "doh"] },
         "host": { "type": "string", "minLength": 1 },
+        "address": { "type": "string", "minLength": 1 },
         "port": { "type": "integer", "minimum": 0, "maximum": 65535 },
-        "transport": { "enum": ["udp+tcp", "tcp", "https", "http", "icmp", "icmp-df"] },
+        "transport": { "enum": ["udp+tcp", "tcp", "https", "http", "icmp", "udp"] },
         "purpose": { "type": "string", "minLength": 1 }
       }
     },

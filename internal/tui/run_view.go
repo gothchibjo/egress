@@ -121,6 +121,9 @@ func (m Model) updateRunKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.exportRunCurrent()
 	case "E":
 		return m.promptRunExport()
+	case "d":
+		m.runDestinationOffset = 0
+		m.view = viewRunDestinations
 	case "enter":
 		m.run.focus = true
 	case "x":
@@ -177,6 +180,9 @@ func (m Model) updateRunPaneKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.exportRunCurrent()
 	case "E":
 		return m.promptRunExport()
+	case "d":
+		m.runDestinationOffset = 0
+		m.view = viewRunDestinations
 	case "1":
 		m.run.view = runViewLadder
 	case "2":

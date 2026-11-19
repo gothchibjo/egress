@@ -289,6 +289,8 @@ implementation in the order above.
 | 2026-11-13 | REQ-010 | Minimum terminal sizes are enforced by the UI.                      | The run view reuses the layout thresholds: normal from 80x24, compact from 60x20, resize message below, stopped below 40x10.                                      | pass   |
 | 2026-11-19 | REQ-011 | No database or history is retained.                                 | The export writes one file at the requested path; no database, cache or history file exists, and each export starts from the current run state.                   | pass   |
 | 2026-11-19 | REQ-011 | Export contains only data from the current session.                 | `sessionEnvelope` reads only `m.run`, the session mode, catalog version, destinations and current network context; no previous run or global history is included. | pass   |
+| 2026-11-19 | REQ-012 | Only declared destinations receive traffic.                         | A session destination builder lists selected targets, configured resolvers and the DoH endpoint only; a live socket inventory shows no other remote address.      | pass   |
+| 2026-11-19 | REQ-012 | No telemetry or enrichment API is added.                            | The call-site scan finds only documented probes; no telemetry, upload or enrichment client exists, and the only environment reads are NO_COLOR and TERM.          | pass   |
 
 # Implementation Log
 
@@ -395,3 +397,8 @@ implementation in the order above.
   view exports with `e`/`E`, keeps partial steps after cancellation, shows the
   written path, and confirms before replacing an existing file. The schema lives
   in `internal/report/schema/session-v1.schema.json`; `result-v1` is untouched.
+- 2026-11-19 — REQ-012 adds the per-run destination list: selected targets with
+  the address the ladder probed, configured resolvers and the DoH endpoint. The
+  run view shows it on `d`; `session-v1` carries it in `destinations`. The
+  network inventory, call-site scan and guard tests live in the REQ-012 evidence
+  files.

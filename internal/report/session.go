@@ -37,15 +37,15 @@ type SessionTarget struct {
 
 // SessionEnvelope is the stable JSON document of one probing session.
 type SessionEnvelope struct {
-	SchemaVersion  string                   `json:"schema_version"`
-	StartedAt      time.Time                `json:"started_at"`
-	FinishedAt     time.Time                `json:"finished_at"`
-	Mode           string                   `json:"mode"`
-	CatalogVersion string                   `json:"catalog_version"`
-	Cancelled      bool                     `json:"cancelled,omitempty"`
-	Targets        []SessionTarget          `json:"targets"`
-	Destinations   []domain.Destination     `json:"destinations,omitempty"`
-	Context        *platform.NetworkContext `json:"context,omitempty"`
+	SchemaVersion  string                      `json:"schema_version"`
+	StartedAt      time.Time                   `json:"started_at"`
+	FinishedAt     time.Time                   `json:"finished_at"`
+	Mode           string                      `json:"mode"`
+	CatalogVersion string                      `json:"catalog_version"`
+	Cancelled      bool                        `json:"cancelled,omitempty"`
+	Targets        []SessionTarget             `json:"targets"`
+	Destinations   []domain.SessionDestination `json:"destinations,omitempty"`
+	Context        *platform.NetworkContext    `json:"context,omitempty"`
 }
 
 // SessionSchema returns the JSON Schema that describes SessionEnvelope.
@@ -54,7 +54,7 @@ func SessionSchema() []byte {
 }
 
 // BuildSessionEnvelope assembles a session document from the finished targets.
-func BuildSessionEnvelope(targets []SessionTarget, started, finished time.Time, mode string, cancelled bool, destinations []domain.Destination) SessionEnvelope {
+func BuildSessionEnvelope(targets []SessionTarget, started, finished time.Time, mode string, cancelled bool, destinations []domain.SessionDestination) SessionEnvelope {
 	return SessionEnvelope{
 		StartedAt:      started,
 		FinishedAt:     finished,

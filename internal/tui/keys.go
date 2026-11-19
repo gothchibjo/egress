@@ -13,6 +13,7 @@ const (
 	viewContext
 	viewPicker
 	viewRun
+	viewRunDestinations
 )
 
 // updateKey dispatches a key press to the active page. Every action has a key;
@@ -35,6 +36,8 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updatePickerKey(msg)
 	case viewRun:
 		return m.updateRunKey(msg)
+	case viewRunDestinations:
+		return m.updateRunDestinationsKey(msg)
 	case viewDetail:
 		return m.updateDetailKey(msg)
 	default:
@@ -182,6 +185,34 @@ func (m Model) updateContextKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) updateRunDestinationsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "up", "k":
+		m.runDestinationOffset = clampOffset(m.runDestinationOffset-1, m.runDestinationMaxOffset())
+	case "down", "j":
+		m.runDestinationOffset = clampOffset(m.runDestinationOffset+1, m.runDestinationMaxOffset())
+	case "pgup":
+		m.runDestinationOffset = clampOffset(m.runDestinationOffset-m.runDestinationBodyHeight(), m.runDestinationMaxOffset())
+	case "pgdown":
+		m.runDestinationOffset = clampOffset(m.runDestinationOffset+m.runDestinationBodyHeight(), m.runDestinationMaxOffset())
+	case "g":
+		m.runDestinationOffset = 0
+	case "G":
+		m.runDestinationOffset = m.runDestinationMaxOffset()
+	case "esc", "d":
+		m.view = viewRun
+	case "?":
+		m.helpReturn = viewRunDestinations
+		m.helpOffset = 0
+		m.view = viewHelp
+	case "q":
+		return m, tea.Quit
+	case "ctrl+c":
+		m.confirmQuit = true
+	}
+	return m, nil
+}
+
 func (m Model) updateDestinationsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "up", "k":
@@ -291,6 +322,8 @@ func (m Model) footerHints() string {
 		return "↑/k ↓/j scroll" + sep + "h/l check" + sep + "esc back" + sep + "? help"
 	case viewDestinations, viewContext:
 		return "j/k scroll" + sep + "esc back" + sep + "? help" + sep + "q quit"
+	case viewRunDestinations:
+		return "j/k scroll" + sep + "esc back" + sep + "? help" + sep + "q quit"
 	case viewPicker:
 		if m.Layout() == LayoutCompact {
 			return "space" + sep + "a all" + sep + "/ filter" + sep + "c custom" + sep + "enter" + sep + "esc"
@@ -326,7 +359,8 @@ func helpLines() []string {
 		"   n / p      next / previous problem",
 		"   PgUp/PgDn  scroll one page",
 		"   enter      open · esc back",
-		"   c / d      context / destinations",
+		"   c          proxy and tunnel context",
+		"   d          run destinations",
 		"   t          choose targets",
 		" ACTIONS",
 		"   r          run the baseline or probes again",

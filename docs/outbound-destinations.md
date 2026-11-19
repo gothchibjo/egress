@@ -40,7 +40,31 @@ Notes:
   name lookups are covered by the resolver row.
 - The captive-portal canary does not follow redirects; a portal response is
   reported, never authenticated to.
-- Tracing is not part of the v1 baseline, so no traceroute destination exists.
+- Tracing is not part of the v1 baseline; the probing session adds its own `udp`
+  target row for TTL-limited probes.
+
+## Session destinations
+
+A probing session is narrower than the baseline. It may contact only:
+
+| Kind     | Transport      | Endpoint                                     | Purpose                              |
+| :------- | :------------- | :------------------------------------------- | :----------------------------------- |
+| target   | tcp/https/http | each selected target on its configured ports | TCP, TLS and HTTP ladder steps       |
+| target   | icmp           | each selected target                         | ICMP echo step                       |
+| target   | udp            | each selected target, high destination ports | TTL-limited trace                    |
+| resolver | tcp            | each configured nameserver, port 53          | target name lookups and DoH fallback |
+| doh      | https          | `cloudflare-dns.com:443`                     | public DoH comparison                |
+
+The run view shows the list on the `d` page, and the `session-v1` export carries
+it in the `destinations` field. Target rows keep the declared host and add the
+address the ladder actually probed, so the same name resolving to a CDN edge is
+visible in both the UI and the export. No anchor, path-MTU or captive-portal
+endpoint is contacted by a probing session.
+
+The session does not create or store a persistent identifier. Export contains
+only the current targets, steps, paths, hypotheses and the context described in
+[the network context]. With no internet access, each ladder step records its own
+failure diagnostic instead of retrying in the background.
 
 ## Enforcement
 
@@ -52,7 +76,10 @@ tests in `internal/probe/destinations_test.go` assert that:
 - the DoH endpoint, path-MTU host and captive-portal endpoint are present;
 - no static destination falls outside the anchor set and the three documented
   services;
-- every row passes `domain.Destination.Validate`.
+- every row passes `domain.Destination.Validate`;
+- session destinations are built only from the selected targets, configured
+  resolvers and the DoH endpoint, and are covered by
+  `internal/domain/session_destination_test.go`.
 
 There is no analytics SDK, crash reporter, update checker or enrichment client
 in the module. HTTP is used only by the DoH comparison and the captive canary.
@@ -80,5 +107,6 @@ this requirement.
 
 <!-- refs -->
 
+[the network context]: network-context.md
 [REQ-020]:
   ../requirements/PCR-0001-baseline-network-diagnostics-tui/03-technical.yaml

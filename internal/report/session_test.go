@@ -77,9 +77,22 @@ func validSessionEnvelope() SessionEnvelope {
 	)
 }
 
+func sessionDestinations() []domain.SessionDestination {
+	return []domain.SessionDestination{
+		{Kind: domain.SessionTarget, Host: "alpha.example", Address: "203.0.113.10", Port: 443,
+			Transport: domain.SessionTLS, Purpose: "TLS handshake to the selected target"},
+		{Kind: domain.SessionTarget, Host: "alpha.example", Address: "203.0.113.10",
+			Transport: domain.SessionTraceUDP, Purpose: "TTL-limited trace to the selected target"},
+		{Kind: domain.SessionResolver, Host: "192.0.2.53", Port: 53,
+			Transport: domain.SessionUDPAndTCP, Purpose: "configured resolver for name lookups"},
+		{Kind: domain.SessionDoH, Host: "cloudflare-dns.com", Port: 443,
+			Transport: domain.SessionTLS, Purpose: "public DoH comparison for name lookups"},
+	}
+}
+
 func TestSessionEnvelopeMatchesSchema(t *testing.T) {
 	envelope := validSessionEnvelope()
-	envelope.Destinations = sampleDestinations()
+	envelope.Destinations = sessionDestinations()
 	envelope.Context = &platform.NetworkContext{
 		Proxies: []platform.ProxySetting{{Name: "HTTPS_PROXY", Source: "https_proxy", Value: "http://***@proxy.example:8080"}},
 		VPN:     []platform.VPNInterface{},
@@ -106,6 +119,7 @@ func encodeSessionToMap(t *testing.T, envelope SessionEnvelope) any {
 
 func TestSessionEnvelopeCarriesTheWholeRun(t *testing.T) {
 	envelope := validSessionEnvelope()
+	envelope.Destinations = sessionDestinations()
 	var buffer bytes.Buffer
 	if err := EncodeSession(&buffer, envelope); err != nil {
 		t.Fatalf("EncodeSession() error = %v", err)
@@ -120,6 +134,9 @@ func TestSessionEnvelopeCarriesTheWholeRun(t *testing.T) {
 		`"localization":{"kind":"complete"`,
 		`"confidence":"low"`,
 		`"caveat":"Single vantage point`,
+		`"kind":"target"`,
+		`"address":"203.0.113.10"`,
+		`"kind":"resolver"`,
 	} {
 		if !strings.Contains(buffer.String(), want) {
 			t.Fatalf("session export is missing %q: %s", want, buffer.String())

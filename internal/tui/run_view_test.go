@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -788,6 +789,18 @@ func TestRunViewExportsTheSession(t *testing.T) {
 	if got.CatalogVersion != domain.CatalogVersion || got.Mode != "unprivileged" {
 		t.Fatalf("session metadata = %+v", got)
 	}
+	destinations := 0
+	for _, destination := range got.Destinations {
+		if destination.Kind == domain.SessionTarget {
+			destinations++
+			if destination.Host == "alpha.example" && destination.Address != "203.0.113.10" {
+				t.Fatalf("exported target address = %q", destination.Address)
+			}
+		}
+	}
+	if destinations == 0 {
+		t.Fatalf("the session export has no target destinations: %+v", got.Destinations)
+	}
 	if got.StartedAt.IsZero() || got.FinishedAt.IsZero() {
 		t.Fatalf("session timestamps = %v..%v", got.StartedAt, got.FinishedAt)
 	}
@@ -877,5 +890,43 @@ func TestRunViewExportsCancelledSessionWithPartialSteps(t *testing.T) {
 	}
 	if err := report.EncodeSession(bytes.NewBuffer(nil), got); err != nil {
 		t.Fatalf("cancelled session is invalid: %v", err)
+	}
+}
+
+func sessionDestinationFixtures() []domain.Destination {
+	return []domain.Destination{
+		{Kind: domain.DestinationResolver, Host: "192.0.2.53", Port: 53, Transport: domain.TransportUDPAndTCP, Purpose: "resolver"},
+		{Kind: domain.DestinationAnchor, Host: "1.1.1.1", Transport: domain.TransportICMP, Purpose: "anchor"},
+		{Kind: domain.DestinationDoH, Host: "cloudflare-dns.com", Port: 443, Transport: domain.TransportHTTPS, Purpose: "doh"},
+	}
+}
+
+func TestRunViewDestinationsPageListsSessionEndpoints(t *testing.T) {
+	model := completeRun(t, runModel(t, 120, 40, WithDestinations(sessionDestinationFixtures(), nil)))
+	model, _ = pressKey(t, model, "d")
+
+	view := model.View()
+	assertBlockShape(t, view, 120, 40)
+	for _, want := range []string{"DESTINATIONS", "target", "alpha.example (203.0.113.10)", "resolver", "192.0.2.53", "doh"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("run destinations page is missing %q:\n%s", want, view)
+		}
+	}
+	if strings.Contains(view, "anchor") || strings.Contains(view, "1.1.1.1") {
+		t.Fatalf("baseline anchors leak into the run destinations:\n%s", view)
+	}
+
+	model, _ = pressKey(t, model, "esc")
+	if !strings.Contains(model.View(), "HOPS") && !strings.Contains(model.View(), "LADDER") {
+		t.Fatalf("esc did not return to the run view:\n%s", model.View())
+	}
+}
+
+func TestRunViewDestinationsPageShowsResolverFailure(t *testing.T) {
+	model := completeRun(t, runModel(t, 120, 40, WithDestinations(nil, errors.New("resolvers unavailable"))))
+	model, _ = pressKey(t, model, "d")
+
+	if view := model.View(); !strings.Contains(view, "Resolver list unavailable: resolvers unavailable") {
+		t.Fatalf("resolver failure is not shown:\n%s", view)
 	}
 }

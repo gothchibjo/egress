@@ -55,6 +55,7 @@ implemented. The requirement is defined by [REQ-021].
 | Run pane              | `g`, `G`         | jump to the top or end                      |
 | Run pane              | `h`/`l`, `[`/`]` | previous or next target                     |
 | Run pane              | `esc`            | leave the pane, stay in the run             |
+| Run                   | `d`              | view the endpoints this run contacts        |
 | Run                   | `e`, `E`         | export the session to default or typed path |
 | Run                   | `r`              | run the current target selection again      |
 | Run                   | `x`, `X`         | cancel the current or every target          |
@@ -87,11 +88,13 @@ destination list]. The `c` page shows the proxy and tunnel context described in
 [the network context]. Both scroll with `j`/`k` and `g`/`G` and return to the
 page they were opened from.
 
-In the run view, `e` and `E` write the session export (`session-v1`) instead of
-the baseline export. `r` replaces the finished target results with a new run of
-the same selection; it is refused while a probe session is still active. On a
-narrow terminal the ladder and the hops share the right column, stacked
-vertically, instead of being squeezed into three columns.
+In the run view, `d` opens the per-run destination list: the selected targets
+with their resolved addresses, the configured resolvers and the DoH endpoint.
+`e` and `E` write the session export (`session-v1`) instead of the baseline
+export. `r` replaces the finished target results with a new run of the same
+selection; it is refused while a probe session is still active. On a narrow
+terminal the ladder and the hops share the right column, stacked vertically,
+instead of being squeezed into three columns.
 
 `n` and `p` walk only through checks with status `warn` or `fail`, in the order
 they appear in the list, and wrap at both ends. `r` runs the baseline again; the

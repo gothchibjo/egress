@@ -177,11 +177,22 @@ func (m Model) sessionEnvelope() report.SessionEnvelope {
 	if mode == "" {
 		mode = "unprivileged"
 	}
-	envelope := report.BuildSessionEnvelope(targets, m.run.startedAt, m.run.finishedAt, mode, m.run.cancelled, m.opts.destinations)
+	envelope := report.BuildSessionEnvelope(targets, m.run.startedAt, m.run.finishedAt, mode, m.run.cancelled, m.sessionDestinations())
 	if m.opts.networkContext != nil {
 		envelope.Context = m.opts.networkContext
 	}
 	return envelope
+}
+
+// sessionDestinations lists every endpoint the current run may contact.
+func (m Model) sessionDestinations() []domain.SessionDestination {
+	targets := make([]domain.ProbeTarget, 0, len(m.run.targets))
+	steps := make(map[string][]domain.StepResult, len(m.run.targets))
+	for _, target := range m.run.targets {
+		targets = append(targets, target.target)
+		steps[target.target.ID] = target.steps
+	}
+	return domain.BuildSessionDestinations(targets, steps, m.opts.destinations)
 }
 
 // updateExportKey handles the path prompt and the overwrite confirmation. Every

@@ -180,36 +180,37 @@ func WithSessionExporter(write SessionExportFunc) Option {
 // Model is the dashboard. It renders a completed run, keeps the selected check
 // across resizes and handles keyboard navigation.
 type Model struct {
-	results            []domain.Result
-	verdict            domain.Verdict
-	hasVerdict         bool
-	selected           int
-	width              int
-	height             int
-	view               viewState
-	helpReturn         viewState
-	destinationsReturn viewState
-	destinationOffset  int
-	detailOffset       int
-	contextReturn      viewState
-	contextOffset      int
-	picker             pickerState
-	run                runState
-	confirmQuit        bool
-	running            bool
-	cancelled          bool
-	progress           string
-	runErr             string
-	scope              string
-	summary            string
-	notice             string
-	noticeID           int
-	helpOffset         int
-	exportPrompt       bool
-	exportInput        string
-	exportOverwrite    string
-	exportSession      bool
-	opts               options
+	results              []domain.Result
+	verdict              domain.Verdict
+	hasVerdict           bool
+	selected             int
+	width                int
+	height               int
+	view                 viewState
+	helpReturn           viewState
+	destinationsReturn   viewState
+	destinationOffset    int
+	runDestinationOffset int
+	detailOffset         int
+	contextReturn        viewState
+	contextOffset        int
+	picker               pickerState
+	run                  runState
+	confirmQuit          bool
+	running              bool
+	cancelled            bool
+	progress             string
+	runErr               string
+	scope                string
+	summary              string
+	notice               string
+	noticeID             int
+	helpOffset           int
+	exportPrompt         bool
+	exportInput          string
+	exportOverwrite      string
+	exportSession        bool
+	opts                 options
 }
 
 // New builds a dashboard for one run. The verdict is produced by
@@ -464,6 +465,8 @@ func (m Model) View() string {
 		return m.renderPicker()
 	case viewRun:
 		return m.renderRun()
+	case viewRunDestinations:
+		return m.renderRunDestinations()
 	}
 	switch m.Layout() {
 	case LayoutStopped:

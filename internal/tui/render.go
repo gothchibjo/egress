@@ -816,6 +816,138 @@ func (m Model) destinationLines() []string {
 	return lines
 }
 
+// renderRunDestinations draws the endpoints of the current probing session.
+func (m Model) renderRunDestinations() string {
+	switch m.Layout() {
+	case LayoutStopped:
+		return ""
+	case LayoutTooSmall:
+		return m.renderTooSmall()
+	}
+	destinations := m.sessionDestinations()
+	position := ""
+	if len(destinations) > 0 {
+		position = fmt.Sprintf("%d endpoints ", len(destinations))
+	}
+	header := m.renderPageHeader("DESTINATIONS", position)
+	footer := m.renderHintFooter(m.footerHints())
+	bodyHeight := m.runDestinationBodyHeight()
+
+	lines := m.runDestinationLines()
+	offset := m.runDestinationOffset
+	if maxOffset := len(lines) - bodyHeight; offset > maxOffset {
+		offset = maxOffset
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	body := block(lines[offset:], m.width, bodyHeight)
+	out := append(header, strings.Split(body, "\n")...)
+	out = append(out, footer...)
+	return strings.Join(out, "\n")
+}
+
+func (m Model) runDestinationBodyHeight() int {
+	header := m.renderPageHeader("DESTINATIONS", "")
+	footer := m.renderHintFooter("")
+	height := m.height - len(header) - len(footer)
+	if height < 1 {
+		height = 1
+	}
+	return height
+}
+
+func (m Model) runDestinationMaxOffset() int {
+	lines := len(m.runDestinationLines())
+	height := m.runDestinationBodyHeight()
+	if lines <= height {
+		return 0
+	}
+	return lines - height
+}
+
+// runDestinationLines builds the per-run endpoint table. Targets keep their
+// declared name and show the address the ladder resolved.
+func (m Model) runDestinationLines() []string {
+	destinations := m.sessionDestinations()
+	intro := wrapText("Only the endpoints listed here are contacted by this run. No telemetry, analytics, uploads or enrichment.", m.width-2)
+	lines := []string{""}
+	for _, part := range intro {
+		lines = append(lines, " "+part)
+	}
+	lines = append(lines, "")
+
+	if m.opts.destinationErr != "" {
+		lines = append(lines, " Resolver list unavailable: "+m.opts.destinationErr, "")
+	}
+	if len(destinations) == 0 {
+		return append(lines, " No destinations recorded for this run.")
+	}
+
+	if m.width < 80 {
+		for _, destination := range destinations {
+			lines = append(lines,
+				fmt.Sprintf(" %-*s %s",
+					destinationKindWidth, sessionKindLabel(destination.Kind),
+					destination.Transport),
+				"   "+destination.DisplayEndpoint(),
+				"   "+destination.Purpose,
+			)
+		}
+		return lines
+	}
+
+	endpointWidth := 34
+	if m.width >= 110 {
+		lines = append(lines, fmt.Sprintf(" %-*s %-*s %-*s %s",
+			destinationKindWidth, "KIND",
+			destinationTransportWidth, "TRANSPORT",
+			endpointWidth, "ENDPOINT",
+			"PURPOSE",
+		))
+		for _, destination := range destinations {
+			lines = append(lines, fmt.Sprintf(" %-*s %-*s %-*s %s",
+				destinationKindWidth, sessionKindLabel(destination.Kind),
+				destinationTransportWidth, destination.Transport,
+				endpointWidth, destination.DisplayEndpoint(),
+				destination.Purpose,
+			))
+		}
+		return lines
+	}
+
+	endpointWidth = m.width - destinationKindWidth - destinationTransportWidth - 8
+	if endpointWidth < 18 {
+		endpointWidth = 18
+	}
+	lines = append(lines, fmt.Sprintf(" %-*s %-*s %s",
+		destinationKindWidth, "KIND",
+		destinationTransportWidth, "TRANSPORT",
+		"ENDPOINT",
+	))
+	for _, destination := range destinations {
+		lines = append(lines, fmt.Sprintf(" %-*s %-*s %s",
+			destinationKindWidth, sessionKindLabel(destination.Kind),
+			destinationTransportWidth, destination.Transport,
+			clip(destination.DisplayEndpoint(), endpointWidth),
+		))
+	}
+	return lines
+}
+
+func sessionKindLabel(kind domain.SessionDestinationKind) string {
+	switch kind {
+	case domain.SessionTarget:
+		return "target"
+	case domain.SessionResolver:
+		return "resolver"
+	case domain.SessionDoH:
+		return "doh"
+	default:
+		return string(kind)
+	}
+}
+
 func destinationKindLabel(kind domain.DestinationKind) string {
 	switch kind {
 	case domain.DestinationResolver:
