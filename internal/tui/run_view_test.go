@@ -6,9 +6,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
+
 	"github.com/gothchibjo/egress/internal/app"
 	"github.com/gothchibjo/egress/internal/domain"
 )
+
+func forceColor(t *testing.T) {
+	t.Helper()
+	previous := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI)
+	t.Cleanup(func() { lipgloss.SetColorProfile(previous) })
+}
 
 func runTargets() []domain.ProbeTarget {
 	return []domain.ProbeTarget{
@@ -633,5 +643,116 @@ func TestRunViewMarksTheTargetAndLossyHops(t *testing.T) {
 	}
 	if !strings.Contains(view, "path complete at hop 3") {
 		t.Fatalf("the localization is missing:\n%s", view)
+	}
+}
+
+func TestRunViewNarrowStacksLadderAboveHops(t *testing.T) {
+	model := completeRun(t, runModel(t, 82, 28))
+	view := model.View()
+	assertBlockShape(t, view, 82, 28)
+
+	ladderLine, hopsLine := -1, -1
+	for i, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "LADDER") {
+			ladderLine = i
+		}
+		if strings.Contains(line, "HOPS (") {
+			hopsLine = i
+		}
+		if strings.Contains(line, "LADDER") && strings.Contains(line, "HOPS (") {
+			t.Fatalf("narrow view still draws three columns:\n%s", view)
+		}
+	}
+	if ladderLine < 0 || hopsLine < 0 {
+		t.Fatalf("narrow view lost a pane:\n%s", view)
+	}
+	if ladderLine > hopsLine {
+		t.Fatalf("hops are not under the ladder:\n%s", view)
+	}
+}
+
+func TestRunViewWideKeepsThreeColumns(t *testing.T) {
+	model := completeRun(t, runModel(t, 130, 40))
+	view := model.View()
+
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "LADDER") && strings.Contains(line, "HOPS (") {
+			return
+		}
+	}
+	t.Fatalf("wide view does not draw three columns:\n%s", view)
+}
+
+func TestRunViewRerunsProbes(t *testing.T) {
+	var restarted []domain.ProbeTarget
+	model := completeRun(t, runModel(t, 120, 40, WithProbeRestart(func(targets []domain.ProbeTarget) {
+		restarted = targets
+	})))
+
+	model, _ = pressKey(t, model, "r")
+	if len(restarted) != len(model.run.targets) || len(restarted) == 0 {
+		t.Fatalf("restart received %d targets, want %d", len(restarted), len(model.run.targets))
+	}
+	if !model.run.running {
+		t.Fatal("the rerun did not reset the run state")
+	}
+	if model.run.targets[0].state != app.TargetPending || len(model.run.targets[0].steps) != 0 {
+		t.Fatalf("the rerun kept the previous result: %+v", model.run.targets[0])
+	}
+}
+
+func TestRunViewColoursHopRows(t *testing.T) {
+	forceColor(t)
+	steps := []domain.StepResult{
+		runStep("dns", domain.StepDNS, domain.StatusPass, 10, domain.Measurement{Name: "system.answers", Value: "203.0.113.10"}),
+		runStep("tcp.443", domain.StepTCP, domain.StatusPass, 20, domain.Measurement{Name: "outcome", Value: "connected"}),
+	}
+	trace := runStep("trace", domain.StepTrace, domain.StatusPass, 500,
+		domain.Measurement{Name: "method", Value: "udp"},
+		domain.Measurement{Name: "address", Value: "203.0.113.10"})
+	trace.Hops = []domain.Hop{
+		{TTL: 1, Address: "192.0.2.1", Sent: 3, Received: 3, RTTMedianMS: 10},
+		{TTL: 2, Address: "198.51.100.1", Sent: 3, Received: 2, RTTMedianMS: 20},
+		{TTL: 3, Address: "203.0.113.10", Sent: 3, Received: 3, RTTMedianMS: 30},
+	}
+	steps = append(steps, trace)
+	targets := runTargets()
+	model := runModel(t, 160, 40, WithColor())
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetDone, Steps: steps},
+		{Target: targets[1], State: app.TargetDone},
+	}}})
+	model, _ = pressKey(t, model, "2")
+
+	view := model.View()
+	if !strings.Contains(view, "\x1b[32m→") {
+		t.Fatalf("the target hop is not green:\n%q", view)
+	}
+	if !strings.Contains(view, "\x1b[33m!") {
+		t.Fatalf("a lossy hop is not yellow:\n%q", view)
+	}
+}
+
+func TestRunViewColoursTheDropBoundary(t *testing.T) {
+	forceColor(t)
+	steps := []domain.StepResult{
+		runStep("dns", domain.StepDNS, domain.StatusPass, 10, domain.Measurement{Name: "system.answers", Value: "203.0.113.10"}),
+	}
+	trace := runStep("trace", domain.StepTrace, domain.StatusWarn, 500, domain.Measurement{Name: "method", Value: "udp"})
+	trace.Hops = []domain.Hop{
+		{TTL: 1, Address: "192.0.2.1", Sent: 3, Received: 3},
+		{TTL: 2, Sent: 3},
+	}
+	steps = append(steps, trace)
+	targets := runTargets()
+	model := runModel(t, 160, 40, WithColor())
+	model = applyMessage(t, model, ProbeCompleteMsg{Run: app.ProbeRun{Targets: []app.TargetRun{
+		{Target: targets[0], State: app.TargetDone, Steps: steps},
+		{Target: targets[1], State: app.TargetDone},
+	}}})
+	model, _ = pressKey(t, model, "2")
+
+	if view := model.View(); !strings.Contains(view, "\x1b[31mx") {
+		t.Fatalf("the drop boundary is not red:\n%q", view)
 	}
 }

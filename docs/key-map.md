@@ -55,6 +55,7 @@ implemented. The requirement is defined by [REQ-021].
 | Run pane              | `g`, `G`         | jump to the top or end                     |
 | Run pane              | `h`/`l`, `[`/`]` | previous or next target                    |
 | Run pane              | `esc`            | leave the pane, stay in the run            |
+| Run                   | `r`              | run the current target selection again     |
 | Run                   | `x`, `X`         | cancel the current or every target         |
 | Run                   | `esc`            | back to the dashboard, never cancels       |
 | Running baseline      | `x`              | cancel the current check                   |
@@ -84,6 +85,11 @@ The `d` page lists the documented outbound endpoints from [the outbound
 destination list]. The `c` page shows the proxy and tunnel context described in
 [the network context]. Both scroll with `j`/`k` and `g`/`G` and return to the
 page they were opened from.
+
+In the run view, `r` replaces the finished target results with a new run of the
+same selection; it is refused while a probe session is still active. On a narrow
+terminal the ladder and the hops share the right column, stacked vertically,
+instead of being squeezed into three columns.
 
 `n` and `p` walk only through checks with status `warn` or `fail`, in the order
 they appear in the list, and wrap at both ends. `r` runs the baseline again; the

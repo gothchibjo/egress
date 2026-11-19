@@ -11,13 +11,17 @@
 === RUN   TestLadderTLSAlertIsAWarning
 --- PASS: TestLadderTLSAlertIsAWarning (0.00s)
 === RUN   TestLadderTimeoutsAreBounded
---- PASS: TestLadderTimeoutsAreBounded (0.25s)
-=== RUN   TestTargetFromPresetAndCustom
---- PASS: TestTargetFromPresetAndCustom (0.00s)
+--- PASS: TestLadderTimeoutsAreBounded (0.20s)
 === RUN   TestLadderHonoursProtocolFilter
 --- PASS: TestLadderHonoursProtocolFilter (0.00s)
 === RUN   TestLadderIntegration
     ladder_test.go:259: set EGRESS_INTEGRATION=1 to run the live ladder
 --- SKIP: TestLadderIntegration (0.00s)
+=== RUN   TestLadderIncludesTheTraceStep
+--- PASS: TestLadderIncludesTheTraceStep (0.00s)
+=== RUN   TestLadderStopsWhenCancelled
+--- PASS: TestLadderStopsWhenCancelled (0.00s)
+=== RUN   TestLadderPlanMatchesStartEvents
+--- PASS: TestLadderPlanMatchesStartEvents (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/probe	0.568s
+ok  	github.com/gothchibjo/egress/internal/probe	0.482s

@@ -154,7 +154,7 @@ func TestHelpFitsMinimumTerminal(t *testing.T) {
 
 	view := model.View()
 	assertBlockShape(t, view, 60, 20)
-	for _, key := range []string{"enter", "ctrl+c", "r          run the baseline again"} {
+	for _, key := range []string{"enter", "ctrl+c", "r          run the baseline or probes again"} {
 		if !strings.Contains(view, key) {
 			t.Fatalf("compact help lost %q", key)
 		}

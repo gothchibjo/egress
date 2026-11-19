@@ -293,7 +293,7 @@ func TestLadderIntegration(t *testing.T) {
 
 func TestLadderIncludesTheTraceStep(t *testing.T) {
 	ladder := testLadder()
-	ladder.trace = TraceStep(fakeTracer{hops: []domain.Hop{{TTL: 1, Address: "192.0.2.1", Sent: 3, Received: 3}}})
+	ladder.trace = TraceStep(fakeTracer{hops: []domain.Hop{{TTL: 1, Address: "93.184.216.34", Sent: 3, Received: 3}}})
 
 	steps := ladder.Run(context.Background(), presetTarget(t, "github"))
 	trace := steps[len(steps)-1]

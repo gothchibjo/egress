@@ -56,6 +56,7 @@ type options struct {
 	contextErr     string
 	rerun          func()
 	startSelection func(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget
+	restartProbes  func(targets []domain.ProbeTarget)
 	resolve        func(ctx context.Context, host string) ([]net.IP, error)
 	cancelTarget   func(targetID string) bool
 	cancelAllProbe func() bool
@@ -131,6 +132,11 @@ func WithContext(context platform.NetworkContext, err error) Option {
 // targets the session accepted.
 func WithStartSelection(start func(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget) Option {
 	return func(o *options) { o.startSelection = start }
+}
+
+// WithProbeRestart wires the run-view rerun action to the probe session owner.
+func WithProbeRestart(restart func(targets []domain.ProbeTarget)) Option {
+	return func(o *options) { o.restartProbes = restart }
 }
 
 // WithProbeCancels wires the run-view cancellation controls.

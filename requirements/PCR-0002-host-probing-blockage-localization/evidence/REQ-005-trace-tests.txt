@@ -19,14 +19,16 @@
 === RUN   TestTraceStepReportsFailure
 --- PASS: TestTraceStepReportsFailure (0.00s)
 === RUN   TestUDPTracerIntegration
-    trace_test.go:174: set EGRESS_INTEGRATION=1 to run the live traceroute
+    trace_test.go:175: set EGRESS_INTEGRATION=1 to run the live traceroute
 --- SKIP: TestUDPTracerIntegration (0.00s)
 === RUN   TestTraceBandsAreDistinct
 --- PASS: TestTraceBandsAreDistinct (0.00s)
 === RUN   TestUDPTracerReachesTheTarget
-    trace_test.go:219: set EGRESS_INTEGRATION=1 to run the live traceroute
+    trace_test.go:220: set EGRESS_INTEGRATION=1 to run the live traceroute
 --- SKIP: TestUDPTracerReachesTheTarget (0.00s)
 === RUN   TestUDPTracePortsUseTheStandardLayout
 --- PASS: TestUDPTracePortsUseTheStandardLayout (0.00s)
+=== RUN   TestTraceStepWarnsWhenTheTargetIsNotReached
+--- PASS: TestTraceStepWarnsWhenTheTargetIsNotReached (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/probe	0.271s
+ok  	github.com/gothchibjo/egress/internal/probe	0.284s

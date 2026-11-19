@@ -1,4 +1,4 @@
 === RUN   TestLadderIntegration
---- PASS: TestLadderIntegration (1.96s)
+--- PASS: TestLadderIntegration (2.92s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/probe	2.272s
+ok  	github.com/gothchibjo/egress/internal/probe	3.158s

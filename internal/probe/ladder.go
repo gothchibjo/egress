@@ -136,10 +136,16 @@ func TraceStep(tracer Tracer) TraceFunc {
 		}
 
 		responding, last := 0, ""
+		reached := false
 		for _, hop := range hops {
 			if hop.Address != "" {
 				responding++
 				last = hop.Address
+			}
+			for _, hopAddress := range hop.AllAddresses() {
+				if hopAddress == address || hopAddress == target.Host {
+					reached = true
+				}
 			}
 		}
 		step.Measurements = append(step.Measurements,
@@ -160,6 +166,9 @@ func TraceStep(tracer Tracer) TraceFunc {
 		case responding == 0:
 			step.Status = domain.StatusWarn
 			step.Diagnostic = "no hop answered; ICMP may be filtered"
+		case !reached:
+			step.Status = domain.StatusWarn
+			step.Diagnostic = "path did not reach the target"
 		}
 		return step
 	}

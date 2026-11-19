@@ -65,7 +65,8 @@ partial evidence stays exportable.
   `RTT` their median round trip. This is the traceroute layout.
 - A leading marker flags what deserves attention: `→` is the hop that answered
   as the target, `!` is a hop with partial loss and `x` is the silent hop where
-  the replies stop. A blank marker is a normal hop.
+  the replies stop. A blank marker is a normal hop. The row is green for the
+  target, yellow for partial loss and red for the drop boundary.
 - `*` means no reply arrived for that TTL; the router may rate-limit or filter
   the probe. It does not prove the hop is down.
 - A path through a tunnel (for example a VPN `utun` interface) often produces no
@@ -89,6 +90,10 @@ The hop table feeds `domain.LocalizePath`, which yields one of three findings:
   target;
 - `inconclusive between hops N and M` when the trace was truncated, or when the
   target answered a transport step but the hops returned no probe reply.
+
+A `trace` step is `warn`, not `pass`, when the trace returned hops but none of
+them is the target address; the diagnostic states
+`path did not reach the target`.
 
 Every finding lists the alternative explanations; a silent hop alone is never
 presented as proof of blocking. The localization is cross-checked with the

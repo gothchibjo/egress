@@ -111,6 +111,8 @@ func (m Model) updateRunKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.jumpProblemTarget(1)
 	case "p":
 		return m.jumpProblemTarget(-1)
+	case "r":
+		return m.rerunProbes()
 	case "enter":
 		m.run.focus = true
 	case "x":
@@ -161,6 +163,8 @@ func (m Model) updateRunPaneKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.jumpProblemTarget(1)
 	case "p":
 		return m.jumpProblemTarget(-1)
+	case "r":
+		return m.rerunProbes()
 	case "1":
 		m.run.view = runViewLadder
 	case "2":
@@ -191,6 +195,26 @@ func (m Model) updateRunPaneKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.confirmQuit = true
 	}
 	return m, nil
+}
+
+// rerunProbes restarts the current target selection without returning to the
+// picker. The previous results are replaced, matching the dashboard rerun.
+func (m Model) rerunProbes() (tea.Model, tea.Cmd) {
+	if m.run.running {
+		return m.setNotice("probes are already running")
+	}
+	if m.opts.restartProbes == nil {
+		return m.setNotice("re-run is unavailable in this session")
+	}
+	targets := make([]domain.ProbeTarget, len(m.run.targets))
+	for i, target := range m.run.targets {
+		targets[i] = target.target
+	}
+	if len(targets) == 0 {
+		return m.setNotice("no targets to probe")
+	}
+	m.opts.restartProbes(targets)
+	return m.startRun(targets), nil
 }
 
 func (m *Model) scrollRun(delta int) {
@@ -400,17 +424,39 @@ func (m Model) renderRun() string {
 	}
 
 	var right []string
-	if m.Layout() == LayoutNormal && bodyHeight >= 12 && m.run.view != runViewVerdict {
+	if m.Layout() == LayoutNormal && bodyHeight >= 14 && m.run.view != runViewVerdict {
 		band := 5
 		panes := bodyHeight - band - 1
-		leftWidth := rightWidth * 2 / 5
-		hopsWidth := rightWidth - leftWidth - 3
-		ladder := block(m.runLadderLines(leftWidth, panes), leftWidth, panes)
-		hops := block(m.runHopsLines(hopsWidth, panes), hopsWidth, panes)
-		top := lipgloss.JoinHorizontal(lipgloss.Top, ladder, block(m.separatorLines(panes), 3, panes), hops)
-		right = strings.Split(top, "\n")
-		right = append(right, m.rule(rightWidth))
-		right = append(right, strings.Split(block(m.runVerdictBand(), rightWidth, band), "\n")...)
+		if rightWidth >= 85 && panes >= 12 {
+			// Wide terminals keep three columns: targets, ladder and hops.
+			leftWidth := rightWidth * 2 / 5
+			hopsWidth := rightWidth - leftWidth - 3
+			ladder := block(m.runLadderLines(leftWidth, panes), leftWidth, panes)
+			hops := block(m.runHopsLines(hopsWidth, panes), hopsWidth, panes)
+			top := lipgloss.JoinHorizontal(lipgloss.Top, ladder, block(m.separatorLines(panes), 3, panes), hops)
+			right = strings.Split(top, "\n")
+			right = append(right, m.rule(rightWidth))
+			right = append(right, strings.Split(block(m.runVerdictBand(), rightWidth, band), "\n")...)
+		} else {
+			// Narrow terminals use two columns: the ladder and the hops stack in
+			// the right column, so neither pane wraps a wide table.
+			ladderHeight := panes * 2 / 5
+			if ladderHeight < 4 {
+				ladderHeight = 4
+			}
+			hopsHeight := panes - ladderHeight - 1
+			if hopsHeight < 4 {
+				hopsHeight = 4
+				ladderHeight = panes - hopsHeight - 1
+			}
+			ladder := block(m.runLadderLines(rightWidth, ladderHeight), rightWidth, ladderHeight)
+			hops := block(m.runHopsLines(rightWidth, hopsHeight), rightWidth, hopsHeight)
+			right = append(right, strings.Split(ladder, "\n")...)
+			right = append(right, m.rule(rightWidth))
+			right = append(right, strings.Split(hops, "\n")...)
+			right = append(right, m.rule(rightWidth))
+			right = append(right, strings.Split(block(m.runVerdictBand(), rightWidth, band), "\n")...)
+		}
 	} else {
 		var lines []string
 		switch m.run.view {
@@ -571,7 +617,7 @@ func (m Model) runLadderRows(target runTarget, width int) ([]string, int) {
 		latest := -1
 		for _, step := range target.steps {
 			latest = len(rows)
-			rows = append(rows, wrapPaneLine(m.runStepRow(step), width)...)
+			rows = append(rows, m.styleStepRow(step, width)...)
 		}
 		return rows, latest
 	}
@@ -581,7 +627,7 @@ func (m Model) runLadderRows(target runTarget, width int) ([]string, int) {
 	for _, planned := range target.plan {
 		if step, ok := finished[planned.ID]; ok {
 			latest = len(rows)
-			rows = append(rows, wrapPaneLine(m.runStepRow(step), width)...)
+			rows = append(rows, m.styleStepRow(step, width)...)
 			continue
 		}
 		if target.state == app.TargetRunning && planned.ID == target.runningStep.ID {
@@ -604,6 +650,17 @@ func (m Model) runStepRow(step domain.StepResult) string {
 		row += "  " + step.Diagnostic
 	}
 	return row
+}
+
+// styleStepRow wraps a finished step and colours the whole row by its status,
+// so a failed or warning step is visible without reading the marker.
+func (m Model) styleStepRow(step domain.StepResult, width int) []string {
+	wrapped := wrapPaneLine(m.runStepRow(step), width)
+	style := m.theme().status(step.Status)
+	for i, line := range wrapped {
+		wrapped[i] = style.Render(line)
+	}
+	return wrapped
 }
 
 // runHopsLines renders the hop table of the active target. Narrow panes use a
@@ -676,16 +733,17 @@ func (m Model) runHopsLines(width, height int) []string {
 		if address == "" {
 			address = "*"
 		}
-		marker := hopMarker(hop, targetIP, index == len(hops)-1)
+		marker := m.hopMarker(hop, targetIP, index == len(hops)-1)
+		style := m.hopStyle(marker)
 		if narrow || lipgloss.Width(address) > addressWidth-2 {
 			table = append(table,
-				fmt.Sprintf("%s %3d  %s", marker, hop.TTL, address),
-				fmt.Sprintf("        %d%% loss  %dms", hop.LossPercent(), hop.RTTMedianMS),
+				style.Render(fmt.Sprintf("%s %3d  %s", marker, hop.TTL, address)),
+				style.Render(fmt.Sprintf("        %d%% loss  %dms", hop.LossPercent(), hop.RTTMedianMS)),
 			)
 			continue
 		}
-		table = append(table, fmt.Sprintf("%s %3d  %-*s %4d%% %6dms",
-			marker, hop.TTL, addressWidth-2, address, hop.LossPercent(), hop.RTTMedianMS))
+		table = append(table, style.Render(fmt.Sprintf("%s %3d  %-*s %4d%% %6dms",
+			marker, hop.TTL, addressWidth-2, address, hop.LossPercent(), hop.RTTMedianMS)))
 	}
 	if summary := target.path.Localization.Summary; summary != "" {
 		table = append(table, "", " "+summary)
@@ -914,11 +972,15 @@ func tracedAddress(steps []domain.StepResult) string {
 // hopMarker flags what deserves attention in a table that otherwise follows
 // the familiar traceroute layout: the target hop, a hop with partial loss and
 // the silent hop where the replies stop.
-func hopMarker(hop domain.Hop, targetIP string, last bool) string {
+func (m Model) hopMarker(hop domain.Hop, targetIP string, last bool) string {
+	target := "→"
+	if m.opts.ascii {
+		target = ">"
+	}
 	if targetIP != "" {
 		for _, address := range hop.AllAddresses() {
 			if address == targetIP {
-				return "→"
+				return target
 			}
 		}
 	}
@@ -932,6 +994,21 @@ func hopMarker(hop domain.Hop, targetIP string, last bool) string {
 		return "!"
 	}
 	return " "
+}
+
+// hopStyle colours a hop row: green for the target, yellow for partial loss,
+// red for the silent boundary and no colour for a normal hop.
+func (m Model) hopStyle(marker string) lipgloss.Style {
+	switch marker {
+	case "→", ">":
+		return m.theme().pass
+	case "!":
+		return m.theme().warn
+	case "x":
+		return m.theme().fail
+	default:
+		return lipgloss.Style{}
+	}
 }
 
 // hopAddress joins every router that answered at one TTL.

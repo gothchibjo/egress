@@ -380,3 +380,10 @@ implementation in the order above.
   high port. The hop table marks the target hop, partial loss and the silent
   drop boundary, and the localization states facts instead of asserting ICMP
   filtering.
+- 2026-11-13 — REQ-010: the run view reruns the current selection with `r` (also
+  from a focused pane), stacks the ladder above the hops on narrow terminals
+  instead of squeezing three columns, and colours hop rows by marker: green for
+  the target, yellow for partial loss, red for the drop boundary. A trace step
+  whose hops never include the target address is `warn` with
+  `path did not reach the target`, so the ladder no longer shows a green check
+  for an unsuccessful trace.

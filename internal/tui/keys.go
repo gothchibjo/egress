@@ -298,12 +298,12 @@ func (m Model) footerHints() string {
 		return "space select" + sep + "a all" + sep + "/ filter" + sep + "c custom" + sep + "enter run" + sep + "esc back"
 	case viewRun:
 		if m.run.focus {
-			return "↑/k ↓/j scroll" + sep + "g/G top/end" + sep + "h/l target" + sep + "esc back"
+			return "↑/k ↓/j scroll" + sep + "g/G top/end" + sep + "h/l target" + sep + "r rerun" + sep + "esc back"
 		}
 		if m.Layout() == LayoutCompact {
-			return "↑↓ target" + sep + "1-3 pane" + sep + "enter" + sep + "x/X" + sep + "? help"
+			return "↑↓ target" + sep + "1-3 pane" + sep + "r rerun" + sep + "x/X" + sep + "? help"
 		}
-		return "↑/k ↓/j target" + sep + "1/2/3 pane" + sep + "enter scroll" + sep + "x/X cancel" + sep + "? help"
+		return "↑/k ↓/j target" + sep + "1/2/3 pane" + sep + "enter scroll" + sep + "r rerun" + sep + "x/X cancel"
 	case viewHelp:
 		return "j/k scroll" + sep + "? close" + sep + "esc back"
 	default:
@@ -329,7 +329,7 @@ func helpLines() []string {
 		"   c / d      context / destinations",
 		"   t          choose targets",
 		" ACTIONS",
-		"   r          run the baseline again",
+		"   r          run the baseline or probes again",
 		"   e / E      export default / path",
 		"   x / X      cancel check / baseline",
 		"   q/ctrl+c   quit, ctrl+c confirms",

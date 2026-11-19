@@ -153,6 +153,7 @@ func runTUI(stdout *os.File, stderr io.Writer, session baselineRunner, mode stri
 	)
 	var startRun func()
 	var startSelection func(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget
+	var startProbes func(targets []domain.ProbeTarget)
 
 	var probeMu sync.Mutex
 	var probeSession *app.ProbeSession
@@ -183,6 +184,9 @@ func runTUI(stdout *os.File, stderr io.Writer, session baselineRunner, mode stri
 		tui.WithStartSelection(func(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget {
 			return startSelection(presets, custom)
 		}),
+		tui.WithProbeRestart(func(targets []domain.ProbeTarget) {
+			startProbes(targets)
+		}),
 		tui.WithProbeCancels(cancelTarget, cancelAllProbe),
 		tui.WithCancelHooks(
 			func() { session.CancelCurrent() },
@@ -191,18 +195,7 @@ func runTUI(stdout *os.File, stderr io.Writer, session baselineRunner, mode stri
 	).StartRunning()
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithOutput(stdout), tea.WithInput(os.Stdin))
 
-	startSelection = func(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget {
-		targets := make([]domain.ProbeTarget, 0, len(presets)+len(custom))
-		for _, preset := range presets {
-			targets = append(targets, probe.TargetFromPreset(preset))
-		}
-		for _, target := range custom {
-			targets = append(targets, probe.TargetFromCustom(target))
-		}
-		if len(targets) == 0 {
-			return nil
-		}
-
+	startProbes = func(targets []domain.ProbeTarget) {
 		session := app.NewProbeSession(probe.NewLadder(elevated))
 		session.OnStep = func(targetID string, step domain.StepResult) {
 			program.Send(tui.ProbeStepMsg{TargetID: targetID, Step: step})
@@ -228,6 +221,20 @@ func runTUI(stdout *os.File, stderr io.Writer, session baselineRunner, mode stri
 			probeMu.Unlock()
 			program.Send(tui.ProbeCompleteMsg{Run: run, Err: runErr})
 		}()
+	}
+
+	startSelection = func(presets []domain.Preset, custom []domain.Target) []domain.ProbeTarget {
+		targets := make([]domain.ProbeTarget, 0, len(presets)+len(custom))
+		for _, preset := range presets {
+			targets = append(targets, probe.TargetFromPreset(preset))
+		}
+		for _, target := range custom {
+			targets = append(targets, probe.TargetFromCustom(target))
+		}
+		if len(targets) == 0 {
+			return nil
+		}
+		startProbes(targets)
 		return targets
 	}
 

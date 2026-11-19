@@ -117,6 +117,7 @@ func TestTraceStepReportsHops(t *testing.T) {
 	step := TraceStep(fakeTracer{hops: []domain.Hop{
 		{TTL: 1, Address: "192.0.2.1", Sent: 3, Received: 3},
 		{TTL: 2, Address: "198.51.100.1", Sent: 3, Received: 3},
+		{TTL: 3, Address: "203.0.113.10", Sent: 3, Received: 3},
 	}})(context.Background(), LadderTarget{Host: "example.net"}, "203.0.113.10")
 
 	if step.Status != domain.StatusPass {
@@ -257,5 +258,22 @@ func TestUDPTracePortsUseTheStandardLayout(t *testing.T) {
 			}
 			seen[port] = true
 		}
+	}
+}
+
+func TestTraceStepWarnsWhenTheTargetIsNotReached(t *testing.T) {
+	step := TraceStep(fakeTracer{hops: []domain.Hop{
+		{TTL: 1, Address: "192.0.2.1", Sent: 3, Received: 3},
+		{TTL: 2, Address: "198.51.100.1", Sent: 3, Received: 3},
+	}})(context.Background(), LadderTarget{Host: "example.net"}, "203.0.113.10")
+
+	if step.Status != domain.StatusWarn {
+		t.Fatalf("status = %q, want warn", step.Status)
+	}
+	if !strings.Contains(step.Diagnostic, "did not reach the target") {
+		t.Fatalf("diagnostic = %q", step.Diagnostic)
+	}
+	if err := step.Validate(); err != nil {
+		t.Fatalf("step is invalid: %v", err)
 	}
 }
