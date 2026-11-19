@@ -1,9 +1,9 @@
 ---
 pcr: PCR-0002
 title: Interactive host probing and blockage localization
-status: implementing
+status: done
 basis: 03-technical.yaml (frozen)
-revised: 2026-11-13
+revised: 2026-11-19
 approved_by: gothchibjo
 approved_at: 2026-11-13
 ---
@@ -430,3 +430,32 @@ implementation in the order above.
   every ladder step, hop-table reading, the eight taxonomy members, confidence
   levels and the mandatory caveat. `?` works from the picker and the run, and
   closing help preserves the selection, target and pane.
+
+# Verification
+
+2026-11-19 — verification pass over the frozen contract.
+
+- Matrix: `evidence/traceability-matrix.md` maps all 16 REQs to their BRs and
+  evidence files.
+- Result: 16/16 REQs have matching evidence; no REQ is missing its required
+  artifact.
+- Tests: `go test -race ./...`, `go vet ./...`, `go build ./...`,
+  `GOOS=linux go build ./...`, Prettier and markdownlint pass on the final tree.
+- Limitations recorded rather than hidden: REQ-005 has no live elevated
+  raw-socket trace and REQ-012 has no root packet capture in this environment;
+  both use the closest available evidence and state the gap.
+- Reviewer sign-offs in the evidence files are pending. The
+  `verification_evidence` gate stays `false` until the human review closes the
+  matrix and the user confirms completion.
+
+# Completion
+
+2026-11-19 — completion confirmed by gothchibjo.
+
+- Evidence matrix: `evidence/traceability-matrix.md`, 16/16 REQs with matching
+  evidence.
+- The reviewer accepted the recorded limitations: no live elevated raw-socket
+  trace (REQ-005) and no root packet capture (REQ-012) in the review
+  environment.
+- `pipeline_gates.verification_evidence` flipped to `passed`.
+- Development state: `done`.

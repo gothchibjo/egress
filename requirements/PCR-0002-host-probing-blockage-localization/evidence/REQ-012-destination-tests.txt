@@ -1,7 +1,3 @@
-REQ-012 destination-list tests
-Generated: 2026-11-19
-
-$ go test ./internal/domain -run SessionDestination -v
 === RUN   TestBuildSessionDestinationsListsTargetsAndResolvers
 --- PASS: TestBuildSessionDestinationsListsTargetsAndResolvers (0.00s)
 === RUN   TestBuildSessionDestinationsUsesAnIPLiteralAsTheAddress
@@ -27,38 +23,4 @@ $ go test ./internal/domain -run SessionDestination -v
     --- PASS: TestSessionDestinationValidate/purpose (0.00s)
     --- PASS: TestSessionDestinationValidate/no_port (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/domain	0.328s
-
-$ go test ./internal/report -run Session -v
-=== RUN   TestSessionEnvelopeMatchesSchema
---- PASS: TestSessionEnvelopeMatchesSchema (0.00s)
-=== RUN   TestSessionEnvelopeCarriesTheWholeRun
---- PASS: TestSessionEnvelopeCarriesTheWholeRun (0.00s)
-=== RUN   TestSessionEnvelopeKeepsCancelledTargetsAndPartialSteps
---- PASS: TestSessionEnvelopeKeepsCancelledTargetsAndPartialSteps (0.00s)
-=== RUN   TestSessionEnvelopeRejectsAnInvalidTarget
-=== RUN   TestSessionEnvelopeRejectsAnInvalidTarget/no_targets
-=== RUN   TestSessionEnvelopeRejectsAnInvalidTarget/no_start
-=== RUN   TestSessionEnvelopeRejectsAnInvalidTarget/bad_state
-=== RUN   TestSessionEnvelopeRejectsAnInvalidTarget/invalid_step
---- PASS: TestSessionEnvelopeRejectsAnInvalidTarget (0.00s)
-    --- PASS: TestSessionEnvelopeRejectsAnInvalidTarget/no_targets (0.00s)
-    --- PASS: TestSessionEnvelopeRejectsAnInvalidTarget/no_start (0.00s)
-    --- PASS: TestSessionEnvelopeRejectsAnInvalidTarget/bad_state (0.00s)
-    --- PASS: TestSessionEnvelopeRejectsAnInvalidTarget/invalid_step (0.00s)
-=== RUN   TestSessionExportWritesNoSecrets
---- PASS: TestSessionExportWritesNoSecrets (0.00s)
-=== RUN   TestWriteSessionFileRefusesToOverwrite
---- PASS: TestWriteSessionFileRefusesToOverwrite (0.00s)
-PASS
-ok  	github.com/gothchibjo/egress/internal/report	0.339s
-
-$ go test ./internal/tui -run "RunViewDestinations|RunViewExportsTheSession" -v
-=== RUN   TestRunViewExportsTheSession
---- PASS: TestRunViewExportsTheSession (0.00s)
-=== RUN   TestRunViewDestinationsPageListsSessionEndpoints
---- PASS: TestRunViewDestinationsPageListsSessionEndpoints (0.00s)
-=== RUN   TestRunViewDestinationsPageShowsResolverFailure
---- PASS: TestRunViewDestinationsPageShowsResolverFailure (0.00s)
-PASS
-ok  	github.com/gothchibjo/egress/internal/tui	0.233s
+ok  	github.com/gothchibjo/egress/internal/domain	0.303s

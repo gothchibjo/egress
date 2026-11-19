@@ -14,5 +14,7 @@
 --- PASS: TestLocalizePathWithoutData (0.00s)
 === RUN   TestHopLossPercent
 --- PASS: TestHopLossPercent (0.00s)
+=== RUN   TestLocalizePathFindsTargetAmongAddresses
+--- PASS: TestLocalizePathFindsTargetAmongAddresses (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/domain	(cached)
+ok  	github.com/gothchibjo/egress/internal/domain	0.283s

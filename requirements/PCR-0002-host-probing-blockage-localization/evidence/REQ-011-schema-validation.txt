@@ -19,4 +19,4 @@
 === RUN   TestWriteSessionFileRefusesToOverwrite
 --- PASS: TestWriteSessionFileRefusesToOverwrite (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/report	0.227s
+ok  	github.com/gothchibjo/egress/internal/report	(cached)

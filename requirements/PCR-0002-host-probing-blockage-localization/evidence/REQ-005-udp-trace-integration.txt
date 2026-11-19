@@ -1,7 +1,7 @@
 === RUN   TestUDPTracerIntegration
---- PASS: TestUDPTracerIntegration (0.79s)
+--- PASS: TestUDPTracerIntegration (1.18s)
 === RUN   TestUDPTracerReachesTheTarget
     trace_test.go:242: method=udp hops=10 responded=10
---- PASS: TestUDPTracerReachesTheTarget (0.71s)
+--- PASS: TestUDPTracerReachesTheTarget (1.49s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/probe	1.777s
+ok  	github.com/gothchibjo/egress/internal/probe	3.024s

@@ -24,4 +24,4 @@
 === RUN   TestLadderPlanMatchesStartEvents
 --- PASS: TestLadderPlanMatchesStartEvents (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/probe	0.482s
+ok  	github.com/gothchibjo/egress/internal/probe	0.461s

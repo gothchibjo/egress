@@ -20,21 +20,11 @@
     --- PASS: TestClassifyTargetScenarios/timeout_only_stays_low (0.00s)
     --- PASS: TestClassifyTargetScenarios/everything_passes (0.00s)
     --- PASS: TestClassifyTargetScenarios/no_data (0.00s)
-=== RUN   TestHypothesisRejectsUnknownTaxonomy
---- PASS: TestHypothesisRejectsUnknownTaxonomy (0.00s)
-=== RUN   TestHypothesisRequiresEvidence
---- PASS: TestHypothesisRequiresEvidence (0.00s)
 === RUN   TestTimeoutOnlyEvidenceIsPassive
 --- PASS: TestTimeoutOnlyEvidenceIsPassive (0.00s)
 === RUN   TestResetEvidenceIsActive
 --- PASS: TestResetEvidenceIsActive (0.00s)
-=== RUN   TestSNIEvidenceIncludesAnActiveSignal
---- PASS: TestSNIEvidenceIncludesAnActiveSignal (0.00s)
-=== RUN   TestDNSEvidenceNamesTheCDNCaveat
---- PASS: TestDNSEvidenceNamesTheCDNCaveat (0.00s)
-=== RUN   TestHighConfidenceNeedsAnActiveLine
---- PASS: TestHighConfidenceNeedsAnActiveLine (0.00s)
 === RUN   TestHypothesisRejectsUnlabelledEvidence
 --- PASS: TestHypothesisRejectsUnlabelledEvidence (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/domain	0.239s
+ok  	github.com/gothchibjo/egress/internal/domain	0.209s

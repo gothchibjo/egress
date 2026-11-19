@@ -31,4 +31,4 @@
 === RUN   TestTraceStepWarnsWhenTheTargetIsNotReached
 --- PASS: TestTraceStepWarnsWhenTheTargetIsNotReached (0.00s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/probe	0.284s
+ok  	github.com/gothchibjo/egress/internal/probe	0.315s

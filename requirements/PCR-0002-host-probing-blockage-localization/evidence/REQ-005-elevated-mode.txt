@@ -1,0 +1,19 @@
+REQ-005 elevated mode report
+Generated: 2026-11-19
+
+$ id -u
+502
+
+$ go test ./internal/probe -run "NewTracer|ICMPTracer|TraceBands" -v
+=== RUN   TestNewTracerSelectsTheMethod
+--- PASS: TestNewTracerSelectsTheMethod (0.00s)
+=== RUN   TestNewTracerElevatedFallsBackWithoutRaw
+--- PASS: TestNewTracerElevatedFallsBackWithoutRaw (0.00s)
+=== RUN   TestICMPTracerRequiresPrivileges
+--- PASS: TestICMPTracerRequiresPrivileges (0.00s)
+=== RUN   TestTraceBandsAreDistinct
+--- PASS: TestTraceBandsAreDistinct (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/probe	0.284s
+Note: this review host has no passwordless sudo, so a live raw-socket trace could not be exercised.
+The elevated branch selects ICMPTracer only when the raw socket opens; without it the session stays limited and uses the tested UDP tracer.

@@ -1,0 +1,79 @@
+REQ-002 picker walkthrough
+Generated: 2026-11-19
+Selected presets, persistent count, and filter preserving the selection at 80x24; compact layout is covered by the picker tests.
+Reviewer sign-off: pending
+
+=== picker 80x24 selected ===
+ egress — TARGETS                                                    2 selected 
+────────────────────────────────────────────────────────────────────────────────
+                                                                                
+ VIDEO                                                                          
+  [ ] YouTube (youtube.com)                                                     
+                                                                                
+ MESSAGING                                                                      
+  [x] Telegram (telegram.org)                                                   
+> [ ] Discord (discord.com)                                                     
+                                                                                
+ DEVELOPER                                                                      
+  [x] GitHub (github.com)                                                       
+                                                                                
+ SEARCH                                                                         
+  [ ] Google (google.com)                                                       
+                                                                                
+ INFRASTRUCTURE                                                                 
+  [ ] Cloudflare (cloudflare.com)                                               
+  [ ] Cloudflare DNS (1.1.1.1)                                                  
+  [ ] Google DNS (8.8.8.8)                                                      
+                                                                                
+ REFERENCE                                                                      
+────────────────────────────────────────────────────────────────────────────────
+               space select · a all · / filter · c custom · enter run · esc back
+=== picker 60x20 selected ===
+ egress — TARGETS                                2 selected 
+────────────────────────────────────────────────────────────
+                                                            
+ VIDEO                                                      
+  [ ] YouTube (youtube.com)                                 
+                                                            
+ MESSAGING                                                  
+  [x] Telegram (telegram.org)                               
+> [ ] Discord (discord.com)                                 
+                                                            
+ DEVELOPER                                                  
+  [x] GitHub (github.com)                                   
+                                                            
+ SEARCH                                                     
+  [ ] Google (google.com)                                   
+                                                            
+ INFRASTRUCTURE                                             
+  [ ] Cloudflare (cloudflare.com)                           
+────────────────────────────────────────────────────────────
+           space · a all · / filter · c custom · enter · esc
+=== picker filtered ===
+ egress — TARGETS                                                    1 selected 
+────────────────────────────────────────────────────────────────────────────────
+                                                                                
+ DEVELOPER                                                                      
+> [x] GitHub (github.com)                                                       
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+────────────────────────────────────────────────────────────────────────────────
+               space select · a all · / filter · c custom · enter run · esc back
+--- PASS: TestDumpPickerEvidence (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.570s

@@ -1,0 +1,58 @@
+REQ-003 custom target walkthrough
+Generated: 2026-11-19
+Custom hostname with port and protocol, and an IP literal; both appear in the picker with their parsed form.
+Reviewer sign-off: pending
+
+=== custom hostname ===
+ egress — TARGETS                                                    1 selected 
+────────────────────────────────────────────────────────────────────────────────
+                                                                                
+ SEARCH                                                                         
+  [ ] Google (google.com)                                                       
+                                                                                
+ INFRASTRUCTURE                                                                 
+  [ ] Cloudflare (cloudflare.com)                                               
+  [ ] Cloudflare DNS (1.1.1.1)                                                  
+  [ ] Google DNS (8.8.8.8)                                                      
+                                                                                
+ REFERENCE                                                                      
+  [ ] Wikipedia (wikipedia.org)                                                 
+                                                                                
+ SOCIAL                                                                         
+  [ ] X (x.com)                                                                 
+                                                                                
+ ANONYMITY                                                                      
+  [ ] Tor (torproject.org)                                                      
+                                                                                
+ CUSTOM                                                                         
+> [x] example.com:8443@tcp (resolving...)                                       
+────────────────────────────────────────────────────────────────────────────────
+               space select · a all · / filter · c custom · enter run · esc back
+=== custom IP literal ===
+ egress — TARGETS                                                    2 selected 
+────────────────────────────────────────────────────────────────────────────────
+ SEARCH                                                                         
+  [ ] Google (google.com)                                                       
+                                                                                
+ INFRASTRUCTURE                                                                 
+  [ ] Cloudflare (cloudflare.com)                                               
+  [ ] Cloudflare DNS (1.1.1.1)                                                  
+  [ ] Google DNS (8.8.8.8)                                                      
+                                                                                
+ REFERENCE                                                                      
+  [ ] Wikipedia (wikipedia.org)                                                 
+                                                                                
+ SOCIAL                                                                         
+  [ ] X (x.com)                                                                 
+                                                                                
+ ANONYMITY                                                                      
+  [ ] Tor (torproject.org)                                                      
+                                                                                
+ CUSTOM                                                                         
+  [x] example.com:8443@tcp (resolving...)                                       
+> [x] 198.51.100.7@icmp                                                         
+────────────────────────────────────────────────────────────────────────────────
+               space select · a all · / filter · c custom · enter run · esc back
+--- PASS: TestDumpCustomEvidence (0.00s)
+PASS
+ok  	github.com/gothchibjo/egress/internal/tui	0.337s

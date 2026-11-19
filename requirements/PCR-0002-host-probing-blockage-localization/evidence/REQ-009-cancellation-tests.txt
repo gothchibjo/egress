@@ -2,7 +2,5 @@
 --- PASS: TestProbeSessionCancelsOneTarget (0.00s)
 === RUN   TestProbeSessionCancelsAll
 --- PASS: TestProbeSessionCancelsAll (0.00s)
-=== RUN   TestProbeSessionBoundedByTimeout
---- PASS: TestProbeSessionBoundedByTimeout (0.20s)
 PASS
-ok  	github.com/gothchibjo/egress/internal/app	0.420s
+ok  	github.com/gothchibjo/egress/internal/app	0.225s
